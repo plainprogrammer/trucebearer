@@ -19,7 +19,7 @@ You are working on the rules engine. It is a plain Ruby gem. It takes a position
 | Path | Holds |
 |---|---|
 | `lib/trucebearer/adjudicator/` | The engine |
-| `data/maps/` | Map definitions as data files: provinces, coasts, adjacencies, supply centres, home centres. The classic map comes first. Maps are never code |
+| `data/maps/` | Map definitions as data files: provinces, coasts, adjacencies, supply centers, home centers. The classic map comes first. Maps are never code |
 | `spec/` | Unit specs |
 | `spec/datc/` | DATC scenarios encoded as original, data-driven fixtures |
 | `docs/interface.md` | The public interface the app relies on |
@@ -31,8 +31,8 @@ The gem skeleton (gemspec, Gemfile, Rakefile, version file) has not been written
 
 ## How to work
 
-1. Pick up Issues labelled `adjudicator`. A request Issue gives example input and expected output. Turn that example into your first failing spec.
-2. Write the test first. For rules behaviour, the DATC scenario is the test.
+1. Pick up Issues labeled `adjudicator`. A request Issue gives example input and expected output. Turn that example into your first failing spec.
+2. Write the test first. For rules behavior, the DATC scenario is the test.
 3. **DATC fixtures** are written by hand from the scenario's position and expected result. Name each one by its DATC section number (for example `6.A.1`). Never copy the document's prose or commentary, not even in a comment.
 4. Where the DATC leaves a choice open, record the option you chose and why in `docs/ruleset.md`.
 5. The algorithm follows Kruijswijk's approach in "The Math of Adjudication": decision-based resolution with explicit handling of paradoxes. This choice is proposed, not final; raise it in an Issue if it doesn't hold up.

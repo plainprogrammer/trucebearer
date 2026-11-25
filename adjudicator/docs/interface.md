@@ -6,12 +6,12 @@ Nothing is defined yet. The sections below are what the interface will cover.
 
 ## Shape
 
-A caller passes in a **position** and a set of **orders**. It gets back the **outcome** of each order and the **next position**. All of these are plain data (hashes, arrays, strings, integers) that can be serialised, stored and replayed.
+A caller passes in a **position** and a set of **orders**. It gets back the **outcome** of each order and the **next position**. All of these are plain data (hashes, arrays, strings, integers) that can be serialized, stored and replayed.
 
 ## Sections to fill in
 
 - **Maps.** How a caller loads a map and what it can ask of one.
-- **Position.** Season, year, phase, units and their locations, supply centre ownership, dislodged units.
+- **Position.** Season, year, phase, units and their locations, supply center ownership, dislodged units.
 - **Orders.** How each order type is expressed for movement, retreat and adjustment phases.
 - **Checking an order.** Checking a single order against a position before adjudication, with a reason when it is rejected.
 - **Adjudication.** Input, output, and the outcome values for each order.
