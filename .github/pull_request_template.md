@@ -4,7 +4,7 @@
 
 - [ ] `adjudicator/`
 - [ ] `web/`
-- [ ] Root files only (`AGENTS.md`, `docs/`, `.github/`, licence files)
+- [ ] Root files only (`AGENTS.md`, `docs/`, `.github/`, license files)
 
 ## What and why
 

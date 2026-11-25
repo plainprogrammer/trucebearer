@@ -15,7 +15,7 @@ labels: adjudicator
 
 ## Example input
 
-<!-- Plain data: the position (season, year, phase, units, supply centres) and the order or orders involved. -->
+<!-- Plain data: the position (season, year, phase, units, supply centers) and the order or orders involved. -->
 
 ```ruby
 ```
@@ -29,7 +29,7 @@ labels: adjudicator
 
 ## Rules reference
 
-<!-- The DATC and rulebook section numbers that decide the behaviour, if any. Cite numbers only; never paste text from either document. -->
+<!-- The DATC and rulebook section numbers that decide the behavior, if any. Cite numbers only; never paste text from either document. -->
 
 ## Changes to the interface
 

@@ -1,11 +1,11 @@
 Trucebearer
 Copyright (C) 2026 James Thompson
 
-Licences
+Licenses
 --------
 Each part of this repository carries its own LICENSE file.
 
-  Part                                   Licence
+  Part                                   License
   -------------------------------------  ------------------------------------
   web/ (the Rails app)                   AGPL-3.0-or-later, with an
                                          additional term under section 7(c)

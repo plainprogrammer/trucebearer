@@ -14,11 +14,11 @@ Status: planning. There is no working code yet.
 
 The two folders are separate projects. The app depends on tagged releases of the gem. See `docs/repository-layout.md`.
 
-## Licence
+## License
 
 Trucebearer is free software, and as much of it as possible is copyleft. Each folder carries its own `LICENSE`:
 
-| Part | Licence |
+| Part | License |
 |---|---|
 | `web/` (the app) | AGPL-3.0-or-later, plus a requirement that modified versions say so in their interface (`web/NOTICE`) |
 | `adjudicator/` (the gem) | AGPL-3.0-or-later |

@@ -22,7 +22,7 @@ version James Thompson published in the official repository
 (https://github.com/plainprogrammer/trucebearer) or as an official
 container image. The following are not modifications: configuring the
 program through the settings and environment variables it supports;
-changing deployment files that do not alter the program's behaviour (for
+changing deployment files that do not alter the program's behavior (for
 example Kamal's config/deploy.yml and secrets); and moving to another
 published version. Changing or updating any other dependency is a
 modification.
