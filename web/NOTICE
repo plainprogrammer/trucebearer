@@ -1,0 +1,53 @@
+Trucebearer web app
+Copyright (C) 2026 James Thompson
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your
+option) any later version, together with the additional term below. See
+LICENSE.
+
+Additional term under AGPL section 7(c)
+---------------------------------------
+If you convey a modified version of this program, or let users interact
+with a modified version of it over a network, you must mark it as modified
+in its user interface. Show, on the page that offers its Corresponding
+Source under section 13, a notice that the program has been modified, a
+short description of the modifications, and the date of the most recent
+modification. "Modified" means any change to the source code of this
+program or of the bundled trucebearer-adjudicator gem, compared with a
+version James Thompson published in the official repository
+(https://github.com/plainprogrammer/trucebearer) or as an official
+container image. The following are not modifications: configuring the
+program through the settings and environment variables it supports;
+changing deployment files that do not alter the program's behavior (for
+example Kamal's config/deploy.yml and secrets); and moving to another
+published version. Changing or updating any other dependency is a
+modification.
+
+This term is permitted by section 7(c) of the license. It is not a
+"further restriction" and may not be removed from copies of this program.
+
+Trademarks
+----------
+Under section 7(e) of the license, this license does not grant rights
+under trademark law for use of the Trucebearer name or logo. The
+Trucebearer name and logo are trademarks of James Thompson. Anyone may
+use them for an instance of this program, modified or not, on the terms
+in TRADEMARKS.md in the project's repository:
+https://github.com/plainprogrammer/trucebearer/blob/main/TRADEMARKS.md
+
+Artwork
+-------
+The Trucebearer logo, wordmark and icons are licensed under the Creative
+Commons Attribution-ShareAlike 4.0 International License
+(https://creativecommons.org/licenses/by-sa/4.0/), (C) 2026 James
+Thompson, wherever they are copied in this repository, including into
+this folder. The wordmark is set in Fraunces, an SIL Open Font License
+1.1 typeface by The Fraunces Project Authors, outlined to vector shapes.
+
+Trucebearer is an independent, unofficial companion for playing the board
+game Diplomacy. Diplomacy(R) is a registered trademark of Hasbro, Inc.
+Trucebearer is not affiliated with, sponsored or endorsed by Hasbro,
+Avalon Hill or Renegade Game Studios. Please support the game by buying
+a copy.

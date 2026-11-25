@@ -1,4 +1,4 @@
-# Trucebearer
+# Trucebearer™
 
 A mobile-first web app for a group playing the board game Diplomacy around a physical board. Each player enters secret orders on their own phone, the app adjudicates the turn and shows the results as text, and the game is saved so the group can pick up where it left off next time.
 
@@ -14,9 +14,20 @@ Status: planning. There is no working code yet.
 
 The two folders are separate projects. The app depends on tagged releases of the gem. See `docs/repository-layout.md`.
 
-## Licence
+## License
 
-The code is licensed under the GNU Affero General Public License, version 3 or later (`LICENSE`). The name and logo are not covered by that licence; see `TRADEMARKS.md`.
+Trucebearer is free software, and as much of it as possible is copyleft. Each folder carries its own `LICENSE`:
+
+| Part | License |
+|---|---|
+| `web/` (the app) | AGPL-3.0-or-later, plus a requirement that modified versions say so in their interface (`web/NOTICE`) |
+| `adjudicator/` (the gem) | AGPL-3.0-or-later |
+| Native app shells (when they exist) | MPL-2.0 |
+| `assets/` and `docs/` | CC BY-SA 4.0 |
+
+You may run Trucebearer under its name and logo, modified or not, commercially or not, as long as you disclose modifications and don't present yourself as the official project. See `TRADEMARKS.md`.
+
+Contributions are welcome and need no paperwork; see `CONTRIBUTING.md`.
 
 ---
 

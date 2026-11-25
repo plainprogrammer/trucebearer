@@ -11,7 +11,7 @@ Trucebearer is a mobile-first web app that helps a group around a physical board
 
 - Start every task inside `adjudicator/` or `web/` and read that folder's `AGENTS.md` before doing anything else.
 - Never change files in the other side's folder. If you need something from the other side, open an Issue with the matching template in `.github/ISSUE_TEMPLATE/` and carry on with what you can do.
-- A pull request touches one side only. Changes to root files (this file, `docs/`, `.github/`, licence files) go in their own pull request.
+- A pull request touches one side only. Changes to root files (this file, `docs/`, `.github/`, license files) go in their own pull request.
 - The app depends on a tagged release of the gem, never on the gem's working copy. See `docs/repository-layout.md`.
 
 ## Shared rules
@@ -21,12 +21,12 @@ Trucebearer is a mobile-first web app that helps a group around a physical board
 - **The name.** "Trucebearer" is always one word. Never give anything (a class, a file, a branch, a gem, a label) a name that contains or echoes "Diplomacy" or "Dip".
 - **No copied rules text.** Never paste text from the game's rulebook or from the DATC (Diplomacy Adjudicator Test Cases) document into code, comments, tests, fixtures or docs. Explain things in your own words and cite the section number.
 - **No copied code.** Other open-source engines may be read as references only. Don't copy or translate their code.
-- **Licence.** All code is AGPL-3.0-or-later (`LICENSE`). The name and logo are covered by `TRADEMARKS.md`, not by the code licence.
+- **License.** Each folder has its own `LICENSE`: `web/` and `adjudicator/` are AGPL-3.0-or-later (the web app with an additional term in `web/NOTICE`), `assets/` and `docs/` are CC BY-SA 4.0, and a future native-shell folder will be MPL-2.0. See `NOTICE` for the map. Use of the name and logo follows `TRADEMARKS.md`.
 - **Fewest moving parts.** Prefer the Ruby standard library and Rails defaults. Adding a dependency needs a reason in the pull request.
 
 ## Where decisions live
 
 - `docs/architecture.md`: the technical decisions both sides build on, and the boundary between the gem and the app.
-- `docs/repository-layout.md`: how this repository is organised and how work moves between the two sides.
+- `docs/repository-layout.md`: how this repository is organized and how work moves between the two sides.
 
 If something you find contradicts a decision there, say so in the Issue or pull request. Don't quietly work around it.
