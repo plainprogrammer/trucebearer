@@ -14,7 +14,7 @@ The technical decisions both sides of the repository build on. If new evidence s
 | Deployment | Kamal to a single server; self-hosters run the same Docker image |
 | Sign-in | Passkeys, with an emailed sign-in link as fallback; no passwords stored |
 | Testing | RSpec on both sides |
-| Licence | AGPL-3.0-or-later for all code, gem included |
+| Licence | AGPL-3.0-or-later for the app (with a section 7(c) disclosure term) and the gem; MPL-2.0 for future native shells; CC BY-SA 4.0 for assets and docs. See `NOTICE` |
 
 ## The adjudicator
 

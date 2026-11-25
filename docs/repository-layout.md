@@ -40,24 +40,25 @@ trucebearer/
 ├── AGENTS.md            shared rules for every agent
 ├── CLAUDE.md            imports AGENTS.md
 ├── README.md
-├── LICENSE              AGPL-3.0-or-later
-├── NOTICE               trademark acknowledgement and credits
-├── TRADEMARKS.md        how the name may and may not be used
-├── assets/              original artwork and docs (CC BY-SA 4.0, once there are any)
-├── docs/                decisions both sides rely on
+├── CONTRIBUTING.md      how contributions are licensed
+├── LICENSE              AGPL-3.0-or-later (root files)
+├── NOTICE               licence map, trademark acknowledgement and credits
+├── TRADEMARKS.md        how the name and logo may be used
+├── assets/              original artwork, icons and the logo (CC BY-SA 4.0)
+├── docs/                decisions both sides rely on (CC BY-SA 4.0)
 ├── .github/
 │   ├── ISSUE_TEMPLATE/  adjudicator request, interface change
 │   ├── pull_request_template.md
 │   └── workflows/       CI (not written yet)
 ├── adjudicator/         the gem
-│   ├── AGENTS.md  CLAUDE.md  README.md  CHANGELOG.md
+│   ├── AGENTS.md  CLAUDE.md  README.md  CHANGELOG.md  LICENSE
 │   ├── bin/             release and development scripts
 │   ├── data/maps/       map definitions as data
 │   ├── docs/            interface.md, ruleset.md
 │   ├── lib/trucebearer/adjudicator/
 │   └── spec/datc/       DATC-derived fixtures
 └── web/                 the Rails app (not generated yet)
-    └── AGENTS.md  CLAUDE.md
+    └── AGENTS.md  CLAUDE.md  LICENSE  NOTICE
 ```
 
 Agent instructions live in `AGENTS.md` files so that tools other than Claude Code can read them. Each `CLAUDE.md` contains one line that imports its `AGENTS.md`. Claude Code loads instruction files from the working folder up to the root, so an agent started in `adjudicator/` sees the root rules and the gem's rules, and never the app's.
@@ -81,9 +82,9 @@ Each pull request touches one side only. Root files change in pull requests of t
 ## Left for the builder
 
 - Generating the Rails app into `web/`. Delete its `.ruby-version` and move any `.github/` it creates to the root.
-- Writing the gem skeleton by hand: gemspec, Gemfile, Rakefile, version file.
+- Writing the gem skeleton by hand: gemspec (`license = "AGPL-3.0-or-later"`, with `LICENSE` in its files), Gemfile, Rakefile, version file.
 - Pinning the Ruby version in a root `.ruby-version`.
 - The release script in `adjudicator/bin/`.
 - The CI workflows.
 - Creating the `adjudicator`, `web` and `interface` labels on GitHub.
-- `assets/LICENSE` (CC BY-SA 4.0), once there are original assets to license.
+- Copying the brand package into `assets/` when the app needs it.
