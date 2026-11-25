@@ -38,6 +38,6 @@ Not yet, and don't build towards these: virtual or mixed-mode play, any rendered
 ## Words on screen
 
 - Never paste rulebook text into help screens or anywhere else. Write explanations from scratch and cite rule sections by number.
-- "Diplomacy" may appear only in plain body text, to describe what the app is for. It is never the largest or most prominent word on a page. Never use words like "official", "licensed" or "authorised".
+- "Diplomacy" may appear only in plain body text, to describe what the app is for. It is never the largest or most prominent word on a page. Never use words like "official", "licensed" or "authorized".
 - No logos, artwork, board images or fonts from any edition of the game.
-- Pick up Issues labelled `web`.
+- Pick up Issues labeled `web`.
