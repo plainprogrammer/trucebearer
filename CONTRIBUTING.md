@@ -4,7 +4,7 @@ Thank you for helping. There is no contributor agreement to sign and no sign-off
 
 ## How your contribution is licensed
 
-A contribution is licensed under the licence of the folder it changes. This is the same "inbound = outbound" rule that GitHub's Terms of Service already apply to every repository that states a licence.
+A contribution is licensed under the nearest `LICENSE` file at or above the file it changes. The one exception is brand artwork (the logo, wordmark and icons), which stays CC BY-SA 4.0 wherever it is copied, including into `web/`. This is the same "inbound = outbound" rule that GitHub's Terms of Service already apply to every repository that states a licence.
 
 | Folder | Licence |
 |---|---|

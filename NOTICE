@@ -7,9 +7,11 @@ Each part of this repository carries its own LICENSE file.
 
   Part                                   Licence
   -------------------------------------  ------------------------------------
-  web/ (the Rails app) and root files    AGPL-3.0-or-later, with an
+  web/ (the Rails app)                   AGPL-3.0-or-later, with an
                                          additional term under section 7(c)
+                                         and a section 7(e) trademark term
                                          (see web/NOTICE)
+  Root files                             AGPL-3.0-or-later
   adjudicator/ (trucebearer-adjudicator) AGPL-3.0-or-later
   Native app shells (when they exist)    MPL-2.0
   assets/ (artwork, icons, the logo      CC BY-SA 4.0

@@ -87,4 +87,7 @@ Each pull request touches one side only. Root files change in pull requests of t
 - The release script in `adjudicator/bin/`.
 - The CI workflows.
 - Creating the `adjudicator`, `web` and `interface` labels on GitHub.
-- Copying the brand package into `assets/` when the app needs it.
+- Copying the brand package into `assets/` when the app needs it. Copies inside `web/` stay CC BY-SA 4.0; `web/NOTICE` already says so.
+- The app's "About this instance" page, linked from every page: the source link that AGPL section 13 requires, the upstream version and commit, whether the build matches a published version, and the operator's description of any modifications (the place the additional term in `web/NOTICE` requires).
+- Never excluding `LICENSE` or `NOTICE` from the Docker image through `.dockerignore`.
+- A pointer to `web/NOTICE` in each source file's header, if the attorney says AGPL section 7 needs one (guardrails question 11).

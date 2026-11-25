@@ -2,7 +2,7 @@
 
 Trucebearer™ and the Trucebearer logo are trademarks of James Thompson. They are not registered. This policy says how anyone may use them, and it is short because the answer is almost always "go ahead".
 
-The code licences cover copyright, not trademarks. AGPL section 7(e) and CC BY-SA 4.0 section 2(b)(2) both say so. The logo artwork is licensed under CC BY-SA 4.0 (`assets/LICENSE`). This policy covers using the name and logo to identify something.
+The code licences cover copyright, not trademarks. The web app's licence declines trademark rights in a term under AGPL section 7(e) (`web/NOTICE`), and CC BY-SA 4.0 section 2(b)(2) excludes them expressly. The logo artwork is licensed under CC BY-SA 4.0 (`assets/LICENSE`). This policy covers using the name and logo to identify something.
 
 ## You may, without asking
 
@@ -14,7 +14,7 @@ The code licences cover copyright, not trademarks. AGPL section 7(e) and CC BY-S
 
 ## Provided that
 
-If your instance or fork is modified, you disclose that to the people who use it. The web app's licence already requires this. See the additional term under AGPL section 7(c) in `web/NOTICE`: a modified version must say in its interface that it has been modified, briefly describe the changes, and give the date. Configuring the app through its supported settings and environment variables is not a modification.
+If your instance or fork is modified, you disclose that to the people who use it. For the web app, its licence already requires this. See the additional term under AGPL section 7(c) in `web/NOTICE`: a modified version must say in its interface that it has been modified, briefly describe the changes, and give the date. Configuration and deployment settings don't count as modifications. For a fork of the `trucebearer-adjudicator` gem alone, the modification notices that AGPL section 5(a) already requires are enough.
 
 ## You may not
 

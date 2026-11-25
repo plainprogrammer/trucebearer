@@ -18,8 +18,13 @@ Source under section 13, a notice that the program has been modified, a
 short description of the modifications, and the date of the most recent
 modification. "Modified" means any change to the source code of this
 program or of the bundled trucebearer-adjudicator gem, compared with a
-tagged release published by the original author. Configuring the program
-through the settings and environment variables it supports is not a
+version James Thompson published in the official repository
+(https://github.com/plainprogrammer/trucebearer) or as an official
+container image. The following are not modifications: configuring the
+program through the settings and environment variables it supports;
+changing deployment files that do not alter the program's behaviour (for
+example Kamal's config/deploy.yml and secrets); and moving to another
+published version. Changing or updating any other dependency is a
 modification.
 
 This term is permitted by section 7(c) of the license. It is not a
@@ -27,10 +32,21 @@ This term is permitted by section 7(c) of the license. It is not a
 
 Trademarks
 ----------
-The Trucebearer name and logo are trademarks of James Thompson. Anyone may
-use them for an instance of this program, modified or not, on the terms in
-TRADEMARKS.md in the project's repository:
+Under section 7(e) of the license, this license does not grant rights
+under trademark law for use of the Trucebearer name or logo. The
+Trucebearer name and logo are trademarks of James Thompson. Anyone may
+use them for an instance of this program, modified or not, on the terms
+in TRADEMARKS.md in the project's repository:
 https://github.com/plainprogrammer/trucebearer/blob/main/TRADEMARKS.md
+
+Artwork
+-------
+The Trucebearer logo, wordmark and icons are licensed under the Creative
+Commons Attribution-ShareAlike 4.0 International License
+(https://creativecommons.org/licenses/by-sa/4.0/), (C) 2026 James
+Thompson, wherever they are copied in this repository, including into
+this folder. The wordmark is set in Fraunces, an SIL Open Font License
+1.1 typeface by The Fraunces Project Authors, outlined to vector shapes.
 
 Trucebearer is an independent, unofficial companion for playing the board
 game Diplomacy. Diplomacy(R) is a registered trademark of Hasbro, Inc.
