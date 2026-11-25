@@ -39,6 +39,7 @@ For how the app depends on the gem:
 trucebearer/
 ├── AGENTS.md            shared rules for every agent
 ├── CLAUDE.md            imports AGENTS.md
+├── .ruby-version        the Ruby both sides use
 ├── README.md
 ├── CONTRIBUTING.md      how contributions are licensed
 ├── LICENSE              AGPL-3.0-or-later (root files)
@@ -83,7 +84,6 @@ Each pull request touches one side only. Root files change in pull requests of t
 
 - Generating the Rails app into `web/`. Delete its `.ruby-version` and move any `.github/` it creates to the root.
 - Writing the gem skeleton by hand: gemspec (`license = "AGPL-3.0-or-later"`, with `LICENSE` in its files), Gemfile, Rakefile, version file.
-- Pinning the Ruby version in a root `.ruby-version`.
 - The release script in `adjudicator/bin/`.
 - The CI workflows.
 - Creating the `adjudicator`, `web` and `interface` labels on GitHub.

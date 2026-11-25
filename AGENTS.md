@@ -14,9 +14,17 @@ Trucebearer is a mobile-first web app that helps a group around a physical board
 - A pull request touches one side only. Changes to root files (this file, `docs/`, `.github/`, license files) go in their own pull request.
 - The app depends on a tagged release of the gem, never on the gem's working copy. See `docs/repository-layout.md`.
 
+## Choosing an Issue
+
+- Work only on Issues labeled for your side: `adjudicator` or `web`. Root files are labeled `repo`.
+- Take an Issue only when every Issue listed under its "Needs" heading, and in GitHub's "blocked by" list, is closed.
+- Never work on `decision` Issues. People settle those in planning.
+- Leave `blocked` Issues alone until the release they wait for exists.
+- Start with the lowest-numbered ready Issue in the current milestone.
+
 ## Shared rules
 
-- **Ruby 4.x** on both sides. The exact version will be pinned in a root `.ruby-version` once it is chosen. Don't add a `.ruby-version` inside either folder.
+- **Ruby** is pinned in the root `.ruby-version` for both sides. Don't add a `.ruby-version` inside either folder. The upgrade policy is in `docs/architecture.md`.
 - **Test first, with RSpec**, on both sides.
 - **The name.** "Trucebearer" is always one word. Never give anything (a class, a file, a branch, a gem, a label) a name that contains or echoes "Diplomacy" or "Dip".
 - **No copied rules text.** Never paste text from the game's rulebook or from the DATC (Diplomacy Adjudicator Test Cases) document into code, comments, tests, fixtures or docs. Explain things in your own words and cite the section number.
