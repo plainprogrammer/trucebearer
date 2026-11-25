@@ -1,19 +1,40 @@
 Trucebearer
 Copyright (C) 2026 James Thompson
 
-This program is free software, licensed under the GNU Affero General Public
-License, version 3 or (at your option) any later version. See LICENSE.
+Licences
+--------
+Each part of this repository carries its own LICENSE file.
+
+  Part                                   Licence
+  -------------------------------------  ------------------------------------
+  web/ (the Rails app) and root files    AGPL-3.0-or-later, with an
+                                         additional term under section 7(c)
+                                         (see web/NOTICE)
+  adjudicator/ (trucebearer-adjudicator) AGPL-3.0-or-later
+  Native app shells (when they exist)    MPL-2.0
+  assets/ (artwork, icons, the logo      CC BY-SA 4.0
+    and wordmark artwork)
+  docs/                                  CC BY-SA 4.0
+
+The additional term in web/NOTICE requires a modified version of the web
+app to say, in its interface, that it has been modified and how. It is a
+draft pending attorney review.
+
+The wordmark is set in Fraunces, (C) The Fraunces Project Authors, under
+the SIL Open Font License 1.1, outlined to vector shapes.
 
 Trademarks
 ----------
+The Trucebearer name and logo are trademarks of James Thompson. Anyone may
+use them, including commercially and on forks, provided modifications are
+disclosed and nobody claims to be the official project or to be endorsed
+by it. See TRADEMARKS.md.
+
 Trucebearer is an independent, unofficial companion for playing the board
 game Diplomacy. Diplomacy(R) is a registered trademark of Hasbro, Inc.
 Trucebearer is not affiliated with, sponsored or endorsed by Hasbro,
 Avalon Hill or Renegade Game Studios. Please support the game by buying
 a copy.
-
-The Trucebearer name and logo are not licensed under the AGPL. See
-TRADEMARKS.md.
 
 Credits
 -------
