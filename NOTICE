@@ -1,0 +1,25 @@
+Trucebearer
+Copyright (C) 2026 James Thompson
+
+This program is free software, licensed under the GNU Affero General Public
+License, version 3 or (at your option) any later version. See LICENSE.
+
+Trademarks
+----------
+Trucebearer is an independent, unofficial companion for playing the board
+game Diplomacy. Diplomacy(R) is a registered trademark of Hasbro, Inc.
+Trucebearer is not affiliated with, sponsored or endorsed by Hasbro,
+Avalon Hill or Renegade Game Studios. Please support the game by buying
+a copy.
+
+The Trucebearer name and logo are not licensed under the AGPL. See
+TRADEMARKS.md.
+
+Credits
+-------
+The adjudicator's test suite is specified by the Diplomacy Adjudicator Test
+Cases (DATC) by Lucas B. Kruijswijk. The scenarios are encoded as original
+test fixtures; no text from that document is reproduced here.
+
+The adjudication approach follows Lucas B. Kruijswijk's "The Math of
+Adjudication".

@@ -1,0 +1,9 @@
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Each side keeps its own .gitignore for build and runtime files.
