@@ -22,6 +22,13 @@ Trucebearer is a mobile-first web app that helps a group around a physical board
 - Leave `blocked` Issues alone until the release they wait for exists.
 - Start with the lowest-numbered ready Issue in the current milestone.
 
+## Specs
+
+- A feature Issue gets a written spec before any plan or code. Chores, releases and `decision` Issues don't. Work from their "Done when" list instead.
+- Specs live on the side they describe, in `adjudicator/docs/specs/` or `web/docs/specs/`. Each spec ships in the same one-side pull request as its code.
+- Name each spec folder after its Issue: the Issue number padded to three digits, then a short slug. For example, Issue 21 becomes `web/docs/specs/021-create-game-join-qr/`.
+- `docs/architecture.md` stays the single record of decisions. A spec that would contradict it raises an Issue first.
+
 ## Shared rules
 
 - **Ruby** is pinned in the root `.ruby-version` for both sides. Don't add a `.ruby-version` inside either folder. The upgrade policy is in `docs/architecture.md`.
