@@ -1,7 +1,7 @@
 # Feature 028: Resume a game in a later session
 
 **Status:** Draft
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #28
@@ -13,7 +13,8 @@
 
 | Version | Date | Change |
 |---------|------|--------|
-| 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **B1:** the layout's CSRF tags make Rails set its session cookie on `GET /`, so "no `Set-Cookie`" is gone: the page sets and deletes no `host_`, `seat_` or `step_in_` cookie (D7, AC-1.6, AC-2.3).<br>• **B2:** spec 022's route table (FR-9) calls `GET /` "no game data"; D10 and AC-8.6 amend it.<br>• **B3:** the host on a fresh phone reaches the host's own seat by reissuing it, which clears that seat's saved orders; D5, the Problem Statement, AC-7.3 and the Gate A question say so, and the dead "Your own seat" link on the host page is a follow-up Issue.<br>• Minors: an identity proof for the home page (AC-3.4), backdated games and distinct powers (AC-3.2), a seat cookie re-signed under another name (AC-3.3), the first 40 ids in request order and at most three queries (D2, AC-3.6), `PUBLIC_ID_SHAPE` reused, `own_seat_target` reused for hosts, the "Your games" heading defined, AC-3.10 and AC-4.4 reworded, `web/README.md`, `StepInsHelper#table_zone`, how a session end is simulated, and the shared stylesheet budget. |
+| 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): AC-3.4 normalizes the CSRF token as the sweep does, AC-3.6 fixes the cookie order with a raw header, a stale AC number, "the queries", and AC-8.5 takes the next free minor. |
+| 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **B1:** the layout's CSRF tags make Rails set its session cookie on `GET /`, so "no `Set-Cookie`" is gone: the page sets and deletes no `host_`, `seat_` or `step_in_` cookie (D7, AC-1.6, AC-2.3).<br>• **B2:** spec 022's route table (FR-9) calls `GET /` "no game data"; D10 and AC-8.6 amend it.<br>• **B3:** the host on a fresh phone reaches the host's own seat by reissuing it, which clears that seat's saved orders; D5, the Problem Statement, AC-7.3 and the Gate A question say so, and the dead "Your own seat" link on the host page is a follow-up Issue.<br>• Minors: an identity proof for the home page (AC-3.4), backdated games and distinct powers (AC-3.2), a seat cookie re-signed under another name (AC-3.3), the first 40 ids in request order and at most three queries (D2, AC-3.6), `PUBLIC_ID_SHAPE` reused, `own_seat_target` reused for hosts, the "Your games" heading defined, AC-3.12 and AC-4.4 reworded, `web/README.md`, `StepInsHelper#table_zone`, how a session end is simulated, and the shared stylesheet budget. |
 | 1.0.0 | 2026-11-26 | First draft |
 
 ## Problem Statement
@@ -163,9 +164,9 @@ No route is added.
 - [ ] **AC-3.1** Given three games A, B and C and four browsers: one with A's seat, one with B's seat and C's host cookie, one with no cookie, one with every cookie named for A, B and C holding junk When each requests `/` Then the first lists exactly A, the second exactly B and C, the third and fourth none; the list is read from the cards' hrefs. The games have distinct powers for their seats, and each game's `created_at` is set to a different day
 - [ ] **AC-3.2** Given each of those pages Then the body contains no other game's public id, join code, phase title (the games' positions are edited so the titles differ), start date (the games are backdated to different days) or power name (the hosts and seats of A, B and C hold different powers, so a power that belongs to a game the viewer has no card for is absent), and contains no join code at all
 - [ ] **AC-3.3** Given a cookie `seat_<A>` that holds B's raw `seat_<B>` value (it fails at the signature), or one freshly signed under A's name that carries B's seat token (it fails at the digest check), or `host_<A>` that holds A's seat token, or a seat cookie whose seat was reissued (the old token), or a cookie whose value is not signed, or a tampered signed value, or a cookie named for a game that does not exist When the browser requests `/` Then that cookie lists no game and the request does not fail
-- [ ] **AC-3.4** Given `/` requested with junk cookies named for an existing game, with junk named for a game that does not exist (`MISSING_ID`), and with no cookie at all Then the three responses are identical under `comparable`: status, body (the CSRF token normalized), the three headers and the cookie lines (`GameFlow#junk_session` builds the inputs)
+- [ ] **AC-3.4** Given `/` requested with junk cookies named for an existing game, with junk named for a game that does not exist (`MISSING_ID`), and with no cookie at all Then the three responses are identical under `comparable`, with the CSRF token normalized as the sweep's `normalized` does: status, body, the three headers and the cookie lines (`GameFlow#junk_session` builds the inputs)
 - [ ] **AC-3.5** Given a cookie name that does not have the shape of a public id (`seat_short`, `host_` followed by 13 characters, `seat_<id>x`, `step_in_<id>`, a name with a dot or a slash) Then it is ignored and the request does not fail
-- [ ] **AC-3.6** Given a browser that sends cookies for 60 distinct valid-shaped ids, the 41st of them a valid seat cookie Then the request answers 200 and the 41st game is not listed (the first 40 in request order are examined)
+- [ ] **AC-3.6** Given a browser that sends cookies for 60 distinct valid-shaped ids, the 41st of them a valid seat cookie Then the request answers 200 and the 41st game is not listed (the first 40 in request order are examined; the test sends a raw `Cookie` header, so the order is its own)
 - [ ] **AC-3.7** Given any browser, with 0, 1 or 60 cookies Then the request makes at most three queries for games, seats and phases (counted with `ActiveSupport::Notifications`, the schema and transaction queries excluded)
 - [ ] **AC-3.8** Given a reissued seat When the old phone requests `/` Then it lists no game for that seat, and the new phone, after the seat link, lists it
 - [ ] **AC-3.9** Given the invariance sweep's six viewers (another seat, the host with a seat, the host with no seat, a stranger, the host wearing France's cookie, the host stepped into France) When each requests `/` Then it lists exactly: France's game for another seat; the game linked to the seat page with "You host this game" for the host with a seat; the game linked to the host page for the host with no seat; nothing for the stranger; the host page card for the host wearing France's cookie; the host page card for the host stepped into France
@@ -225,7 +226,7 @@ No route is added.
 - [ ] **AC-8.2** Given `web/docs/design-system.md` Then the `.game-card` line names #28, says "built", names the partial `home/_game_card` and the helper, and reads "Start date, phase header, your power"
 - [ ] **AC-8.3** Given the stylesheets Then `.game-card` uses tokens only (no raw color, `stylesheet_rules_spec` passes), the total stays at or under 32,768 bytes, and `.game-card` plus the sample use at most 2,800 bytes
 - [ ] **AC-8.4** Given `web/README.md` Then a section "Coming back to a game" says what the home page lists, that it reads signed cookies only, that a lost cookie is fixed by the host reissuing the seat, and the optional `TRUCEBEARER_TIME_ZONE` for the date
-- [ ] **AC-8.5** Given spec 021 Then its changelog has a 1.5.0 row for spec 028 that names AC-2.1, the URL table's home page row and the stranger page, its version line is at least 1.5.0, and `spec_amendments_spec.rb` checks the row
+- [ ] **AC-8.5** Given spec 021 Then its changelog has a row for spec 028 (1.5.0, or the next free minor if another amendment comes first) that names AC-2.1, the URL table's home page row and the stranger page, its version line is at least that row's, and `spec_amendments_spec.rb` checks the row
 - [ ] **AC-8.6** Given spec 022 Then its changelog has a row for spec 028 (the next free minor) that names FR-9 and `GET /`, FR-9's table row for `/` reads "No order" and says it lists the games the cookies verify for, its version line is at least that row's, and `spec_amendments_spec.rb` checks the row
 
 ## Functional Requirements
@@ -256,7 +257,7 @@ One partial, `shared/_lost_seat`, with no locals.
 
 ### Reliability
 
-- A bad cookie never raises. A game that vanishes between the two queries is dropped.
+- A bad cookie never raises. A game that vanishes between the queries is dropped.
 
 ### Accessibility and layout
 
