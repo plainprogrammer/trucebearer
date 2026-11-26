@@ -20,14 +20,28 @@ RSpec.describe "TA.adjudicate: dislodgement, battles and circles" do
       expect(result.outcomes.last.dislodged).to be(true)
     end
 
-    it "flags a failed move, a support and a convoy that were dislodged, on the order each followed (AC-9.2)" do
-      units = [u(:germany, :army, "ber"), u(:germany, :fleet, "kie"), u(:russia, :fleet, "bal"), u(:russia, :army, "pru"),
-               u(:russia, :army, "sil"), u(:germany, :army, "mun")]
-      result = run(units, [mv(:germany, :ber, "pru"), sh(:germany, :kie, :ber), sh(:russia, :bal, :pru),
-                           mv(:russia, :pru, "ber"), mv(:russia, :sil, "mun"), sm(:germany, :mun, :ber, :pru)])
-      flags = result.outcomes.to_h { [_1.order.at, _1.dislodged] }
-      expect(flags.values.count(true)).to eq(result.position.dislodged_units.size)
-      expect(result.position.dislodged_units.map { _1.unit.location.province }).to all(satisfy { |province| flags[province] })
+    it "flags a dislodged unit's failed move, in the order it followed (AC-9.2)" do
+      units = [u(:austria, :army, "vie"), u(:germany, :army, "boh"), u(:italy, :army, "tri"), u(:italy, :army, "tyr")]
+      result = run(units, [mv(:austria, :vie, "boh"), mv(:italy, :tri, "vie"), sm(:italy, :tyr, :tri, :vie)])
+      expect(results(result, 3)).to eq(%i[bounced succeeded given])
+      expect(result.outcomes.map { [_1.order.at, _1.dislodged] }.select(&:last)).to eq([[:vie, true]])
+      expect(dislodged(result)).to eq(vie: :tri)
+    end
+
+    it "flags a dislodged supporter, whose support is cut (AC-9.2)" do
+      units = [u(:austria, :army, "vie"), u(:austria, :army, "gal"), u(:italy, :army, "tri"), u(:italy, :army, "tyr")]
+      result = run(units, [sh(:austria, :vie, :gal), mv(:italy, :tri, "vie"), sm(:italy, :tyr, :tri, :vie)])
+      expect(results(result, 3)).to eq(%i[cut succeeded given])
+      expect(result.outcomes.map { [_1.order.at, _1.dislodged] }.select(&:last)).to eq([[:vie, true]])
+      expect(dislodged(result)).to eq(vie: :tri)
+    end
+
+    it "flags a dislodged convoying fleet, whose convoy order is unmatched in this release (AC-9.2)" do
+      units = [u(:england, :army, "lon"), u(:england, :fleet, "nth"), u(:germany, :fleet, "hel"), u(:germany, :fleet, "ska")]
+      result = run(units, [cv(:england, :nth, :lon, :nwy), mv(:germany, :hel, "nth"), sm(:germany, :ska, :hel, :nth)])
+      expect(results(result, 3)).to eq(%i[unmatched succeeded given])
+      expect(result.outcomes.map { [_1.order.at, _1.dislodged] }.select(&:last)).to eq([[:nth, true]])
+      expect(dislodged(result)).to eq(nth: :hel)
     end
 
     it "keeps a dislodged fleet's coast, and names the attacker's province with no coast (AC-9.3)" do

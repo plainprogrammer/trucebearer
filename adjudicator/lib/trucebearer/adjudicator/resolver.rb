@@ -20,9 +20,12 @@ module Trucebearer
         def destination = order.is_a?(Order::Move) ? order.destination.province : order.to
       end
 
-      # True when the last-resort rule ran: moves still undecided after the circle rule all
-      # failed. It can't run without convoys (docs/specs/014-adjudicate-movement/spec.md, "The
-      # paradox flag"), and #15 decides what it becomes.
+      # True when the last-resort rule ran: the moves on the cycles that are stuck failed. It
+      # can't run in this release: a move that goes by convoy fails at once, so every other
+      # undecided move waits on at most one move, and the cycles that remain are circles that
+      # `circle_pass` decides (docs/specs/014-adjudicate-movement/spec.md, "The paradox flag").
+      # #15 makes it reachable, once whether a convoy route works depends on a fleet that may
+      # be dislodged, and decides what it becomes.
       attr_reader :paradox
 
       def initialize(position, orders)
@@ -46,7 +49,7 @@ module Trucebearer
         case entry.order
         when Order::Hold then :held
         when Order::Move, Order::MoveViaConvoy
-          return :no_route if convoy?(entry)
+          return :no_route unless path?(entry)
 
           succeeded?(entry) ? :succeeded : :bounced
         when Order::SupportHold, Order::SupportMove then support_result(entry)
@@ -111,7 +114,8 @@ module Trucebearer
         end
       end
 
-      # The one place a later release decides whether a convoy route works (#15).
+      # The one place a later release decides whether a convoy route works (#15). `result` reads
+      # it too, so a move without a route is :no_route.
       def path?(move) = !convoy?(move)
 
       def destination_location(entry)
@@ -120,7 +124,7 @@ module Trucebearer
 
       def hold_supporters(province)
         @entries.select do |entry|
-          entry.order.is_a?(Order::SupportHold) && entry.order.target == province && !@at[province].move?
+          entry.order.is_a?(Order::SupportHold) && entry.order.target == province
         end
       end
 
@@ -156,10 +160,9 @@ module Trucebearer
         end
       end
 
-      # Nothing can be decided and no circle of three or more is left. Without convoys this
-      # can't happen (docs/specs/014-adjudicate-movement/spec.md, "The paradox flag"). The moves
-      # on the cycles that are stuck fail, or every undecided move if there is no cycle, so the
-      # loop always ends.
+      # Nothing can be decided and no circle of three or more is left. This can't happen in
+      # this release (see `paradox`). The moves on the cycles that are stuck fail, or every
+      # undecided move if there is no cycle, so the loop always ends.
       def last_resort
         stuck = cycles.flatten
         stuck = @moves.select { |move| @state[move].nil? } if stuck.empty?

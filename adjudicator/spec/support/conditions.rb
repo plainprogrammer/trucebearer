@@ -30,9 +30,29 @@ module Conditions
       problems << "#{label(entry)}: #{support_problem(entry, at, into)}" if entry.support? && support_problem(entry, at, into)
       problems << "#{label(entry)}: #{move_problem(entry, at, into, entries)}" if entry.move? && move_problem(entry, at, into, entries)
     end
+    problems.concat(circle_problems(entries))
     problems.concat(dislodgement_problems(position, adjudication, entries, into))
     problems.concat(standoff_problems(position, adjudication, entries, at, into))
     problems
+  end
+
+  # Moves that go around a circle of three or more units, each into the province the next
+  # one leaves, all succeed or all fail: each one succeeds only if the next unit leaves.
+  def circle_problems(entries)
+    moves = entries.select(&:move?).to_h { |move| [move.province, move] }
+    seen = []
+    moves.values.filter_map do |start|
+      path = [start]
+      path << moves[path.last.destination] while moves[path.last.destination] && !path.include?(moves[path.last.destination])
+      follower = moves[path.last.destination]
+      next unless follower && path.include?(follower)
+
+      circle = path[path.index(follower)..]
+      next if circle.size < 3 || circle.intersect?(seen)
+
+      seen.concat(circle)
+      "a circle of #{circle.map(&:province).inspect} moves only in part" if circle.map { |move| succeeded?(move) }.uniq.size > 1
+    end
   end
 
   def entries_of(position, adjudication)

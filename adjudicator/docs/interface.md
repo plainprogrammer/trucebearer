@@ -583,11 +583,13 @@ TA::CheckResult.new(legal: false, reasons: [])
 TA::CheckResult.new(legal: false, reasons: [:own_province, :not_reachable])
 
 # From 0.2.0: an outcome with a result its order class can't have, a void order that is dislodged,
-# or an implied hold that isn't a held Hold.
+# a move that succeeded and was dislodged, or an implied hold that isn't a held Hold.
 hold = O::Hold.new(power: :england, at: :lon)
 TA::Outcome.new(order: hold, result: :bounced, submitted: true, dislodged: false)
 TA::Outcome.new(order: hold, result: :void, submitted: true, dislodged: true)
 TA::Outcome.new(order: hold, result: :void, submitted: false, dislodged: false)
+TA::Outcome.new(order: O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth)),
+                result: :succeeded, submitted: true, dislodged: true)   # a unit that moved isn't dislodged
 
 # From 0.2.0: an adjudication with a submitted outcome after an implied hold, with implied holds
 # that aren't in ascending order of province, or with two submitted outcomes for one power and

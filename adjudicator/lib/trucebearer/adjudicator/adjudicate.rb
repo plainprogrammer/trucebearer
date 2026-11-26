@@ -24,20 +24,21 @@ module Trucebearer
       end
 
       def build(position, orders)
-        legal = orders.reject { |order| Check.reason_for(position, order) }
+        reasons = orders.map { |order| Check.reason_for(position, order) }
+        legal = orders.zip(reasons).filter_map { |order, reason| order unless reason }
         by_province = legal.to_h { |order| [order.at, order] }
         followed = position.units.map do |unit|
           by_province[unit.location.province] || Order::Hold.new(power: unit.power, at: unit.location.province)
         end
         resolver = Resolver.new(position, followed)
 
-        Adjudication.new(outcomes: submitted_outcomes(position, orders, resolver) + implied_outcomes(position, by_province, resolver),
+        Adjudication.new(outcomes: submitted_outcomes(orders, reasons, resolver) + implied_outcomes(position, by_province, resolver),
                          paradox: resolver.paradox, position: next_position(position, resolver))
       end
 
-      def submitted_outcomes(position, orders, resolver)
-        orders.map do |order|
-          if Check.reason_for(position, order)
+      def submitted_outcomes(orders, reasons, resolver)
+        orders.zip(reasons).map do |order, reason|
+          if reason
             Outcome.new(order: order, result: :void, submitted: true, dislodged: false)
           else
             entry = resolver.entry_at(order.at)

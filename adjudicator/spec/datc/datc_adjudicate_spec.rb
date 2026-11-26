@@ -19,7 +19,7 @@ RSpec.describe "DATC fixtures: adjudication" do
     expect(cases.map(&:id) & left_out).to eq([])
   end
 
-  it "marks only 6.B.2 and 6.B.12 as departures, and their results are the strict ones (AC-8.4)" do
+  it "marks only 6.B.2 and 6.B.12 as departures, and their results are the strict ones (AC-11.3)" do
     expect(cases.select(&:departure).map(&:id).sort).to eq(%w[6.B.12 6.B.2])
     %w[6.B.2 6.B.12].each do |id|
       kase = cases.find { _1.id == id }

@@ -147,6 +147,8 @@ RSpec.describe "TA.adjudicate: the examples of docs/interface.md" do
       expect { TA::Outcome.new(order: hold, result: :bounced, submitted: true, dislodged: false) }.to raise_error(TA::InvalidInput)
       expect { TA::Outcome.new(order: hold, result: :void, submitted: true, dislodged: true) }.to raise_error(TA::InvalidInput)
       expect { TA::Outcome.new(order: hold, result: :void, submitted: false, dislodged: false) }.to raise_error(TA::InvalidInput)
+      move = O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth))
+      expect { TA::Outcome.new(order: move, result: :succeeded, submitted: true, dislodged: true) }.to raise_error(TA::InvalidInput)
     end
 
     it "refuses the impossible adjudications of ### Impossible objects" do
