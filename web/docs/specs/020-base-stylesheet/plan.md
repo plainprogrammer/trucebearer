@@ -3005,3 +3005,24 @@ Gaps: none. Placeholder scan: none. Type check: `IconHelper#unit_icon`, `#supply
 | The in-browser font checks (the face loads, every request is to this origin) live in `spec/system/font_spec.rb` in Phase 9, not in Phase 11 | The plan review: they depend on the font and the stylesheet, not on the new style guide sections, so they fail first in Phase 9 |
 | Phase 10 ran straight after Phase 7, then 8, 9, 11, 12, 13 | The plan review: Phase 7's spec stays red until the helper exists, and a red file stops a whole run |
 | Screenshot `styleguide-360-top.png` was added beside the three planned ones | It shows the header, which is the maintainer's design call |
+
+## Implementation review (version 2.0)
+
+A read-only Opus review of the whole branch against spec 2.0.2 and these phases. Verdict: GAPS, for one blocking finding. Nothing is left without proof, and the palette and power values match Issue #81 exactly.
+
+| # | Finding | Handling |
+|---|---|---|
+| 1 (blocking) | `.sg-unit__name { min-width: 5rem }` is a raw size outside the token file (FR-2) | Fixed: `calc(var(--space-8) + var(--space-4))`, which is the same 5rem |
+| 2 | New code in `StyleguideHelper`, the style guide request spec and the view was at the wrong indentation | Fixed: re-indented. (My scripted edits had stripped it) |
+| 3 | Two spec table rows were merged into one line, so the 404 row did not render | Fixed |
+| 4 | The AC-4.4 selector check was anchored only at the end, so `.button .unit-icon--austria` passed | Fixed test first: anchored at both ends, with two negative examples |
+| 5 | The unit color checks read only the first icon (always the 20 pixel army) | Fixed: every icon of every power is read (six per power: army and fleet, at 20, 32 and 48) |
+| 6 | The AC-7.10 check did not tie each name to its row's icon | Fixed: all eight supply-center names, and each row's name equals its icon's power |
+| 7 | The tag's initial went through `format` into a raw XML string | Fixed: the tag is parsed first and the initial is set as text |
+| 8 | The artwork's generic `class="mark"` would collide with any future `.mark` rule | Fixed test first: each mark also carries `unit-icon__mark` |
+| 9 | The AC-4.6 doc check (`/fixed/`, `/no edition/`) would pass on almost any text | Fixed: it matches "decision 42", "sampled, traced or looked up" and "no edition was consulted" |
+| 10 | The root `NOTICE` license map does not mention the OFL font or the CC BY-SA copies inside `web/` | Not mine to fix (a root file). The coordinator opened Issue #88 and the pull request cites it |
+| 11 | `unit_icon` draws any size, but the AC-1.1 exemption covers only 20 to 48 pixels | Fixed: `design-system.md` says sizes under 20 are outside the exemption |
+| 12 | For information: `styleguide.css` has about 400 bytes left; the Phase 1 code block above still quotes the old comment | No action. The 2.0 header says later phases win |
+
+Not checked by the reviewer: the helper, request and system specs (they need Rails and Chrome), and the font against the npm tarball. The worker ran the specs (152 examples, 0 failures), and checked the tarball's sha1 and the file's SHA-256 against the registry and `web/NOTICE` while fetching it.

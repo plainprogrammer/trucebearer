@@ -545,7 +545,8 @@ When version 1.2.1 was approved the Gemfile had no browser-driving gem, so geome
 | `supply_center_icon` gets an unknown owner or a bad size | It raises `ArgumentError`. A `nil` owner is the unowned look, not an error |
 | A unit icon is shown at 20 pixels | The `-small` drawing is used, and the tag's initial is very small. The icon is still labelled, and in a list the power is named beside it |
 | The font file fails to load | `swap` keeps the fallback monospace on screen, and nothing else depends on the font. Icons and layout are unchanged |
-| A copy of a drawing no longer matches its master | The file spec fails and names the file. Note: `.github/workflows/web.yml` runs only on `web/**` changes, so a pull request that edits a master alone (a `repo` change) does not run it, and the failure shows on the next web pull request. Adding `assets/icons/**` to that workflow's paths is a root change with its own Issue (#86), and is not made here || A request for `/styleguide` in production | 404 |
+| A copy of a drawing no longer matches its master | The file spec fails and names the file. Note: `.github/workflows/web.yml` runs only on `web/**` changes, so a pull request that edits a master alone (a `repo` change) does not run it, and the failure shows on the next web pull request. Adding `assets/icons/**` to that workflow's paths is a root change with its own Issue (#86), and is not made here |
+| A request for `/styleguide` in production | 404 |
 | The stylesheet is blocked or fails to load | The page is still readable and usable as plain, unstyled HTML, since no content comes from CSS |
 
 ## Open Questions

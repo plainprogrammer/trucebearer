@@ -39,6 +39,7 @@ RSpec.describe IconHelper, type: :helper do
       expect(svg.css("[id]")).to be_empty
       expect(svg.at_css("path.unit-icon__silhouette")).not_to be_nil
       expect(svg.at_css("g.unit-icon__marks .mark")).not_to be_nil
+      expect(svg.css(".mark").map { |m| m["class"].split }).to all(include("unit-icon__mark"))
       expect(html).not_to match(/url\(|<style|<image|<script|<title|style=/i)
     end
 

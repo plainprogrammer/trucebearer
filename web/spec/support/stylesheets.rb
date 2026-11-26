@@ -106,7 +106,7 @@ module Stylesheets
     out << "#{label}: color-mix" if css.include?("color-mix(")
     rules(css).each do |selector, body|
       next unless body.include?("var(--color-power-")
-      next if selector.split(",").all? { |part| part.strip.match?(/\.(?:power-badge|unit-icon|supply-center-icon)--(?:austria|england|france|germany|italy|russia|turkey)\z/) }
+      next if selector.split(",").all? { |part| part.strip.match?(/\A\.(?:power-badge|unit-icon|supply-center-icon)--(?:austria|england|france|germany|italy|russia|turkey)\z/) }
       out << "#{label}: --color-power- used outside a power badge rule (#{selector})"
     end
     out

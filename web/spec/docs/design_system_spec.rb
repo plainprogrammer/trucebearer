@@ -23,7 +23,9 @@ RSpec.describe "The design-system document (AC-9.1, 9.2)" do
   end
 
   it "says the power values are fixed and that no edition was consulted (AC-4.6)" do
+    expect(doc).to include("decision 42")
     expect(doc).to match(/fixed/i)
-    expect(doc).to match(/no edition/i)
+    expect(doc).to include("sampled, traced or looked up")
+    expect(doc).to match(/no edition was consulted/i)
   end
 end

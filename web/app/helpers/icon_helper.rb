@@ -15,7 +15,7 @@ module IconHelper
   TAG = <<~SVG.strip.freeze
     <g class="unit-icon__tag" aria-hidden="true">
       <rect class="unit-icon__tag-tile" x="20.75" y="20.75" width="10.5" height="10.5" stroke-width="1.5"/>
-      <text class="unit-icon__tag-initial mono" x="26" y="28.8" text-anchor="middle" font-size="8">%<initial>s</text>
+      <text class="unit-icon__tag-initial mono" x="26" y="28.8" text-anchor="middle" font-size="8"></text>
     </g>
   SVG
 
@@ -28,7 +28,8 @@ module IconHelper
     name = PowerBadgeHelper::POWER_NAMES.fetch(key)
     file = size < SMALL_BELOW ? "#{type_key}-small" : type_key
     svg = icon_svg(file, "unit-icon", "unit-icon unit-icon--#{key}", size, "#{UNIT_TYPES.fetch(type_key)}, #{name}", decorative)
-    svg.add_child(format(TAG, initial: name[0]))
+    tag = svg.add_child(TAG).first
+    tag.at_xpath(".//*[local-name()='text']").content = name[0] # set as text, so a name is never read as markup
     svg_markup(svg)
   end
 
@@ -68,6 +69,8 @@ module IconHelper
       part.remove_attribute("id")
       part["class"] = [ part["class"], "#{block}__#{id}" ].compact.join(" ")
     end
+    # The artwork marks its white shapes with a generic class; give them one of this block, too.
+    svg.xpath(".//*[@class='mark']").each { |mark| mark["class"] = "mark #{block}__mark" }
     svg
   end
 

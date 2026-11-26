@@ -175,6 +175,8 @@ RSpec.describe "Stylesheet rules" do
       expect(found(".supply-center-icon--austria { --_owner: var(--color-power-austria); }")).to be_empty
       expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
       expect(found(".unit-icon { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".button .unit-icon--austria { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".app-main .power-badge--austria { --_fill: var(--color-power-austria); }")).not_to be_empty
       expect(found(".power-badge--austria, .button { color: var(--color-power-austria); }")).not_to be_empty
     end
   end

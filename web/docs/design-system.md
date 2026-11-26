@@ -97,7 +97,7 @@ Seven muted, original colors, one per power. Each is named `--color-power-<ident
 - One **army** drawing (a chevron shield) and one **fleet** drawing (a warship) serve every power, filled with the power's color. The artwork's full drawings are used from 24 pixels up, and the `-small` drawings below that.
 - **Power-initial tag.** A white tile in the bottom-right corner of every unit, holding the power's initial (A, E, F, G, I, R, T) in the power's color, with a border in the power's color. It is part of the icon, so it works where no name is printed.
 - **Supply center.** Owned is a disk in the owner's color with a white center. Unowned is a white disk with an Iron (`text`) edge and an Iron center.
-- **Sizes.** List rows use 32 pixels. A future map will use about 20.
+- **Sizes.** List rows use 32 pixels. A future map will use about 20. The helper draws any size, but the 14-pixel text rule is exempted for the tag initial only at the sizes this app uses, 20 to 48 pixels. A size under 20 is outside that exemption.
 - **Small icons need a name.** At 20 pixels the tag's initial is only about 5 pixels tall, so in this release's lists and screens a visible name sits beside a unit icon under 24 pixels, and the icon is then `decorative: true`. The future map settles its own labeling.
 - **The artwork.** The master drawings are in `assets/icons/` (CC BY-SA 4.0). The app uses byte-for-byte copies in `web/app/assets/images/icons/`, and a spec fails if a copy differs from its master. Change the master, then copy it again. Never edit a copy.
 

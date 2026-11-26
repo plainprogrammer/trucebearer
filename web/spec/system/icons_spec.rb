@@ -10,16 +10,23 @@ RSpec.describe "Icons and the monospace in the browser", type: :system do
 
   def paint(selector, property) = evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json}))[#{property.to_json}]")
 
+  # Every match, not the first: all the armies and fleets, at every size, must be painted the same way.
+  # (An empty list would equal nothing, so a selector that finds no icon fails the example.)
+  def paint_all(selector, property)
+    evaluate_script("Array.from(document.querySelectorAll(#{selector.to_json})).map((el) => getComputedStyle(el)[#{property.to_json}])")
+  end
+
   before { visit "/styleguide" }
 
   powers.each do |id|
     it "colors a #{id} unit from its power token (AC-7.7)" do
+      # Six icons per power: the army and the fleet at 20, 32 and 48 pixels (small and full drawings).
       icon = ".sg-units .unit-icon--#{id}"
-      expect(paint("#{icon} .unit-icon__silhouette", "fill")).to eq(token("power-#{id}"))
-      expect(paint("#{icon} .mark", "fill")).to eq(rgb("#ffffff"))
-      expect(paint("#{icon} .unit-icon__tag-tile", "fill")).to eq(token("surface"))
-      expect(paint("#{icon} .unit-icon__tag-tile", "stroke")).to eq(token("power-#{id}"))
-      expect(paint("#{icon} .unit-icon__tag-initial", "fill")).to eq(token("power-#{id}"))
+      expect(paint_all("#{icon} .unit-icon__silhouette", "fill")).to eq([ token("power-#{id}") ] * 6)
+      expect(paint_all("#{icon} .mark", "fill").uniq).to eq([ rgb("#ffffff") ])
+      expect(paint_all("#{icon} .unit-icon__tag-tile", "fill")).to eq([ token("surface") ] * 6)
+      expect(paint_all("#{icon} .unit-icon__tag-tile", "stroke")).to eq([ token("power-#{id}") ] * 6)
+      expect(paint_all("#{icon} .unit-icon__tag-initial", "fill")).to eq([ token("power-#{id}") ] * 6)
     end
 
     it "colors a supply center owned by #{id} (AC-7.7)" do
