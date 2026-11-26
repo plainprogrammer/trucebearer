@@ -22,6 +22,8 @@ Citations refer to DATC v3.4. The repository keeps an unmodified copy for readin
 | 4.B.6 | What about a coast on an army move, or an unknown coast? | The army move is rejected. An unknown coast raises `InvalidInput` | Strict, against the preference |
 | 4.D.3 | What if one power gives the same unit two orders? | `InvalidInput` is raised | Not one of the listed options. The app keeps one order per unit |
 | 4.E.1 | What happens to an order that breaks the rules? | It is void, and the unit holds and can still be supported | Preferred |
+| 6.D.31 | May a unit support a move that could happen only through a convoy chain that needs the supporter's own fleet? | No. The support is rejected with `move_impossible`, judging the supported army's chain without the supporter's fleet | Our reading of 4.E.1: the order lists offer only orders that could matter. One fleet can't be both the sea route and the support |
+| 6.G.19 | May a fleet that no minimal convoy chain needs give a convoy order? | No. It is rejected with `not_on_chain`; a chain counts only when no smaller set of fleets is also a chain | Our reading of 4.E.1, as above; it also keeps the question of who showed intent out of checking |
 
 ## Departures from preferred results
 
