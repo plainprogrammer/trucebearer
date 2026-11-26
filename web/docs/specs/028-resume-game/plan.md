@@ -1,17 +1,18 @@
 # Plan 028: Resume a game in a later session
 
 **Spec:** `web/docs/specs/028-resume-game/spec.md` (v1.0.3, approved at Gate A)
+**Base:** `origin/main` at ce608ba (#105 merged, #116 merged) is already merged into the branch; the stylesheets stand at 29,963 bytes and `spec_amendments_spec.rb` reads each amended spec's version as "at least the row's".
 **Branch:** `web/28-resume-game`
 
 ## Global Constraints
 
 - Web side only. Nothing under `adjudicator/`, `.github/` or the root files changes (`git diff --name-only main...HEAD` lists only `web/` paths).
-- Test first, RSpec. Every phase begins with a spec seen failing, and the failing spec is committed before the code that fixes it.
+- Test first, RSpec. Each phase writes its specs before its code and runs them. A spec that the earlier code already satisfies is shown able to fail by a scratch edit that is reverted before the commit, and each phase says which kind it is. The first failing spec (Phase 1) is committed on its own, before any code.
 - No new dependency, no new route, no migration, no JavaScript. `GameAccess` is not edited.
-- The host page, the seat page and the channels are not edited (#112 and #105 work there). The only edited views are `home/index`, the stranger page and the style guide.
+- The host page, the seat page and the channels are not edited (#112 is still working on the host page; #105's channels are merged and untouched). The only edited views are `home/index`, the stranger page and the style guide.
 - Words on screen: no rulebook text; "Diplomacy" appears nowhere.
-- Commit messages are plain imperative sentences ending with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. One git operation per shell call. No force-push; `main` comes in by merge.
-- Stylesheet budget: 29,963 of 32,768 bytes in total; `.game-card` plus its sample stay within 2,800 bytes, `styleguide.css` gains nothing. Measure again after any merge of `main`.
+- Commit messages are plain imperative sentences ending with the `Co-Authored-By:` line the session's attribution gives. One git operation per shell call. No force-push; `main` comes in by merge.
+- Stylesheet budget: 29,963 of 32,768 bytes in total (measured after the merge of `main`); `.game-card` plus its sample stay within 2,800 bytes, `styleguide.css` gains nothing. Measure again after any merge of `main`.
 - Run from `web/`.
 
 ## Goal
@@ -336,6 +337,17 @@ RSpec.describe "What the home page shows each browser", type: :request do
 
   def hrefs(phone) = Nokogiri::HTML5(phone.response.body).css("a.game-card").map { |card| card["href"] }
 
+  # The SQL the block ran against the three tables the home page may read (the games, the seats, the phases).
+  def game_queries
+    queries = []
+    counter = ->(*, payload) { queries << payload[:sql] if payload[:name] != "SCHEMA" && payload[:sql].match?(/FROM "(?:games|seats|phases)"/) }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
+    queries
+  end
+
+  # A cookie's value as a browser puts it in a Cookie header: escaped, because a signed value can hold a "+".
+  def header_pair(name, session) = "#{name}=#{Rack::Utils.escape(session.cookies[name])}"
+
   # The raw text of a signed cookie value, as the app would have written it.
   def signed(name, value)
     request = ActionDispatch::Request.new(Rails.application.env_config.dup)
@@ -368,7 +380,10 @@ RSpec.describe "What the home page shows each browser", type: :request do
     [ only_a, b_and_c, nobody, junk ].each do |s|
       games.each_value { |g| expect(s.response.body).not_to include(g.join_code) } # no join code at all
     end
+    expect(only_a.response.body).not_to match(/France|Germany/) # A is England's game
+    expect(b_and_c.response.body).not_to include("England")
     expect(nobody.response.body).not_to match(/England|France|Germany/)
+    expect(junk.response.body).not_to match(/England|France|Germany/)
   end
 
   it "lists no game for a cookie that does not verify (AC-3.3)" do
@@ -396,53 +411,48 @@ RSpec.describe "What the home page shows each browser", type: :request do
   end
 
   it "answers junk for an existing game, junk for a missing one and no cookie with the same page (AC-3.4)" do
-    normalize = ->(session) { comparable(session.response, a.game.public_id).tap { |r| r[1] = r[1].gsub(/(name="csrf-token" content=")[^"]*/, '\1TOKEN') } }
-    existing = open_session.tap { |s| %w[host seat].each { |kind| s.cookies["#{kind}_#{a.game.public_id}"] = "junk" } }
-    missing = open_session.tap { |s| %w[host seat].each { |kind| s.cookies["#{kind}_zzzzzzzzzzzz"] = "junk" } }
+    normalize = ->(session, id) { comparable(session.response, id).tap { |r| r[1] = r[1].gsub(/(name="csrf-token" content=")[^"]*/, '\1TOKEN') } }
+    existing = junk_session(a.game.public_id)
+    missing = junk_session(GameFlow::MISSING_ID)
     none = open_session
     [ existing, missing, none ].each { |s| s.get "/" }
 
-    expect(normalize.call(existing)).to eq(normalize.call(none))
-    expect(normalize.call(missing)).to eq(normalize.call(none))
+    expect(normalize.call(existing, a.game.public_id)).to eq(normalize.call(none, a.game.public_id))
+    expect(normalize.call(missing, GameFlow::MISSING_ID)).to eq(normalize.call(none, GameFlow::MISSING_ID))
   end
 
-  it "ignores names that are not game cookies (AC-3.5)" do
+  it "ignores names that are not game cookies, and looks up no game for them (AC-3.5)" do
     id = a.game.public_id
-    token = phone([ a.game, "seat", a.seat_token ]).cookies["seat_#{id}"]
+    token = Rack::Utils.escape(phone([ a.game, "seat", a.seat_token ]).cookies["seat_#{id}"])
     names = [ "seat_short", "host_#{'a' * 13}", "seat_#{id}x", "step_in_#{id}", "seat_#{id}.x", "seat_#{id}/x", "other_#{id}" ]
-    header = names.map { |name| "#{name}=#{token}" }.join("; ")
     session = open_session
-    session.get "/", headers: { "HTTP_COOKIE" => header }
+    queries = game_queries { session.get "/", headers: { "HTTP_COOKIE" => names.map { |name| "#{name}=#{token}" }.join("; ") } }
 
     expect(session.response).to have_http_status(:ok)
     expect(hrefs(session)).to be_empty
+    expect(queries).to be_empty, "a name that is not a public id's shape must not cause a lookup"
   end
 
   it "examines the first 40 ids in request order and no more (AC-3.6)" do
     id = a.game.public_id
-    token = phone([ a.game, "seat", a.seat_token ]).cookies["seat_#{id}"]
-    filler = Array.new(40) { |i| "seat_#{format('%012d', i)}=junk" }
+    mine = header_pair("seat_#{id}", phone([ a.game, "seat", a.seat_token ]))
+    filler = ->(count) { Array.new(count) { |i| "seat_#{format('%012d', i)}=junk" } }
     session = open_session
-    session.get "/", headers: { "HTTP_COOKIE" => (filler + [ "seat_#{id}=#{token}" ]).join("; ") }
+    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(40) + [ mine ] + filler.call(19)).join("; ") } # 60 ids, mine the 41st
 
     expect(session.response).to have_http_status(:ok)
-    expect(hrefs(session)).to be_empty # the 41st id is not looked up
+    expect(hrefs(session)).to be_empty
 
-    session.get "/", headers: { "HTTP_COOKIE" => ([ "seat_#{id}=#{token}" ] + filler.first(39)).join("; ") }
+    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(39) + [ mine ] + filler.call(20)).join("; ") } # mine the 40th
     expect(hrefs(session)).to eq([ "/games/#{id}" ])
   end
 
   it "makes at most three queries on games, seats and phases, whatever the cookies (AC-3.7)" do
-    id = a.game.public_id
-    token = phone([ a.game, "seat", a.seat_token ]).cookies["seat_#{id}"]
-    filler = Array.new(59) { |i| "seat_#{format('%012d', i)}=junk" }
-    [ [], [ "seat_#{id}=#{token}" ], [ "seat_#{id}=#{token}" ] + filler ].each do |cookies|
-      queries = []
-      counter = ->(*, payload) { queries << payload[:sql] if payload[:sql].match?(/FROM "(?:games|seats|phases)"/) && payload[:name] != "SCHEMA" }
+    mine = [ a, b, c ].map { |started| header_pair("seat_#{started.game.public_id}", phone([ started.game, "seat", started.seat_token ])) }
+    filler = Array.new(57) { |i| "seat_#{format('%012d', i)}=junk" }
+    [ [], mine.first(1), mine + filler ].each do |cookies|
       session = open_session
-      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
-        session.get "/", headers: { "HTTP_COOKIE" => cookies.join("; ") }
-      end
+      queries = game_queries { session.get "/", headers: { "HTTP_COOKIE" => cookies.join("; ") } }
 
       expect(queries.size).to be <= 3, queries.join("\n")
     end
@@ -460,6 +470,13 @@ RSpec.describe "What the home page shows each browser", type: :request do
     new_phone = phone([ b.game, "seat", token ])
     new_phone.get "/"
     expect(hrefs(new_phone)).to eq([ "/games/#{b.game.public_id}" ])
+  end
+
+  it "classifies GET / as showing no order, and says why (AC-3.11)" do
+    entry = SecrecyRoutes::APP["GET /"]
+
+    expect(entry).to include(shows: :none, revealed: :none)
+    expect(entry[:why]).to include("cookies").and include("never an order")
   end
 
   it "keeps the home page free of any order, count or submitted state (AC-3.12)" do
@@ -507,7 +524,7 @@ The same edit adds `RSpec::Matchers.define_negated_matcher :not_include, :includ
 
 The sweep already requests `/` as every viewer before and after England's orders (AC-3.10), and the route-table examples already cover AC-3.11; both are run, not rewritten.
 
-**Verify:** `bundle exec rspec spec/requests/resume_secrecy_spec.rb spec/requests/order_secrecy_spec.rb` passes. To prove the examples can fail, in a scratch edit (reverted before the commit) change `host?(game)` to `true` in the concern and see AC-3.1 and AC-3.3 fail; change `.first(LIMIT)` to `.first(60)` and see AC-3.6 fail. Commit "Prove that the home page shows a browser only its own games".
+**Verify:** `bundle exec rspec spec/requests/resume_secrecy_spec.rb spec/requests/order_secrecy_spec.rb` passes. The concern from Phase 2 already meets these examples, so each is shown able to fail by a scratch edit to the concern, reverted before the commit: `host?(game)` changed to `true` fails AC-3.1 and AC-3.3; `.first(LIMIT)` changed to `.first(60)` fails AC-3.6; the `GameAccess::PUBLIC_ID_SHAPE` filter removed fails AC-3.5; a per-game `game.current_phase` call in place of the phases query fails AC-3.7; the `held` filter removed (every game with a cookie name listed) fails AC-3.3 and AC-3.8. Commit "Prove that the home page shows a browser only its own games".
 
 ## Phase 4: The lost-seat line
 
@@ -552,10 +569,10 @@ Test first (added to `spec/requests/resume_game_spec.rb`):
       expect(new_phone.response.location).to eq("http://www.example.com/games/#{id}")
       new_phone.get "/"
       expect(cards(new_phone).map { |card| card["href"] }).to eq([ "/games/#{id}" ])
+      old_phone.get "/"
+      expect(cards(old_phone)).to be_empty # before the game page, whose stranger response would delete the stale cookie
       old_phone.get "/games/#{id}"
       expect(old_phone.response).to have_http_status(:not_found)
-      old_phone.get "/"
-      expect(cards(old_phone)).to be_empty
     end
   end
 ```
@@ -573,7 +590,7 @@ In `home/index.html.erb`, after the two buttons: `<%= render "shared/lost_seat" 
 
 ## Phase 5: The host link goes to the host's seat
 
-**Implements:** FR-4, D5. **Satisfies:** AC-5.1 to AC-5.4. **Files:** `app/controllers/host_links_controller.rb`, `spec/requests/resume_game_spec.rb`. **Interfaces:** none new.
+**Implements:** FR-4, D5. **Satisfies:** AC-5.1 to AC-5.4. **Files:** `app/controllers/host_links_controller.rb`, `spec/requests/resume_game_spec.rb`. **Interfaces:** none new. Only AC-5.2 goes red before the change (it redirects to the host page); AC-5.1, AC-5.3 and AC-5.4 pin today's behaviour that the change must keep, and are run before and after.
 
 Test first (added to `spec/requests/resume_game_spec.rb`):
 
@@ -662,7 +679,7 @@ Test first:
 
 ```ruby
   it "keeps the game card within its 2,800 bytes (spec 028 AC-8.3)" do
-    css = Stylesheets.read(File.join(Stylesheets::DIR, "components.css"))
+    css = File.read(File.join(Stylesheets::DIR, "components.css")) # the raw file: Stylesheets.read strips the comment this looks for
     block = css[/\/\* ---- Game card \(#28\).*?(?=\n  \/\* ----|\z)/m].to_s
 
     expect(block).not_to be_empty
@@ -734,7 +751,7 @@ In `styleguide_helper.rb` (the sample needs no database):
   ].freeze
 ```
 
-The sample's phase is built in the view from `Phase.new(position: RulesEngine.starting_position)`, as the phase-header sample does, and passed with `entry.with(phase: sample_phase)`. In `styleguide/show.html.erb`, after the `phase-header` section:
+The sample's phase is built in the view from `Phase.new(position: RulesEngine.starting_position)`, as the phase-header sample does, and passed with `entry.with(phase: sample_phase)`. In `styleguide/show.html.erb`, directly after the `phase-header` section and before the `banner` section (the file reassigns `sample_phase` to a Struct that has only `number` further down, near the `confirm` section, so the card section must come before that line):
 
 ```erb
   <section data-component="game-card" class="stack" aria-labelledby="sg-game-card">
@@ -817,10 +834,10 @@ RSpec.describe "Resuming a game", type: :system do
   end
 
   it "brings a player back to the current phase after the browser was closed (AC-7.1, AC-7.2)" do
-    host_link = nil
-    with_viewport(360) { host_link, = create_game_and_join_as_france }
+    with_viewport(360) { create_game_and_join_as_france }
     game = Game.order(:id).last
-    first_title = game.current_phase.title
+    title = ->(phase) { /#{Regexp.escape(phase.title)}/i } # the page draws the title in capitals
+    first_title = title.call(game.current_phase)
 
     using_session(:player) do
       with_viewport(360) do
@@ -841,10 +858,10 @@ RSpec.describe "Resuming a game", type: :system do
       with_viewport(360) do
         end_browser_session
         visit "/"
-        expect(page).to have_css("a.game-card", text: game.reload.current_phase.title)
+        expect(page).to have_css("a.game-card", text: title.call(game.reload.current_phase))
         click_link(class: "game-card")
         expect(page).to have_css("h1", text: "You hold France")
-        expect(page).to have_text(game.current_phase.title)
+        expect(page).to have_text(title.call(game.current_phase))
       end
     end
   end
@@ -972,7 +989,7 @@ Test first, in `spec/docs/spec_amendments_spec.rb`:
     spec, row = resume_row("022-phase-lifecycle")
 
     expect(row).to include("FR-9").and include("GET /")
-    expect(spec).to include("Lists the games the request's cookies verify for")
+    expect(spec).to include("No order. Lists the games the request's cookies verify for")
     expect(spec).not_to include("`GET /up`, `GET /`, `GET /styleguide` | No. Static, no game data")
   end
 
@@ -990,7 +1007,7 @@ Then the edits. Spec 021: version `1.4.0` to `1.5.0`, `Last Updated` unchanged (
 | 1.5.0 | 2026-11-26 | Amended by spec 028 (resuming a game, #28).<br>• **AC-2.1:** the redirect after a verified host link goes to the seat page when the browser holds the host's own seat, and to the host page otherwise (spec 028 D5).<br>• The URL table's `/` row: after its existing text it lists the games the browser's cookies verify for, then the two buttons, then the lost-seat line (spec 028 D1, D6).<br>• The stranger page also holds the line "Lost your seat? Ask the host for a new QR code." It is part of the one answer every request gets (D4, AC-5.5 still hold). |
 ```
 
-and AC-2.1's text gets "(and, since spec 028, to `/games/<id>` when the browser holds the host's own seat)" after "redirects to `/games/<id>/host`"; the `/` row of the URL table reads "The home page: its existing text, the games this browser's cookies verify for, then two buttons: \"Create a game\" and \"Join a game\"" . Spec 022: version `1.7.0` to `1.8.0`, a row above 1.7.0:
+and AC-2.1's text gets "(and, since spec 028, to `/games/<id>` when the browser holds the host's own seat)" after "redirects to `/games/<id>/host`"; the `/` row of the URL table reads "The home page: its existing text, the games this browser's cookies verify for, then two buttons: \"Create a game\" and \"Join a game\"" . The stranger page's description in the same spec ("a page that says \"We can't find that page.\", with status 404 and a link to the home page") gains ", and the lost-seat line of spec 028". Spec 022: version `1.7.0` to `1.8.0`, a row above 1.7.0:
 
 ```
 | 1.8.0 | 2026-11-26 | Amended by spec 028 (resuming a game, #28). **FR-9:** the route table's row for `GET /` no longer says "no game data": it lists the games the request's cookies verify for, each as a start date, an open phase's title and the viewer's power, and never an order, a count or a submitted state. The sweep and `spec/requests/resume_secrecy_spec.rb` prove it. |
