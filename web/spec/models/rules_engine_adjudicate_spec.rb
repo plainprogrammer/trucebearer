@@ -8,6 +8,10 @@ RSpec.describe "RulesEngine.adjudicate and load_adjudication" do
   let(:start) { RulesEngine.starting_position }
   let(:result) { RulesEngine.adjudicate(start, [ move(:england, :lon, :nth) ]) }
 
+  it "has no stand_in? any more (AC-3.2)" do
+    expect(RulesEngine).not_to respond_to(:stand_in?)
+  end
+
   describe "load_adjudication (AC-2.3)" do
     it "returns an object as it is, builds one from its hash form, and passes nil" do
       expect(RulesEngine.load_adjudication(result)).to equal(result)

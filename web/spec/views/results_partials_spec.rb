@@ -76,11 +76,9 @@ RSpec.describe "results partials", type: :view do
     expect(fragment.css(".result-row[data-province=edi]").map { |row| row.css(".outcome-tag").map(&:text) }).to eq([ [ "Not a legal order" ], [ "Held" ] ])
   end
 
-  it "shows the paradox banner only when the stored result says so, and the practice note only while the stand-in is in use (AC-7.1, AC-7.4)" do
+  it "shows the paradox banner only when the stored result says so, and no practice note (AC-7.4, spec 029 AC-3.3)" do
     clean = revealed_phase_with(game, outcomes: [])
     expect(draw(clean).css("[data-paradox]")).to be_empty
-    expect(draw(clean).at_css(".practice-note")).to be_present
-    allow(RulesEngine).to receive(:stand_in?).and_return(false)
     expect(draw(clean).at_css(".practice-note")).to be_nil
 
     odd = revealed_phase_with(Game.start!(power: "england").game, outcomes: [], paradox: true)
