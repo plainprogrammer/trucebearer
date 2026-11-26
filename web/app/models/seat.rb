@@ -69,9 +69,13 @@ class Seat < ApplicationRecord
   end
 
   # Deletes this seat's saved orders and its submission for the phase (a reissue, spec 022 D9). The caller holds the phase lock.
+  # Returns whether a submission was removed, which is what the status stream is told about (spec 024 D3).
   def clear_orders!(phase)
-    removed = saved_orders.where(phase_id: phase.id).destroy_all + submissions.where(phase_id: phase.id).destroy_all
-    raise Phase::Revealed unless removed.all?(&:destroyed?) # a guard refused: the phase was revealed under us
+    orders = saved_orders.where(phase_id: phase.id).destroy_all
+    withdrawn = submissions.where(phase_id: phase.id).destroy_all
+    raise Phase::Revealed unless (orders + withdrawn).all?(&:destroyed?) # a guard refused: the phase was revealed under us
+
+    withdrawn.any?
   end
 
   # Uniqueness is the database's job: the index on [game_id, power] is the only arbiter of "taken".

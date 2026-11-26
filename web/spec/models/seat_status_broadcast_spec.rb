@@ -72,4 +72,26 @@ RSpec.describe "Seat status broadcast" do
 
     expect { seat.save_orders!(phase, {}, submit: true) }.to raise_error(RuntimeError, "boom")
   end
+
+  it "sends one broadcast when the host reissues a submitted seat (AC-2.4), and none for a seat that had not submitted" do
+    seat.save_orders!(phase, {}, submit: true)
+    game.reissue_seat!(seat)
+    expect(payloads.size).to eq(2)
+    expect(state_of(payloads.last, "england")).to eq("Not submitted")
+
+    france = game.take_seat!("france").first
+    game.reissue_seat!(france)
+    expect(payloads.size).to eq(2)
+  end
+
+  it "sends one broadcast at a reveal, all seven Not submitted, and none for a reveal that finds the phase done (AC-2.5)" do
+    seat.save_orders!(phase, {}, submit: true)
+    expect(phase.reveal!.status).to eq(:revealed)
+
+    expect(payloads.size).to eq(2)
+    states = Nokogiri::HTML5.fragment(payloads.last).css(".seat-status__state").map(&:text)
+    expect(states).to eq([ "Not submitted" ] * 7)
+    expect(Phase.find(phase.id).reveal!.status).to eq(:already)
+    expect(payloads.size).to eq(2)
+  end
 end

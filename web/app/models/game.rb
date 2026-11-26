@@ -89,11 +89,12 @@ class Game < ApplicationRecord
   # first, as in a save, so a save from the old phone can't slip in between. Returns the new token.
   def reissue_seat!(seat)
     token = Token.generate
-    transaction do
+    withdrew = transaction do
       phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
       seat.update!(token_digest: Token.digest(token))
       seat.clear_orders!(phase)
     end
+    broadcast_seat_status if withdrew # the seat had submitted and no longer has (spec 024 D3)
     token
   end
 end

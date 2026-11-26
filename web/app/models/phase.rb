@@ -40,6 +40,7 @@ class Phase < ApplicationRecord
       :revealed
     end
     reload
+    game.broadcast_seat_status if status == :revealed # the new phase has no submissions (spec 024 D3)
     Reveal.new(status: status)
   end
 
