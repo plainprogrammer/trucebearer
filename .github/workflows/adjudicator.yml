@@ -1,0 +1,45 @@
+name: Adjudicator
+
+on:
+  pull_request:
+    paths:
+      - "adjudicator/**"
+      - ".github/workflows/adjudicator.yml"
+  push:
+    branches: [main]
+    paths:
+      - "adjudicator/**"
+      - ".github/workflows/adjudicator.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: adjudicator
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # setup-ruby has no input for a version file outside its working
+      # directory, so read the root .ruby-version here. Run steps start in
+      # adjudicator/, hence the relative path.
+      - name: Read the Ruby version from the root .ruby-version
+        id: ruby
+        run: echo "version=$(tr -d '[:space:]' < ../.ruby-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Ruby and install gems
+        uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
+        with:
+          ruby-version: ${{ steps.ruby.outputs.version }}
+          bundler-cache: true
+          working-directory: adjudicator
+
+      - name: Run the specs
+        run: bundle exec rspec
