@@ -61,3 +61,10 @@ group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
 end
+
+group :test do
+  # System specs in headless Chrome, for layout and in-browser behavior (decision in Issue #72).
+  # Both are the Rails 8.1 defaults that --skip-test left out. Selenium Manager finds the driver.
+  gem "capybara"
+  gem "selenium-webdriver"
+end
