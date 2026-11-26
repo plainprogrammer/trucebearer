@@ -1,0 +1,27 @@
+case: "6.G.7"
+summary: "An illegal convoy order gives no intent: the armies stay"
+position:
+  units:
+    - {power: england, type: fleet, at: ska}
+    - {power: england, type: fleet, at: nwy}
+    - {power: russia, type: army, at: swe}
+    - {power: russia, type: fleet, at: bot}
+orders:
+  - order: {type: convoy, power: england, at: ska, from: swe, to: nwy}
+    check: {legal: true}
+    result: unmatched
+  - order: {type: move, power: england, at: nwy, destination: swe}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: russia, at: swe, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: convoy, power: russia, at: bot, from: swe, to: nwy}
+    check: {legal: false, reason: not_on_chain}
+    result: void
+after:
+  units:
+    - {power: russia, type: fleet, at: bot}
+    - {power: england, type: fleet, at: nwy}
+    - {power: england, type: fleet, at: ska}
+    - {power: russia, type: army, at: swe}

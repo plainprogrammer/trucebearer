@@ -1,0 +1,42 @@
+case: "6.G.12"
+summary: Two armies swap with two convoys, both explicitly via convoy
+position:
+  units:
+    - {power: england, type: army, at: lvp}
+    - {power: england, type: fleet, at: nao}
+    - {power: england, type: fleet, at: nwg}
+    - {power: germany, type: army, at: edi}
+    - {power: germany, type: fleet, at: nth}
+    - {power: germany, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: iri}
+orders:
+  - order: {type: move_via_convoy, power: england, at: lvp, to: edi}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: england, at: nao, from: lvp, to: edi}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: england, at: nwg, from: lvp, to: edi}
+    check: {legal: true}
+    result: given
+  - order: {type: move_via_convoy, power: germany, at: edi, to: lvp}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: germany, at: nth, from: edi, to: lvp}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: germany, at: eng, from: edi, to: lvp}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: germany, at: iri, from: edi, to: lvp}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: army, at: edi}
+    - {power: germany, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: iri}
+    - {power: germany, type: army, at: lvp}
+    - {power: england, type: fleet, at: nao}
+    - {power: germany, type: fleet, at: nth}
+    - {power: england, type: fleet, at: nwg}

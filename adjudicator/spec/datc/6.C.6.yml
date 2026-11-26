@@ -1,0 +1,27 @@
+case: "6.C.6"
+summary: Two armies exchange places, each carried by its own fleet
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: bel}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: france, at: eng, from: bel, to: lon}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: bel, destination: lon}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: england, type: army, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: lon}
+    - {power: england, type: fleet, at: nth}

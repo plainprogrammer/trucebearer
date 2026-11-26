@@ -1,0 +1,40 @@
+case: "6.G.15"
+summary: Bounce and dislodge when both armies go by convoy
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: hol}
+    - {power: england, type: army, at: yor}
+    - {power: england, type: army, at: lon}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: bel}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: hol, from: lon, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: yor, destination: lon}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: france, at: eng, from: bel, to: lon}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: bel, destination: lon}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+after:
+  units:
+    - {power: england, type: army, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: england, type: army, at: hol}
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: yor}
+  dislodged:
+    - {power: france, type: army, at: bel, from: lon, by_convoy: true}
+  standoffs: [lon]

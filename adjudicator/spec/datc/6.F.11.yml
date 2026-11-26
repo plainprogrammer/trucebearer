@@ -1,0 +1,34 @@
+case: "6.F.11"
+summary: A convoy with two routes, both fleets foreign, survives the loss of one
+position:
+  units:
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: eng}
+    - {power: russia, type: fleet, at: nth}
+    - {power: france, type: fleet, at: bre}
+    - {power: france, type: fleet, at: mao}
+orders:
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: germany, at: eng, from: lon, to: bel}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: convoy, power: russia, at: nth, from: lon, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: bre, from: mao, to: eng}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: mao, destination: eng}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: england, type: army, at: bel}
+    - {power: france, type: fleet, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: russia, type: fleet, at: nth}
+  dislodged:
+    - {power: germany, type: fleet, at: eng, from: mao}

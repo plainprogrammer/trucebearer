@@ -9,9 +9,19 @@ position:
 orders:
   - order: {type: move, power: france, at: mar, destination: spa}
     check: {legal: true}
+    result: bounced
   - order: {type: convoy, power: france, at: wes, from: mar, to: spa}
     check: {legal: false, reason: not_on_chain}
+    result: void
   - order: {type: convoy, power: italy, at: gol, from: mar, to: spa}
     check: {legal: true}
+    result: unmatched
   - order: {type: move, power: italy, at: spa, destination: mar}
     check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: italy, type: fleet, at: gol}
+    - {power: france, type: army, at: mar}
+    - {power: italy, type: army, at: spa}
+    - {power: france, type: fleet, at: wes}

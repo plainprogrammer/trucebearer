@@ -1,0 +1,22 @@
+case: "6.F.4"
+summary: Attacking a carrying fleet without dislodging it changes nothing
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: ska}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: lon, destination: hol}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: army, at: hol}
+    - {power: england, type: fleet, at: nth}
+    - {power: germany, type: fleet, at: ska}

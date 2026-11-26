@@ -1,0 +1,29 @@
+case: "6.G.13"
+summary: A move via convoy to a neighbor counts as coming from its own province
+position:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: fleet, at: alb}
+orders:
+  - order: {type: convoy, power: austria, at: adr, from: tri, to: ven}
+    check: {legal: true}
+    result: given
+  - order: {type: move_via_convoy, power: austria, at: tri, to: ven}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+  - order: {type: support_move, power: italy, at: ven, from: alb, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: alb, destination: tri}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: italy, type: fleet, at: tri}
+    - {power: italy, type: army, at: ven}
+  dislodged:
+    - {power: austria, type: army, at: tri, from: alb}

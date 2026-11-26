@@ -72,6 +72,13 @@ RSpec.describe "TA::Reach (internal)" do
       expect(reach.chain?(ln, :lon, :nwy, without: :eng)).to be(true)
     end
 
+    it "links a set of seas the same way (linked?, used to decide whether a convoy route works)" do
+      expect(reach.linked?(Set[:nth], :lon, :hol)).to be(true)
+      expect(reach.linked?(Set[:eng], :lon, :hol)).to be(false)
+      expect(reach.linked?(Set[:eng, :nth], :lon, :nwy)).to be(true)
+      expect(reach.linked?(Set.new, :lon, :hol)).to be(false)
+    end
+
     it "ignores coasts at both ends (6.B.18, 6.B.19)" do
       from_bulgaria = Board.position(army.("bul"), fleet.("bla"))
       expect(reach.chain?(from_bulgaria, :bul, :sev)).to be(true)

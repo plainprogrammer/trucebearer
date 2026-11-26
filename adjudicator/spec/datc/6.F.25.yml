@@ -1,0 +1,70 @@
+case: "6.F.25"
+summary: Cuts from convoyed armies settle a long chain of dependencies, the supports being decided last
+position:
+  units:
+    - {power: germany, type: army, at: ruh}
+    - {power: germany, type: army, at: hol}
+    - {power: germany, type: army, at: den}
+    - {power: germany, type: fleet, at: ska}
+    - {power: germany, type: army, at: fin}
+    - {power: england, type: army, at: yor}
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: fleet, at: hel}
+    - {power: england, type: army, at: bel}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: fleet, at: nwy}
+    - {power: russia, type: fleet, at: swe}
+orders:
+  - order: {type: move, power: germany, at: ruh, destination: bel}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: hol, from: ruh, to: bel}
+    check: {legal: true}
+    result: cut
+    dislodged: true
+  - order: {type: move, power: germany, at: den, destination: nwy}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: germany, at: ska, from: den, to: nwy}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: fin, from: den, to: nwy}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: yor, destination: hol}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: england, at: nth, from: yor, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: hel, from: yor, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: hold, power: england, at: bel}
+    check: {legal: true}
+    result: held
+  - order: {type: move, power: russia, at: nwg, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: nwy, from: nwg, to: nth}
+    check: {legal: true}
+    result: cut
+    dislodged: true
+  - order: {type: move, power: russia, at: swe, destination: ska}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: army, at: bel}
+    - {power: germany, type: army, at: fin}
+    - {power: england, type: fleet, at: hel}
+    - {power: england, type: army, at: hol}
+    - {power: england, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: germany, type: army, at: nwy}
+    - {power: germany, type: army, at: ruh}
+    - {power: germany, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: swe}
+  dislodged:
+    - {power: germany, type: army, at: hol, from: yor, by_convoy: true}
+    - {power: russia, type: fleet, at: nwy, from: den, by_convoy: true}

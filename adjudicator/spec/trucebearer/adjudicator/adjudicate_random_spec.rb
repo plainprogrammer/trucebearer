@@ -38,7 +38,7 @@ RSpec.describe "TA.adjudicate on random boards" do
     expect(counts.values_at(:circle, :head_to_head, :supporter_attacked, :beleaguered).min).to be >= 20, counts.inspect
   end
 
-  it "never sets the paradox flag; the last-resort branch can't run unseen (AC-12.2)" do
+  it "never sets the paradox flag: without a convoy no move can wait on a route (AC-12.2)" do
     expect(results.map { |*, adjudication| adjudication.paradox }).to all(be(false))
   end
 

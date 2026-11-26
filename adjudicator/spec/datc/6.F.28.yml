@@ -1,0 +1,84 @@
+case: "6.F.28"
+summary: A ring of six convoyed armies, each convoy fleet attacked
+paradox: true
+position:
+  units:
+    - {power: russia, type: fleet, at: fin}
+    - {power: russia, type: fleet, at: stp/sc}
+    - {power: russia, type: fleet, at: pru}
+    - {power: russia, type: fleet, at: swe}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: den}
+    - {power: russia, type: fleet, at: nwy}
+    - {power: russia, type: fleet, at: cly}
+    - {power: germany, type: army, at: lvn}
+    - {power: germany, type: fleet, at: bot}
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: bal}
+    - {power: germany, type: army, at: hol}
+    - {power: germany, type: fleet, at: nth}
+    - {power: germany, type: army, at: bel}
+    - {power: germany, type: fleet, at: eng}
+    - {power: england, type: fleet, at: wal}
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: army, at: naf}
+    - {power: england, type: fleet, at: mao}
+    - {power: england, type: fleet, at: nao}
+    - {power: england, type: army, at: edi}
+    - {power: england, type: fleet, at: nwg}
+    - {power: england, type: fleet, at: bar}
+    - {power: france, type: fleet, at: spa/nc}
+    - {power: france, type: fleet, at: bre}
+orders:
+  - order: {type: move, power: russia, at: fin, destination: bot}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: stp, from: fin, to: bot}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: pru, destination: bal}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: swe, from: pru, to: bal}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: ska, destination: nth}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: den, from: ska, to: nth}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: nwy, destination: nwg}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: cly, from: nwy, to: nwg}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: lvn, destination: swe}
+    check: {legal: true}
+  - order: {type: convoy, power: germany, at: bot, from: lvn, to: swe}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: ber, destination: den}
+    check: {legal: true}
+  - order: {type: convoy, power: germany, at: bal, from: ber, to: den}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: hol, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: germany, at: nth, from: hol, to: lon}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: bel, destination: bre}
+    check: {legal: true}
+  - order: {type: convoy, power: germany, at: eng, from: bel, to: bre}
+    check: {legal: true}
+  - order: {type: move, power: england, at: wal, destination: eng}
+    check: {legal: true}
+  - order: {type: support_move, power: england, at: lon, from: wal, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: england, at: naf, destination: cly}
+    check: {legal: true}
+  - order: {type: convoy, power: england, at: mao, from: naf, to: cly}
+    check: {legal: true}
+  - order: {type: convoy, power: england, at: nao, from: naf, to: cly}
+    check: {legal: true}
+  - order: {type: move, power: england, at: edi, destination: stp}
+    check: {legal: true}
+  - order: {type: convoy, power: england, at: nwg, from: edi, to: stp}
+    check: {legal: true}
+  - order: {type: convoy, power: england, at: bar, from: edi, to: stp}
+    check: {legal: true}
+  - order: {type: move, power: france, at: spa, destination: mao}
+    check: {legal: true}
+  - order: {type: support_move, power: france, at: bre, from: spa, to: mao}
+    check: {legal: true}

@@ -1,0 +1,29 @@
+case: "6.D.16"
+summary: A power may convoy a foreign army that dislodges its own unit
+position:
+  units:
+    - {power: england, type: army, at: lon}
+    - {power: england, type: fleet, at: nth}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: bel}
+orders:
+  - order: {type: hold, power: england, at: lon}
+    check: {legal: true}
+    result: held
+    dislodged: true
+  - order: {type: convoy, power: england, at: nth, from: bel, to: lon}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: eng, from: bel, to: lon}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: bel, destination: lon}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: lon}
+    - {power: england, type: fleet, at: nth}
+  dislodged:
+    - {power: england, type: army, at: lon, from: bel, by_convoy: true}

@@ -1,0 +1,34 @@
+case: "6.F.8"
+summary: The army's fleet is dislodged, so its destination stays open to another unit
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: germany, type: army, at: bel}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: hol}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: move, power: england, at: lon, destination: hol}
+    check: {legal: true}
+    result: no_route
+  - order: {type: support_move, power: germany, at: hel, from: ska, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: germany, at: bel, destination: hol}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: army, at: hol}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: nth}
+  dislodged:
+    - {power: england, type: fleet, at: nth, from: ska}

@@ -1,0 +1,42 @@
+case: "6.G.17"
+summary: The same, with the other army convoyed
+position:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: england, type: army, at: den}
+    - {power: england, type: fleet, at: bal}
+    - {power: england, type: fleet, at: ska}
+    - {power: england, type: fleet, at: nth}
+    - {power: russia, type: army, at: swe}
+    - {power: russia, type: fleet, at: nwg}
+orders:
+  - order: {type: move_via_convoy, power: england, at: nwy, to: swe}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: england, at: den, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: bal, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: england, at: ska, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: nth, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: russia, at: swe, destination: nwy}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: nwg, from: swe, to: nwy}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: fleet, at: bal}
+    - {power: england, type: army, at: den}
+    - {power: england, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: army, at: nwy}
+    - {power: england, type: fleet, at: ska}
+    - {power: england, type: army, at: swe}

@@ -1,0 +1,42 @@
+case: "6.E.11"
+summary: A swap by convoy with a fleet on a split-coast province, the attacker behind is stopped
+position:
+  units:
+    - {power: france, type: army, at: spa}
+    - {power: france, type: fleet, at: mao}
+    - {power: france, type: fleet, at: gol}
+    - {power: germany, type: army, at: mar}
+    - {power: germany, type: army, at: gas}
+    - {power: italy, type: fleet, at: por}
+    - {power: italy, type: fleet, at: wes}
+orders:
+  - order: {type: move_via_convoy, power: france, at: spa, to: por}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: france, at: mao, from: spa, to: por}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: gol, from: por, to: spa}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: mar, from: gas, to: spa}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: gas, destination: spa}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: italy, at: por, destination: spa/nc}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: italy, at: wes, from: por, to: spa}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: germany, type: army, at: gas}
+    - {power: france, type: fleet, at: gol}
+    - {power: france, type: fleet, at: mao}
+    - {power: germany, type: army, at: mar}
+    - {power: france, type: army, at: por}
+    - {power: italy, type: fleet, at: spa/nc}
+    - {power: italy, type: fleet, at: wes}

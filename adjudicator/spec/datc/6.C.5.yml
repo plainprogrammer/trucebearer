@@ -1,0 +1,49 @@
+case: "6.C.5"
+summary: A convoy fleet in a circle is dislodged, so every army of the circle stays
+position:
+  units:
+    - {power: austria, type: army, at: tri}
+    - {power: austria, type: army, at: ser}
+    - {power: turkey, type: army, at: bul}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: ion}
+    - {power: turkey, type: fleet, at: adr}
+    - {power: italy, type: fleet, at: nap}
+    - {power: italy, type: fleet, at: tun}
+orders:
+  - order: {type: move, power: austria, at: tri, destination: ser}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: austria, at: ser, destination: bul}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: turkey, at: bul, destination: tri}
+    check: {legal: true}
+    result: no_route
+  - order: {type: convoy, power: turkey, at: aeg, from: bul, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: turkey, at: ion, from: bul, to: tri}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: convoy, power: turkey, at: adr, from: bul, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: nap, destination: ion}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: italy, at: tun, from: nap, to: ion}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: turkey, type: fleet, at: adr}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: army, at: bul}
+    - {power: italy, type: fleet, at: ion}
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: fleet, at: tun}
+  dislodged:
+    - {power: turkey, type: fleet, at: ion, from: nap}

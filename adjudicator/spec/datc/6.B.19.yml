@@ -7,5 +7,11 @@ position:
 orders:
   - order: {type: move, power: italy, at: tus, destination: spa}
     check: {legal: true}
+    result: succeeded
   - order: {type: convoy, power: italy, at: gol, from: tus, to: spa}
     check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: italy, type: fleet, at: gol}
+    - {power: italy, type: army, at: spa}

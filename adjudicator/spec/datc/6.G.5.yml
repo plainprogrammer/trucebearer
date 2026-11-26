@@ -1,0 +1,27 @@
+case: "6.G.5"
+summary: One fleet of the same power shows the intent, a second fleet is also needed on the route
+position:
+  units:
+    - {power: italy, type: army, at: rom}
+    - {power: italy, type: fleet, at: tys}
+    - {power: turkey, type: army, at: apu}
+    - {power: turkey, type: fleet, at: ion}
+orders:
+  - order: {type: move, power: italy, at: rom, destination: apu}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: italy, at: tys, from: apu, to: rom}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: apu, destination: rom}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: turkey, at: ion, from: apu, to: rom}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: italy, type: army, at: apu}
+    - {power: turkey, type: fleet, at: ion}
+    - {power: turkey, type: army, at: rom}
+    - {power: italy, type: fleet, at: tys}

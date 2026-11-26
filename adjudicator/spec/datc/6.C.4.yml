@@ -1,0 +1,42 @@
+case: "6.C.4"
+summary: A circle of three moves holds a convoyed army, and a convoy fleet that is attacked but not dislodged
+position:
+  units:
+    - {power: austria, type: army, at: tri}
+    - {power: austria, type: army, at: ser}
+    - {power: turkey, type: army, at: bul}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: ion}
+    - {power: turkey, type: fleet, at: adr}
+    - {power: italy, type: fleet, at: nap}
+orders:
+  - order: {type: move, power: austria, at: tri, destination: ser}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: austria, at: ser, destination: bul}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: bul, destination: tri}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: turkey, at: aeg, from: bul, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: turkey, at: ion, from: bul, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: turkey, at: adr, from: bul, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: nap, destination: ion}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: turkey, type: fleet, at: adr}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: austria, type: army, at: bul}
+    - {power: turkey, type: fleet, at: ion}
+    - {power: italy, type: fleet, at: nap}
+    - {power: austria, type: army, at: ser}
+    - {power: turkey, type: army, at: tri}

@@ -1,0 +1,39 @@
+case: "6.F.20"
+summary: "A second route keeps the move alive: the support gets cut and the fleet is lost"
+position:
+  units:
+    - {power: france, type: army, at: tun}
+    - {power: france, type: fleet, at: tys}
+    - {power: italy, type: fleet, at: nap}
+    - {power: italy, type: fleet, at: ion}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: eas}
+orders:
+  - order: {type: move, power: france, at: tun, destination: nap}
+    check: {legal: true}
+    result: bounced
+  - order: {type: convoy, power: france, at: tys, from: tun, to: nap}
+    check: {legal: true}
+    result: given
+  - order: {type: support_hold, power: italy, at: nap, target: ion}
+    check: {legal: true}
+    result: cut
+  - order: {type: convoy, power: italy, at: ion, from: tun, to: nap}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: support_move, power: turkey, at: aeg, from: eas, to: ion}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: eas, destination: ion}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: ion}
+    - {power: italy, type: fleet, at: nap}
+    - {power: france, type: army, at: tun}
+    - {power: france, type: fleet, at: tys}
+  dislodged:
+    - {power: italy, type: fleet, at: ion, from: eas}

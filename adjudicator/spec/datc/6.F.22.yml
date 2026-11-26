@@ -1,0 +1,30 @@
+case: "6.F.22"
+summary: "A second-order paradox: two convoys tied together"
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: lon}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: bel}
+    - {power: germany, type: fleet, at: pic}
+    - {power: russia, type: army, at: nwy}
+    - {power: russia, type: fleet, at: nth}
+orders:
+  - order: {type: move, power: england, at: edi, destination: nth}
+    check: {legal: true}
+  - order: {type: support_move, power: england, at: lon, from: edi, to: nth}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: bel, from: pic, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: pic, destination: eng}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: nwy, destination: bel}
+    check: {legal: true}
+  - order: {type: convoy, power: russia, at: nth, from: nwy, to: bel}
+    check: {legal: true}

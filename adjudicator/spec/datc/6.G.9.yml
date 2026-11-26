@@ -1,0 +1,27 @@
+case: "6.G.9"
+summary: An own convoy order to a neighbor makes the swap, not a battle
+position:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: england, type: fleet, at: ska}
+    - {power: england, type: fleet, at: fin}
+    - {power: russia, type: army, at: swe}
+orders:
+  - order: {type: move, power: england, at: nwy, destination: swe}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: england, at: ska, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: fin, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: swe, destination: nwy}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: england, type: fleet, at: fin}
+    - {power: russia, type: army, at: nwy}
+    - {power: england, type: fleet, at: ska}
+    - {power: england, type: army, at: swe}

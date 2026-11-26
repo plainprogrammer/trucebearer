@@ -36,7 +36,7 @@ RSpec.describe "TA.adjudicate: dislodgement, battles and circles" do
       expect(dislodged(result)).to eq(vie: :tri)
     end
 
-    it "flags a dislodged convoying fleet, whose convoy order is unmatched in this release (AC-9.2)" do
+    it "flags a dislodged convoying fleet, whose convoy order is unmatched, since no army moves by convoy (AC-9.2)" do
       units = [u(:england, :army, "lon"), u(:england, :fleet, "nth"), u(:germany, :fleet, "hel"), u(:germany, :fleet, "ska")]
       result = run(units, [cv(:england, :nth, :lon, :nwy), mv(:germany, :hel, "nth"), sm(:germany, :ska, :hel, :nth)])
       expect(results(result, 3)).to eq(%i[unmatched succeeded given])
