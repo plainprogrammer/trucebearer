@@ -1,0 +1,8 @@
+case: "6.A.4"
+summary: A move to the unit's own province is not an order
+position:
+  units:
+    - {power: germany, type: fleet, at: kie}
+orders:
+  - order: {type: move, power: germany, at: kie, destination: kie}
+    check: {legal: false, reason: own_province}

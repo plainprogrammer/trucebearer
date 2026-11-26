@@ -1,0 +1,14 @@
+case: "6.B.4"
+summary: A fleet may support a move to a coast it can't reach itself
+position:
+  units:
+    - {power: france, type: fleet, at: gas}
+    - {power: france, type: fleet, at: mar}
+    - {power: italy, type: fleet, at: wes}
+orders:
+  - order: {type: move, power: france, at: gas, destination: "spa/nc"}
+    check: {legal: true}
+  - order: {type: support_move, power: france, at: mar, from: gas, to: spa}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: wes, destination: "spa/sc"}
+    check: {legal: true}

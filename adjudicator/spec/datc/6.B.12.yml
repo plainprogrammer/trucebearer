@@ -1,0 +1,9 @@
+case: "6.B.12"
+summary: An army's move may not name a coast
+departure: true
+position:
+  units:
+    - {power: france, type: army, at: gas}
+orders:
+  - order: {type: move, power: france, at: gas, destination: "spa/nc"}
+    check: {legal: false, reason: coast_not_allowed}

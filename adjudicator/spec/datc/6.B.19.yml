@@ -1,0 +1,11 @@
+case: "6.B.19"
+summary: An army may be convoyed into a split-coast province, and the convoy order is legal
+position:
+  units:
+    - {power: italy, type: army, at: tus}
+    - {power: italy, type: fleet, at: gol}
+orders:
+  - order: {type: move, power: italy, at: tus, destination: spa}
+    check: {legal: true}
+  - order: {type: convoy, power: italy, at: gol, from: tus, to: spa}
+    check: {legal: true}

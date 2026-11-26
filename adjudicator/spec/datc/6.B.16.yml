@@ -1,0 +1,17 @@
+case: "6.B.16"
+summary: A support to hold a fleet that stands on a coast names the province only
+position:
+  units:
+    - {power: france, type: army, at: gas}
+    - {power: france, type: army, at: mar}
+    - {power: italy, type: fleet, at: "spa/sc"}
+    - {power: england, type: fleet, at: por}
+orders:
+  - order: {type: move, power: france, at: gas, destination: spa}
+    check: {legal: true}
+  - order: {type: support_move, power: france, at: mar, from: gas, to: spa}
+    check: {legal: true}
+  - order: {type: hold, power: italy, at: spa}
+    check: {legal: true}
+  - order: {type: support_hold, power: england, at: por, target: spa}
+    check: {legal: true}

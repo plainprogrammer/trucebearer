@@ -1,0 +1,14 @@
+case: "6.A.10"
+summary: A support is illegal when the supporter can't reach the province the move goes to
+position:
+  units:
+    - {power: austria, type: army, at: ven}
+    - {power: italy, type: fleet, at: rom}
+    - {power: italy, type: army, at: apu}
+orders:
+  - order: {type: hold, power: austria, at: ven}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: rom, from: apu, to: ven}
+    check: {legal: false, reason: not_reachable}
+  - order: {type: move, power: italy, at: apu, destination: ven}
+    check: {legal: true}

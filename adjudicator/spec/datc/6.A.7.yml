@@ -1,0 +1,11 @@
+case: "6.A.7"
+summary: A fleet can't be convoyed, so neither its move nor a convoy for it is legal
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: nth}
+orders:
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: false, reason: not_reachable}
+  - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
+    check: {legal: false, reason: no_unit}

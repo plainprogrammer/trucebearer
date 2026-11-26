@@ -1,0 +1,11 @@
+case: "6.D.31"
+summary: A fleet may not support a move whose only convoy route is through that same fleet
+position:
+  units:
+    - {power: austria, type: army, at: rum}
+    - {power: turkey, type: fleet, at: bla}
+orders:
+  - order: {type: move, power: austria, at: rum, destination: arm}
+    check: {legal: true}
+  - order: {type: support_move, power: turkey, at: bla, from: rum, to: arm}
+    check: {legal: false, reason: move_impossible}

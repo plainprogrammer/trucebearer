@@ -1,0 +1,8 @@
+case: "6.B.10"
+summary: A fleet on the south coast of Spain may move to the Gulf of Lyon (written without the unit's coast)
+position:
+  units:
+    - {power: france, type: fleet, at: "spa/sc"}
+orders:
+  - order: {type: move, power: france, at: spa, destination: gol}
+    check: {legal: true}

@@ -1,0 +1,17 @@
+case: "6.B.7"
+summary: A support names no coast, so supporting a move to either coast of Spain is legal
+position:
+  units:
+    - {power: france, type: fleet, at: por}
+    - {power: france, type: fleet, at: mao}
+    - {power: italy, type: fleet, at: gol}
+    - {power: italy, type: fleet, at: wes}
+orders:
+  - order: {type: support_move, power: france, at: por, from: mao, to: spa}
+    check: {legal: true}
+  - order: {type: move, power: france, at: mao, destination: "spa/nc"}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: gol, from: wes, to: spa}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: wes, destination: "spa/sc"}
+    check: {legal: true}

@@ -1,0 +1,8 @@
+case: "6.A.1"
+summary: A fleet may not move to a province that does not touch its own
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+orders:
+  - order: {type: move, power: england, at: nth, destination: pic}
+    check: {legal: false, reason: not_reachable}

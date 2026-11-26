@@ -1,0 +1,8 @@
+case: "6.A.6"
+summary: A power may not give an order to another power's unit
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+orders:
+  - order: {type: move, power: germany, at: lon, destination: nth}
+    check: {legal: false, reason: foreign_unit}

@@ -1,0 +1,20 @@
+case: "6.A.5"
+summary: A move to the unit's own province is still not an order when a convoy and a support point at it
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: yor}
+    - {power: england, type: army, at: lvp}
+    - {power: germany, type: fleet, at: lon}
+    - {power: germany, type: army, at: wal}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: yor, to: yor}
+    check: {legal: false, reason: bad_endpoints}
+  - order: {type: move, power: england, at: yor, destination: yor}
+    check: {legal: false, reason: own_province}
+  - order: {type: support_move, power: england, at: lvp, from: yor, to: yor}
+    check: {legal: false, reason: same_province}
+  - order: {type: move, power: germany, at: lon, destination: yor}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: wal, from: lon, to: yor}
+    check: {legal: true}

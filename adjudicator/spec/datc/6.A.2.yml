@@ -1,0 +1,8 @@
+case: "6.A.2"
+summary: An army may not move into the open sea
+position:
+  units:
+    - {power: england, type: army, at: lvp}
+orders:
+  - order: {type: move, power: england, at: lvp, destination: iri}
+    check: {legal: false, reason: not_reachable}

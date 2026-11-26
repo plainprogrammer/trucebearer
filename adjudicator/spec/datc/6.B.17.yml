@@ -1,0 +1,14 @@
+case: "6.B.17"
+summary: A support for a move out of a split-coast province names the province only
+position:
+  units:
+    - {power: england, type: fleet, at: mao}
+    - {power: france, type: fleet, at: "spa/sc"}
+    - {power: italy, type: fleet, at: wes}
+orders:
+  - order: {type: hold, power: england, at: mao}
+    check: {legal: true}
+  - order: {type: move, power: france, at: spa, destination: mao}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: wes, from: spa, to: mao}
+    check: {legal: true}

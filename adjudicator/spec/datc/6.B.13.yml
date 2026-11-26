@@ -1,0 +1,11 @@
+case: "6.B.13"
+summary: Two fleets each move across the two coasts of Bulgaria and Constantinople, both moves legal
+position:
+  units:
+    - {power: turkey, type: fleet, at: "bul/sc"}
+    - {power: turkey, type: fleet, at: con}
+orders:
+  - order: {type: move, power: turkey, at: bul, destination: con}
+    check: {legal: true}
+  - order: {type: move, power: turkey, at: con, destination: "bul/ec"}
+    check: {legal: true}
