@@ -273,7 +273,7 @@ Positions, units, orders and results are value objects. These rules hold for eve
 - **Canonical order.** List fields are put into a fixed order when the object is built, and then frozen (see [Canonical order](#canonical-order)).
 - **Validated on construction.** Every value object is checked against the classic map, whether it is built with `new` or with `from_h`. An object that can't exist on that map raises `TA::InvalidInput` (see [Impossible objects](#impossible-objects)). This will be revisited if other maps arrive.
 
-A value object is only checked for being well formed. An order that breaks a rule of the game, such as a move to a province the unit can't reach, is still a valid order object. Judging it is the job of checking (see Checking an order).
+A value object is only checked for being well formed. An order that breaks a rule of the game, such as a move to a province the unit can't reach, is still a valid order object. Judging it is the job of checking (see [Checking an order](#checking-an-order)).
 
 ### Province fields and location fields
 
@@ -448,7 +448,7 @@ O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy).to_h
 The answer to checking one order. It carries `format`.
 
 - `legal`: `true` or `false`.
-- `reasons`: an `Array` of rejection-reason symbols. It is empty when `legal` is `true`, and holds exactly one reason when `legal` is `false`. The reasons are listed under Checking an order.
+- `reasons`: an `Array` of rejection-reason symbols. It is empty when `legal` is `true`, and holds exactly one reason when `legal` is `false`. The reasons are listed under [Checking an order](#checking-an-order).
 
 ```ruby
 TA::CheckResult.new(legal: false, reasons: [:foreign_unit]).to_h
@@ -552,6 +552,126 @@ TA::Position.new(**spring.merge(dislodged_units: [TA::DislodgedUnit.new(unit: fl
 TA::CheckResult.new(legal: true, reasons: [:own_province])
 TA::CheckResult.new(legal: false, reasons: [])
 TA::CheckResult.new(legal: false, reasons: [:own_province, :not_reachable])
+```
+
+## Checking an order
+
+*Arrives in 0.1.0.*
+
+`TA.check(position, order)` takes a `TA::Position` and one order, and returns a `TA::CheckResult` saying whether that order is legal in that position.
+
+- **The position alone decides.** Checking looks only at the position and the order. It never looks at any other order, submitted or not. A unit being supported or convoyed may belong to any power, including another power than the one giving the order.
+- **At most one reason.** A legal order has no reasons. An order that is not legal has exactly one: the first condition that fails, in the precedence given for its order type below. `reasons` stays a list so that a later version may report more than one.
+- **Never an exception for a broken rule.** An order that breaks the rules gives a result with `legal: false`. Only malformed input raises `TA::InvalidInput`, and a value object that was built without raising is never malformed.
+
+```ruby
+start = TA::Map.classic.starting_position
+TA.check(start, O::Hold.new(power: :england, at: :lon))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=true, reasons=[]>
+TA.check(start, O::Hold.new(power: :france, at: :lon))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:foreign_unit]>
+TA.check(start, O::Move.new(power: :england, at: :lon, destination: L.new(province: :bel)))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:not_reachable]>   # London holds a fleet, which can't reach Belgium
+TA.check(start, O::Move.new(power: :russia, at: :sev, destination: L.new(province: :rum)))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=true, reasons=[]>
+TA.check(start, O::Move.new(power: :france, at: :mar, destination: L.new(province: :spa, coast: :nc)))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:coast_not_allowed]>   # Marseilles holds an army
+TA.check(start, O::MoveViaConvoy.new(power: :england, at: :lvp, to: :wal))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:no_convoy_route]>   # no fleet is at sea yet
+TA.check(start, O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=true, reasons=[]>   # Austria may support a Russian army
+```
+
+### Terms used in checking
+
+- **Can reach.** A unit can reach a province when the map's adjacency for its unit type joins the unit's current location to that province. For a fleet, the step must start from the coast the fleet is on, and it is enough to reach any one coast of the province (DATC 6.A.9, 6.A.10, 6.B.4, 6.B.5).
+- **Convoy chain.** A sequence of different sea provinces, each with a fleet of any power in it, that links two different coastal provinces: the first sea province borders the origin, each one borders the next, and the last borders the destination. Coasts at the two ends don't matter (DATC 6.B.18, 6.B.19).
+- **Minimal convoy chain.** A convoy chain that stops being a chain between the same two provinces if any one or more of its fleets are taken out (DATC 4.E.1, 6.G.19).
+
+### When each order type is legal
+
+Every order first needs a movement-phase position, a unit in its `at` province, and that unit to belong to the order's `power`. Beyond that:
+
+- **Hold** needs nothing more.
+- **Move** is legal when the destination is a province other than the unit's own (DATC 6.A.4, 6.A.5) and either the unit can reach it, or the unit is an army and the position has a convoy chain from its province to the destination. A fleet never moves by convoy chain (DATC 6.A.1, 6.A.7). The destination's coast must also fit: an army names none, and a fleet moving to a province with split coasts names one it can reach.
+- **MoveViaConvoy** is legal when the unit is an army, the destination is another province, the army could also get there by land, and the position has a convoy chain from its province to the destination. The tag only exists to pick the sea route to a neighboring province. Refusing it for a province the army can't reach by land is our own input-contract choice; DATC 4.A.3 doesn't demand it.
+- **SupportHold** is legal when the supported province isn't the supporter's own (DATC 6.A.8), some unit stands there, and the supporter can reach it.
+- **SupportMove** is legal when:
+  - neither the origin nor the destination is the supporter's own province (DATC 6.D.34);
+  - the origin and destination differ;
+  - a unit stands in the origin;
+  - the supporter can reach the destination;
+  - the unit in the origin could make that move as a plain move, to some coast of the destination, without a convoy chain that runs through the supporter's province (DATC 6.D.31).
+- **Convoy** is legal when the ordered unit is a fleet in a sea province, the origin and destination are two different coastal provinces, an army stands in the origin, and the fleet is part of at least one minimal convoy chain from the origin to the destination (DATC 6.G.19).
+
+### Rejection reasons
+
+Each order type checks its conditions in the order below, and the first that fails gives the reason. A condition shared by several order types gives the same symbol in each.
+
+| Order type | Reasons, in precedence order |
+|---|---|
+| every order, checked first | `:wrong_phase`, `:no_such_unit`, `:foreign_unit` |
+| Hold | none further |
+| Move | `:own_province`, `:not_reachable`, `:coast_not_allowed`, `:coast_required`, `:coast_unreachable` |
+| MoveViaConvoy | `:not_army`, `:own_province`, `:not_adjacent`, `:no_convoy_route` |
+| SupportHold | `:own_province`, `:no_unit`, `:not_reachable` |
+| SupportMove | `:own_province`, `:same_province`, `:no_unit`, `:not_reachable`, `:move_impossible` |
+| Convoy | `:not_fleet_at_sea`, `:bad_endpoints`, `:no_unit`, `:not_on_chain` |
+
+What each reason means:
+
+- `:wrong_phase`: the position isn't in a movement phase. No other reason is ever given alongside it.
+- `:no_such_unit`: there is no unit in the order's `at` province, so the ordered unit isn't on the board.
+- `:foreign_unit`: the ordered unit belongs to a power other than the one giving the order (DATC 6.A.6).
+- `:own_province`: the order points at the unit's own province. For a move, that is the destination. For a support to hold, it is the supported province. For a support to move, it is either the origin or the destination (DATC 6.A.4, 6.A.5, 6.A.8, 6.D.34).
+- `:not_reachable`: the unit can't reach the province it needs to. For a move, that is the destination, with no convoy chain to help an army. For a support, it is the supported province or the destination (DATC 6.A.1, 6.A.7, 6.A.10).
+- `:coast_not_allowed`: an army's move names a coast. This is the strict option of DATC 4.B.6, and departs from the preferred result of 6.B.12 (see `ruleset.md`).
+- `:coast_required`: a fleet's move to a province with split coasts names no coast, even when only one coast is in reach. This is the strict option of DATC 4.B.2, and departs from the preferred result of 6.B.2 (see `ruleset.md`).
+- `:coast_unreachable`: a fleet's move names a coast it can't reach. The coast is never corrected for the caller (DATC 4.B.3, 6.B.3).
+- `:not_army`: a move via convoy is ordered for a fleet.
+- `:not_adjacent`: a move via convoy names a province the army couldn't reach by land (DATC 4.A.3).
+- `:no_convoy_route`: a move via convoy has no convoy chain in the position.
+- `:same_province`: a support to move names the same province as origin and destination.
+- `:no_unit`: the province the order refers to has no suitable unit: no unit at all in the supported province or the support's origin, or no army in the convoy's origin.
+- `:move_impossible`: the unit in the support's origin couldn't make the supported move itself, judged without any convoy chain through the supporter's province (DATC 6.D.31).
+- `:not_fleet_at_sea`: a convoy is ordered for an army, or for a fleet that isn't in a sea province.
+- `:bad_endpoints`: a convoy's origin and destination are the same province, or either of them isn't coastal.
+- `:not_on_chain`: the convoying fleet isn't part of any minimal convoy chain from the origin to the destination (DATC 6.G.19).
+
+## Legal orders
+
+*Arrives in 0.1.0.*
+
+`TA.legal_orders(position, unit)` takes a `TA::Position` and a `TA::Unit`, and returns an `Array` of every legal order for that unit.
+
+- **The same answer as checking.** Every order in the list passes [`TA.check`](#checking-an-order), and every order for the unit that passes `TA.check` is in the list. Each order has one accepted form, so the list is always finite.
+- **The position alone decides.** Like checking, the list depends only on the position, never on what anyone has ordered.
+- **The owner gives every order.** Each listed order names the unit's owner as its `power`.
+- **Supports for moves nobody has ordered** are included, since checking doesn't look at other orders.
+- **One move per coast.** A fleet that can reach a province with split coasts gets one move for each coast it can reach, and no move without a coast.
+- **Moves by convoy.** For an army with a convoy chain to a province, a province it can't reach by land appears as a plain move only. A province it can reach by land appears both as a plain move and as a move via convoy.
+- **Empty, never an exception.** The list is empty when the position isn't in a movement phase, or when the unit isn't on the board. A unit is on the board only when the position holds a unit with the same power, type and location.
+
+### List order
+
+The list comes in this order, and the same call always gives the same list. Provinces and coasts sort by identifier.
+
+1. the hold
+2. moves, by destination province and then coast
+3. moves via convoy, by destination
+4. supports to hold, by target
+5. supports to move, by origin and then destination
+6. convoys, by origin and then destination
+
+```ruby
+start = TA::Map.classic.starting_position
+fleet = TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon))
+TA.legal_orders(start, fleet).first(3)
+# => [O::Hold.new(power: :england, at: :lon),
+#     O::Move.new(power: :england, at: :lon, destination: L.new(province: :eng)),
+#     O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth))]
+TA.legal_orders(start, TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :lon)))
+# => []   # no French fleet is in London
 ```
 
 ## Change rules
