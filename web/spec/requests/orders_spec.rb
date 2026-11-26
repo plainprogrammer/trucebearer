@@ -23,61 +23,50 @@ RSpec.describe "Saving orders", type: :request do
     game.phases.create!(number: 2, position: RulesEngine.starting_position)
   end
 
-  describe "the page (AC-2.11)" do
-    it "has a select for each of the seat's units, with no order first and then the legal orders" do
+  # The page replaced spec 022's plain form (spec 023 AC-8.2). The equivalents of its examples:
+  describe "the order screen (replaces AC-2.11; spec 023 AC-1.1 to AC-1.6)" do
+    def rows = page.css(".unit-row__body").map { |row| row.text.squish }
+
+    it "has a row for each of the seat's units, none of another power's, and no select" do
       phone.get path
 
       expect(phone.response).to have_http_status(:ok)
-      selects = page.css("select")
-      expect(selects.map { |s| s["name"] }).to eq(%w[orders[edi] orders[lon] orders[lvp]])
-      selects.each do |select|
-        province = select["name"][/\[(\w+)\]/, 1]
-        unit = phase.position.units.find { |u| u.location.province.to_s == province }
-        options = select.css("option")
-        expect(options.first.text).to eq("No order (holds)")
-        expect(options.first["value"]).to eq("")
-        expect(options.size).to eq(1 + RulesEngine.legal_orders(phase.position, unit).size)
-        expect(options.drop(1).map { |o| JSON.parse(o["value"])["at"] }.uniq).to eq([ province ])
-      end
-      labels = page.css("label.field__label").map { |l| l.dup.tap { |copy| copy.css("svg").remove }.text.squish }
-      expect(labels).to eq([ "Fleet in EDI", "Fleet in LON", "Army in LVP" ])
+      expect(page.css("a.unit-row").map { |a| a["href"] }).to eq(%w[edi lon lvp].map { |province| "#{path}/#{province}" })
+      expect(rows).to eq([ "Fleet in Edinburgh (EDI) holds", "Fleet in London (LON) holds", "Army in Liverpool (LVP) holds" ])
+      expect(page.css("select, option")).to be_empty
     end
 
-    it "shows the stored order as selected, and no order for a unit that has none" do
+    it "shows the stored order in words on its row, and 'holds' on a unit that has none" do
       england.save_orders!(phase, { "lon" => json_of(move(:england, :lon, :nth)) })
 
       phone.get path
 
-      selected = page.css("option[selected]")
-      expect(selected.size).to eq(1)
-      expect(selected.first.text).to eq("Move to NTH")
-      expect(page.at_css("#order-lon option[selected]")).to be_present
+      expect(rows).to eq([ "Fleet in Edinburgh (EDI) holds", "Fleet in London (LON) Move to North Sea (NTH)", "Army in Liverpool (LVP) holds" ])
     end
 
-    it "shows the seat's own state and count, and the phase header with its badge" do
+    it "shows the seat's own state and count in the submit bar, and the phase header with its badge" do
       england.save_orders!(phase, { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: true)
 
       phone.get path
 
       expect(page.at_css(".phase-header__title").text).to eq("Spring 1901 · Movement")
       expect(page.at_css(".phase-header .power-badge--england")).to be_present
-      expect(page.text).to include("Submitted")
-      expect(page.text).to include("1 of 3 units ordered")
+      expect(page.at_css(".submit-bar__state").text).to eq("Submitted · 1 of 3 ordered")
     end
 
-    it "has the two buttons in the action area, tied to the form (D5)" do
+    it "has one Submit button in the action area, in a form that PUTs to the endpoint with submit=1 (D9)" do
       phone.get path
 
-      expect(page.at_css("form#orders-form")["method"]).to eq("post")
-      expect(page.at_css("form#orders-form input[name=_method]")["value"]).to eq("put")
-      save = page.at_css(".app-actions button[form=orders-form]:not([name])")
-      submit = page.at_css(".app-actions button[form=orders-form][name=submit][value='1']")
-      expect([ save.text, submit.text ]).to eq([ "Save orders", "Save and submit" ])
+      form = page.at_css(".app-actions .submit-bar form")
+      expect(form["action"]).to eq(path)
+      expect(form.at_css("input[name=_method]")["value"]).to eq("put")
+      expect(form.at_css("button[name=submit][value='1']").text.squish).to eq("Submit orders 0 of 3 ordered")
+      expect(page.css(".app-actions button").size).to eq(1)
     end
   end
 
   describe "saving (AC-2.1, AC-3.1)" do
-    it "stores an order for each unit and goes back to the page with a banner" do
+    it "stores an order for each unit and goes back to the page, saved, with no banner (spec 023 D4)" do
       orders = { "lon" => json_of(move(:england, :lon, :nth)), "edi" => json_of(rules_order(:hold, :england, :edi)),
                  "lvp" => json_of(move(:england, :lvp, :yor)) }
 
@@ -87,8 +76,9 @@ RSpec.describe "Saving orders", type: :request do
       expect(phone.response.location).to eq("http://www.example.com#{path}")
       expect(SavedOrder.where(seat_id: england.id, phase_id: phase.id).count).to eq(3)
       phone.follow_redirect!
-      expect(page.css(".banner--info").map(&:text)).to eq([ "Orders saved." ])
-      expect(page.text).to include("3 of 3 units ordered")
+      expect(page.css(".banner")).to be_empty
+      expect(page.at_css(".save-status__rest").text).to eq("Saved")
+      expect(page.at_css(".submit-bar").text.squish).to include("3 of 3 ordered")
     end
 
     it "submits when asked, and the banner says so (AC-3.1)" do
@@ -118,9 +108,12 @@ RSpec.describe "Saving orders", type: :request do
 
     it "keeps only the banner's kind and text in the flash (AC-7.7)" do
       order = json_of(move(:england, :lon, :nth))
-      phone.put path, params: { orders: { "lon" => order } }
+      phone.put path, params: { orders: { "lon" => order }, submit: "1" }
 
-      expect(phone.flash.to_h).to eq({ "banner" => { "kind" => "info", "text" => "Orders saved." } })
+      expect(phone.flash.to_h).to eq({ "banner" => { "kind" => "info", "text" => "Submitted." } })
+      phone.follow_redirect!
+      phone.put path, params: { orders: { "lon" => json_of(rules_order(:hold, :england, :lon)) } } # a plain save sets no flash (spec 023 D4)
+      expect(phone.flash.to_h).to be_empty
     end
   end
 
@@ -131,7 +124,8 @@ RSpec.describe "Saving orders", type: :request do
       expect(phone.response).to have_http_status(:unprocessable_content)
       expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: The fleet in LON can't reach there." ])
       expect(SavedOrder.count).to eq(0)
-      expect(page.css("select").size).to eq(3)
+      expect(page.css(".unit-row").size).to eq(3)
+      expect(page.at_css(".save-status__rest").text).to eq("Not saved")
     end
 
     it "gives 422 for another power's unit and for another power's name" do

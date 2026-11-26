@@ -26,6 +26,12 @@ module SecrecyRoutes
     "POST /games/:public_id/host/seats/:power/reissue" => { shows: :none, why: "replaces the token and deletes the seat's saved orders for the open phase" },
     "GET /games/:public_id/host/seats/:power/qr" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/qr" }, why: "a one-time code; without the flash it redirects" },
     "GET /games/:public_id/phases/:number/orders" => { shows: :own, sweep: ->(c) { "/games/#{c.id}/phases/1/orders" }, why: "the seat's own orders" },
+    "GET /games/:public_id/phases/:number/orders/:province" => {
+      shows: :own,
+      sweep: ->(c) { { "lon" => "/games/#{c.id}/phases/1/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi",
+                       "par" => "/games/#{c.id}/phases/1/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
+      why: "the seat's own picker steps; a province that is not the viewer's unit is the stranger page"
+    },
     "PUT /games/:public_id/phases/:number/orders" => { shows: :own, why: "saves the seat's own orders; the reply and the redirect show only its own" },
     "GET /games/:public_id/host/phases/:number/reveal" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/1/reveal" }, why: "names the powers that have not submitted" },
     "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, why: "reveals; redirects to the host page" }
@@ -42,6 +48,17 @@ module SecrecyRoutes
 
   def self.classified?(key) = APP.key?(key) || FRAMEWORK.any? { |pattern, _why| key.match?(pattern) }
 
-  # The GET routes the sweep requests, as { key => entry }.
+  # The GET routes the sweep requests, as { key => entry }. An entry's `sweep` is a path, or a Hash of { label => path } when one
+  # route needs several pages swept (the picker's own units, each with a deep draft; spec 023 AC-5.2).
   def self.readable = APP.select { |_key, entry| entry[:sweep] }
+
+  # Every page the sweep requests, as { label => { path:, entry: } }.
+  def self.sweeps(context)
+    readable.flat_map do |key, entry|
+      result = entry[:sweep].call(context)
+      if result.is_a?(Hash) then result.map { |name, path| [ "#{key} [#{name}]", { path: path, entry: entry } ] }
+      else [ [ key, { path: result, entry: entry } ] ]
+      end
+    end.to_h
+  end
 end

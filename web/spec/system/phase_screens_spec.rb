@@ -46,25 +46,28 @@ RSpec.describe "Screens of the phase lifecycle", type: :system do
         measure_screen("the seat page", width)
 
         click_link "Enter orders"
-        expect(page).to have_css("select", count: 3)
+        expect(page).to have_css(".unit-row", count: 3)
         measure_screen("the orders page", width)
 
-        # The two buttons live in the sticky action area, inside the viewport.
+        # The submit bar lives in the sticky action area, inside the viewport.
         sticky = evaluate_script(<<~JS)
           (() => {
             const area = document.querySelector(".app-actions");
             return { position: getComputedStyle(area).position, bottom: area.getBoundingClientRect().bottom, height: window.innerHeight,
-                     buttons: Array.from(area.querySelectorAll("button")).map((b) => b.textContent.trim()) };
+                     buttons: Array.from(area.querySelectorAll("button")).map((b) => b.textContent.replace(/\\s+/g, " ").trim()) };
           })()
         JS
         expect(sticky["position"]).to eq("sticky")
         expect(sticky["bottom"]).to be <= sticky["height"] + tolerance
-        expect(sticky["buttons"]).to eq([ "Save orders", "Save and submit" ])
+        expect(sticky["buttons"]).to eq([ "Submit orders 0 of 3 ordered" ])
 
-        select "Move to NTH", from: "orders[lon]"
-        click_button "Save and submit"
+        click_link "Fleet in London"
+        click_link "Move"
+        click_button "North Sea"
+        expect(page).to have_css(".unit-row__order", text: "Move to North Sea (NTH)")
+        click_button "Submit orders"
         expect(page).to have_css(".banner--info", text: "Submitted.")
-        expect(page).to have_text("1 of 3 units ordered")
+        expect(page).to have_text("1 of 3 ordered")
         measure_screen("the orders page after submitting", width)
 
         visit "/games/#{id}/host"

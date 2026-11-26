@@ -1,0 +1,8 @@
+<%# The order so far, in words. locals: unit, trail %>
+<div class="picker__draft">
+  <p class="picker__unit"><%= unit_icon(unit.power, unit.type, size: 32, decorative: true) %>
+    <%= unit.type.to_s.capitalize %> in <%= province_label(unit.location.province) %></p>
+  <% if trail.any? %>
+    <p class="picker__trail"><%= safe_join(trail.map { |t| safe_join([ t.words, (province_label(t.province) if t.province) ].compact, " ") }, " → ") %></p>
+  <% end %>
+</div>

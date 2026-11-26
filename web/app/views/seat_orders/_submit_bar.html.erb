@@ -1,0 +1,15 @@
+<%# The submit bar in the sticky action area (spec 023 D9). locals: game, phase, submitted, ordered, total, state (for the save status) %>
+<div class="submit-bar">
+  <%= render "shared/save_status", state: state %>
+  <% if submitted %>
+    <p class="submit-bar__state">Submitted · <%= ordered %> of <%= total %> ordered</p>
+    <%= link_to "Back to your seat", game_path(game.public_id), class: "button button--secondary" %>
+  <% else %>
+    <p class="submit-bar__state">Not submitted</p>
+    <%= form_with url: game_seat_orders_path(game.public_id, phase.number), method: :put do %>
+      <%= button_tag type: "submit", name: "submit", value: "1", class: "button submit-bar__button" do %>
+        Submit orders <span class="submit-bar__count"><%= ordered %> of <%= total %> ordered</span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

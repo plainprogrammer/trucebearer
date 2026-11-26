@@ -31,4 +31,8 @@ module StyleguideHelper
   TYPE_STEPS = %w[sm base lg xl 2xl].freeze
   SPACE_STEPS = (1..8).to_a.freeze
   POWER_IDS = PowerBadgeHelper::POWER_NAMES.keys.freeze
+
+  # Stand-ins for the game and phase the order screen's partials build their links from (spec 023).
+  SAMPLE_GAME = Struct.new(:public_id).new("sample").freeze
+  SAMPLE_PHASE = Struct.new(:number).new(1).freeze
 end

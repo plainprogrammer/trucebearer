@@ -1,0 +1,3 @@
+<%# One choice's words, its province in full with the abbreviation, and a short note. locals: choice %>
+<span class="picker__choice"><%= choice.words %> <%= province_label(choice.province) if choice.province %></span>
+<% if choice.note %><span class="picker__note"><%= choice.note %></span><% end %>

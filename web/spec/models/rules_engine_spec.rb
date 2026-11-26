@@ -109,4 +109,22 @@ RSpec.describe RulesEngine do
     expect(RulesEngine.province?(:lon)).to be(true)
     expect([ "xyz", "", nil, "LON", "lon " ].map { |id| RulesEngine.province?(id) }).to all(be(false))
   end
+
+  describe ".province_name (spec 023 FR-3)" do
+    it "gives the full name of a province, by symbol or string" do
+      expect(RulesEngine.province_name("lvp")).to eq("Liverpool")
+      expect(RulesEngine.province_name(:stp)).to eq("St Petersburg")
+    end
+
+    it "raises the gem's invalid-input error for an unknown province" do
+      expect { RulesEngine.province_name("xxx") }.to raise_error(RulesEngine::InvalidInput)
+    end
+  end
+
+  describe ".army_adjacent? (spec 023 D3)" do
+    it "is true when an army could walk from one province to the other and false when it could not" do
+      expect(RulesEngine.army_adjacent?("lon", "yor")).to be(true)
+      expect(RulesEngine.army_adjacent?("lon", "nwy")).to be(false)
+    end
+  end
 end

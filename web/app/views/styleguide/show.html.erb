@@ -206,7 +206,7 @@
   <section data-component="banner" class="stack" aria-labelledby="sg-banner">
     <h2 id="sg-banner">Banner</h2>
     <p>One sentence. Warnings and errors start with a word, so the kind never rests on colour.</p>
-    <%= render "shared/banner", kind: "info", text: "Orders saved." %>
+    <%= render "shared/banner", kind: "info", text: "Submitted." %>
     <%= render "shared/banner", kind: "warning", text: "Austria's army in SER was dislodged. Settle it by hand." %>
     <%= render "shared/banner", kind: "danger", text: "The host has already revealed this phase. Your orders were not saved." %>
   </section>
@@ -222,6 +222,45 @@
           confirm_path: nil, cancel_path: "#sg-confirm" } do %>
       <p>Closing cannot be undone.</p>
     <% end %>
+  </section>
+
+  <% sample_game = StyleguideHelper::SAMPLE_GAME %>
+  <% sample_position = RulesEngine.starting_position %>
+  <% sample_unit = sample_position.units.find { |u| u.location.province == :kie } %>
+  <% sample_order = RulesEngine.load_order("format" => 1, "type" => "move", "power" => "germany", "at" => "kie",
+                                           "destination" => { "province" => "den", "coast" => nil }) %>
+  <% sample_phase = StyleguideHelper::SAMPLE_PHASE %>
+  <% sample_step = OrderChoices.new(sample_position, sample_unit, ordered: true).step("kind" => "move") %>
+
+  <section data-component="unit-row" class="stack" aria-labelledby="sg-unit-row">
+    <h2 id="sg-unit-row">Unit row</h2>
+    <p>One of a player's units: the icon, its place in full with the abbreviation, and its order. A unit with no order says "holds".</p>
+    <ul class="list">
+      <%= render "seat_orders/unit_row", unit: sample_unit, order: sample_order, game: sample_game, phase: sample_phase %>
+      <%= render "seat_orders/unit_row", unit: sample_position.units.find { |u| u.location.province == :ber }, order: nil, game: sample_game, phase: sample_phase %>
+    </ul>
+  </section>
+
+  <section data-component="picker" class="stack picker" aria-labelledby="sg-picker">
+    <h2 id="sg-picker">Picker step</h2>
+    <p>The order so far, then the choices. Each step is a page; a choice is a link, and the last pick saves.</p>
+    <%= render "order_pickers/draft", unit: sample_unit, trail: sample_step.trail %>
+    <ul class="list">
+      <% sample_step.choices.each do |choice| %>
+        <li><%= link_to "#sg-picker", class: "list__row" do %><%= render "order_pickers/choice", choice: choice %><% end %></li>
+      <% end %>
+      <li><%= link_to "#sg-picker", class: "list__row" do %><%= render "order_pickers/choice", choice: OrderChoices::Choice.new(nil, "nwy", "needs a convoy", nil, nil) %><% end %></li>
+    </ul>
+  </section>
+
+  <section data-component="submit-bar" class="stack" aria-labelledby="sg-submit-bar">
+    <h2 id="sg-submit-bar">Submit bar</h2>
+    <p>Sticky at the foot of the order screen. The save status and the submitted state are words, so colour is never the only signal.</p>
+    <%= render "seat_orders/submit_bar", game: sample_game, phase: sample_phase, submitted: false, ordered: 3, total: 5, state: :saved %>
+    <%= render "seat_orders/submit_bar", game: sample_game, phase: sample_phase, submitted: true, ordered: 5, total: 5, state: :saved %>
+    <%= render "shared/save_status", state: :saves_on_pick %>
+    <%= render "shared/save_status", state: :not_saved %>
+    <%= render "shared/save_status", state: :saved, saving: true %>
   </section>
 
   <section class="stack" aria-labelledby="sg-colors">

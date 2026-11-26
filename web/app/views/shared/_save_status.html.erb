@@ -1,0 +1,4 @@
+<%# locals: state (:saved, :saves_on_pick or :not_saved), saving (optional: the style guide's static sample).
+    Two spans, so CSS can show "Saving…" while Turbo submits a form and the text is always real text (spec 023 D6). %>
+<% rest = { saved: "Saved", saves_on_pick: "Saves when you pick", not_saved: "Not saved" }.fetch(state) %>
+<p class="save-status<%= " save-status--saving" if local_assigns[:saving] %>" role="status"><span class="save-status__rest"><%= rest %></span><span class="save-status__saving">Saving…</span></p>

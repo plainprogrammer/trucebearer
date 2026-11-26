@@ -28,6 +28,8 @@ Rails.application.routes.draw do
     # Phases (spec 022). A phase number is matched strictly in the controller, so a dot in it is a stranger, not a 404 page.
     get "phases/:number/orders", to: "seat_orders#show", as: :game_seat_orders, constraints: { number: %r{[^/]+} }
     put "phases/:number/orders", to: "seat_orders#update", constraints: { number: %r{[^/]+} }
+    get "phases/:number/orders/:province", to: "order_pickers#show", as: :game_order_picker,
+                                           constraints: { number: %r{[^/]+}, province: %r{[^/]+} } # spec 023
     get "host/phases/:number/reveal", to: "reveals#show", as: :game_reveal, constraints: { number: %r{[^/]+} }
     post "host/phases/:number/reveal", to: "reveals#create", as: nil, constraints: { number: %r{[^/]+} }
   end

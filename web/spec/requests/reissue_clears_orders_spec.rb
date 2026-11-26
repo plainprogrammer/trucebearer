@@ -48,9 +48,9 @@ RSpec.describe "Reissuing a seat", type: :request do
 
     page = Nokogiri::HTML5(phone.response.body)
     expect(phone.response).to have_http_status(:ok)
-    expect(page.css("select").map { |select| select.at_css("option[selected]") }).to all(be_nil)
-    expect(page.text).to include("Not submitted")
-    expect(page.text).to include("0 of 3 units ordered")
+    expect(page.css(".unit-row__order").map { |row| row.text.squish }).to eq(%w[holds holds holds])
+    expect(page.at_css(".submit-bar__state").text).to eq("Not submitted")
+    expect(page.at_css(".submit-bar").text.squish).to include("0 of 3 ordered")
   end
 
   it "shuts the hole: the host reading the new seat sees none of the old orders (AC-7.10)" do
@@ -59,7 +59,7 @@ RSpec.describe "Reissuing a seat", type: :request do
     phone = reissue_and_take_over("england")
     phone.get "/games/#{id}/phases/1/orders"
 
-    expect(Nokogiri::HTML5(phone.response.body).css("option[selected]")).to be_empty
+    expect(Nokogiri::HTML5(phone.response.body).css(".unit-row__order").map { |row| row.text.squish }).to eq(%w[holds holds holds])
   end
 
   it "does not touch the orders and submissions of a revealed phase" do

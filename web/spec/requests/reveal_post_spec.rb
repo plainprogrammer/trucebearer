@@ -139,6 +139,7 @@ RSpec.describe "Revealing a phase", type: :request do
 
       expect(phase_routes).to match_array([
         [ "GET", "/games/:public_id/phases/:number/orders" ], [ "PUT", "/games/:public_id/phases/:number/orders" ],
+        [ "GET", "/games/:public_id/phases/:number/orders/:province" ],
         [ "GET", "/games/:public_id/host/phases/:number/reveal" ], [ "POST", "/games/:public_id/host/phases/:number/reveal" ]
       ])
       expect(routes.map(&:last).grep(/reopen|undo|unreveal/)).to be_empty

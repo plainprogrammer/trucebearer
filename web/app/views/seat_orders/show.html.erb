@@ -5,28 +5,15 @@
   <h1>Your orders</h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
   <% if @refusal %><%= render "shared/banner", kind: "danger", text: @refusal %><% end %>
-  <p><%= @seat.submitted?(@phase) ? "Submitted" : "Not submitted" %>. <%= @stored.size %> of <%= @units.size %> units ordered. A unit with no order holds.</p>
-
-  <%= form_with url: game_seat_orders_path(@game.public_id, @phase.number), method: :put, id: "orders-form", class: "stack" do %>
+  <p>Tap a unit to give it an order. A unit with no order holds.</p>
+  <ul class="list">
     <% @units.each do |unit| %>
-      <% province = unit.location.province.to_s %>
-      <div class="field">
-        <label class="field__label" for="order-<%= province %>">
-          <%= unit_icon(unit.power, unit.type, size: 32, decorative: true) %>
-          <%= unit.type.to_s.capitalize %> in <span class="mono"><%= province.upcase %></span>
-        </label>
-        <select class="control" id="order-<%= province %>" name="orders[<%= province %>]">
-          <option value="">No order (holds)</option>
-          <% @choices.fetch(province).each do |order| %>
-            <%= tag.option order_label(order), value: JSON.generate(order.to_h), selected: @stored[province] == order %>
-          <% end %>
-        </select>
-      </div>
+      <%= render "seat_orders/unit_row", unit: unit, order: @stored[unit.location.province.to_s], game: @game, phase: @phase %>
     <% end %>
-  <% end %>
+  </ul>
 </div>
 
 <% content_for :actions do %>
-  <%= button_tag "Save orders", type: "submit", name: nil, form: "orders-form", class: "button button--secondary" %>
-  <%= button_tag "Save and submit", type: "submit", name: "submit", value: "1", form: "orders-form", class: "button" %>
+  <%= render "seat_orders/submit_bar", game: @game, phase: @phase, submitted: @submitted, ordered: @stored.size, total: @units.size,
+                                       state: @refusal ? :not_saved : :saved %>
 <% end %>
