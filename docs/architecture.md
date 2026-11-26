@@ -41,7 +41,7 @@ Neither target includes the phase clock, the shared display or backups. Also out
 - Written in Ruby, test-first, as the gem `trucebearer-adjudicator` (module `Trucebearer::Adjudicator`) in `adjudicator/`.
 - Classic map only at first, loaded from a data file, so variants remain possible without a rewrite.
 - The current rulebook is the baseline, and the DATC decides edge cases. Every choice is recorded in `adjudicator/docs/ruleset.md`.
-- DATC scenarios are encoded as original, data-driven specs. No text from the document is copied.
+- DATC scenarios are encoded as original, data-driven specs. The repository keeps one unmodified reference copy of the DATC v3.4 at `adjudicator/docs/reference/datc-v3.4.html`, for reading only, so the section numbers can be checked. Nothing is quoted from it anywhere else, and no other copy is added.
 - The algorithm follows Kruijswijk's "The Math of Adjudication" (proposed).
 - Orders are checked as they are entered, so the gem offers checking of a single order separately from adjudication (proposed).
 
