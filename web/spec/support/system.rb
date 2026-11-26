@@ -38,3 +38,28 @@ RSpec.configure do |config|
     driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 900 ]
   end
 end
+
+# Chrome 158 rejects the wildcard origin that Capybara 3.40.0 sends when it
+# resets the browser between examples (Storage.clearDataForOrigin with origin
+# "*"), so every system spec after the first failed with "* is not a valid
+# URL". This shim sends the same clear with real values instead: all cookies
+# through Network.clearBrowserCookies, and local storage for the app's own
+# origin. Remove it once a Capybara release stops sending "*".
+module ChromeResetWithoutWildcardOrigin
+  private
+
+  def execute_cdp(cmd, params = {})
+    return super unless cmd == "Storage.clearDataForOrigin" && params[:origin] == "*"
+
+    super("Network.clearBrowserCookies")
+    types = params[:storageTypes].to_s.split(",") - [ "cookies" ]
+    server = Capybara.current_session.server
+    if types.any? && server
+      super(cmd, origin: "http://#{server.host}:#{server.port}", storageTypes: types.join(","))
+    end
+  end
+end
+
+require "capybara/selenium/driver"
+require "capybara/selenium/driver_specializations/chrome_driver"
+Capybara::Selenium::Driver::ChromeDriver.prepend(ChromeResetWithoutWildcardOrigin)
