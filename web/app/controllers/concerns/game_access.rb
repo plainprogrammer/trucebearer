@@ -78,7 +78,7 @@ module GameAccess
     return false unless host?(game) && seat != game.host_seat
 
     cookies.delete(cookie_name(:seat, game.public_id))
-    redirect_to game_step_in_path(game.public_id, seat.power, game.current_phase.number)
+    redirect_to game_step_in_path(game.public_id, seat.power, game.current_phase.number), status: :see_other
     true
   end
 
@@ -114,7 +114,8 @@ module GameAccess
   end
 
   # Where "your own seat" is: the seat page, or the host page when this browser holds no seat of its own (D7).
-  def own_seat_target(game = @game) = seat_of(game) ? game_path(game.public_id) : game_host_path(game.public_id)
+  # The host's own seat counts, not a foreign seat cookie, which D5 sends to a confirmation.
+  def own_seat_target(game = @game) = seat_of(game) == game.host_seat ? game_path(game.public_id) : game_host_path(game.public_id)
 
   # The order screen's address for the seat this page acts for: the own URL, or the stepped-in one (spec 026 D4).
   # The partials pass their own `game` (the style guide has no @game); a page's own game is the default.

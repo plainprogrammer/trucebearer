@@ -20,7 +20,7 @@ module SecrecyRoutes
     "GET /games/:public_id" => { shows: :own, sweep: ->(c) { "/games/#{c.id}" }, why: "the seat's own state and count, never an order" },
     "GET /games/:public_id/host" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host" }, why: "phase header, history, dislodged units" },
     "GET /games/:public_id/host-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/host-link?token=#{c.host_token}" }, why: "sets a cookie and redirects" },
-    "GET /games/:public_id/seat-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/seat-link?token=#{c.france_token}" }, why: "sets a cookie and redirects" },
+    "GET /games/:public_id/seat-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/seat-link?token=#{c.france_token}" }, why: "sets a cookie and redirects; a host browser is redirected to the step-in confirmation instead and stores nothing (spec 026 D5)" },
     "GET /games/:public_id/host/close" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/close" }, why: "a confirmation page" },
     "POST /games/:public_id/host/close" => { shows: :none, why: "closes joining" },
     "GET /games/:public_id/host/seats/:power/reissue" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/reissue" }, why: "a confirmation page; the reissue itself deletes the seat's saved orders (D9)" },

@@ -82,8 +82,12 @@ RSpec.describe "Forgery protection", type: :request do
       expect(StepIn.count).to eq(0)
     end
 
-    it "refuses Leave without a token" do
+    it "refuses Leave without a token, and the step-in stays in force" do
+      created.session.post "/games/#{id}/host/seats/france/phases/1/step-in" # forgery protection is still off here
       post_without_token "/games/#{id}/host/seats/france/step-in", verb: :delete
+      expect(created.session.cookies["step_in_#{id}"]).to be_present
+      created.session.get "/games/#{id}/host/seats/france/phases/1/orders"
+      expect(created.session.response).to have_http_status(:ok)
     end
 
     it "does record the confirmation with a token, so the refusal is not just a missing route" do

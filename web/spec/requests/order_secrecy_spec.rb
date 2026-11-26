@@ -167,8 +167,8 @@ RSpec.describe "Order secrecy", type: :request do
       end
       expect(status.call("the host, stepped into France", "#{stepped} [france]")).to eq(200)
       expect(status.call("the host, stepped into France", "#{stepped} [england]")).to eq(404)
-      expect(status.call("the host, with France's seat cookie", "GET /games/:public_id")).to eq(302)
-      expect(status.call("the host, with France's seat cookie", orders)).to eq(302)
+      expect(status.call("the host, with France's seat cookie", "GET /games/:public_id")).to eq(303)
+      expect(status.call("the host, with France's seat cookie", orders)).to eq(303)
 
       %i[one all other none].each do |name|
         set_orders(name)

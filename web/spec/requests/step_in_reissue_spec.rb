@@ -106,7 +106,7 @@ RSpec.describe "The reissue gap", type: :request do
         options = verb == :put ? { params: { orders: { "mar" => hold(:france, :mar) } } } : {}
         request_as_wearing_france(verb, path, **options)
 
-        expect(browser.response).to have_http_status(:found), path
+        expect(browser.response).to have_http_status(:see_other), path
         expect(location_path(browser)).to eq(confirmation), path
         expect(cookie_line(browser.response, "seat_#{id}")).to match(/\Aseat_#{id}=;|max-age=0|expires=Thu, 01 Jan 1970/i), path
         expect(browser.response.body).not_to include("Hold"), path

@@ -181,6 +181,7 @@ RSpec.describe "Stepping into a seat", type: :request do
       host.get screen("france", 1)
 
       expect(host.response).to have_http_status(:conflict)
+      expect(page.at_css("h1").text).to eq("France's orders")
       expect(page.css(".banner--warning")).to be_empty
       expect(page.css("a").map { |a| [ a.text, a["href"] ] }).to include([ "Go to the current phase", screen("france", 2) ])
     end
