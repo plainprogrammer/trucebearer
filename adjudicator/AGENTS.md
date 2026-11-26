@@ -25,11 +25,11 @@ You are working on the rules engine. It is a plain Ruby gem. It takes a position
 | `docs/interface.md` | The public interface the app relies on |
 | `docs/ruleset.md` | Every rules choice the engine makes, with the DATC section that decides it |
 | `CHANGELOG.md` | Changes since the last release, under "Unreleased" |
-| `bin/` | Development and release scripts |
+| `bin/` | Development and release scripts. `bin/release_tools/` is the release script's own code; it is not gem code and never ships |
 
 The gem skeleton was written by hand to fit this layout. It holds the gemspec, `Gemfile`, `Gemfile.lock`, `Rakefile`, `.rspec`, `.gitignore`, the entry point `lib/trucebearer/adjudicator.rb` with its `version.rb`, and `spec/spec_helper.rb`. Don't run `bundle gem` over the folder.
 
-Run the specs with `bundle exec rspec`; `bundle exec rake` does the same. Development dependencies are `rspec` and `rake` only, and they go in the `Gemfile`, not the gemspec, so the gem has no runtime dependencies. Commit `Gemfile.lock`. When the version changes, regenerate it with `bundle install`. The gemspec reads the Ruby version from the root `.ruby-version` and refuses `gem push` to any real host.
+Run the specs with `bundle exec rspec`; `bundle exec rake` does the same. Development dependencies are `rspec` and `rake` only, and they go in the `Gemfile`, not the gemspec, so the gem has no runtime dependencies. Commit `Gemfile.lock`. When the version changes, regenerate it with `bundle lock --local` (`bin/release` does this for you; run `bundle install` if a gem is missing locally). The gemspec reads the Ruby version from the root `.ruby-version` and refuses `gem push` to any real host.
 
 ## How to work
 
@@ -51,5 +51,8 @@ Anything in `docs/interface.md` is a promise to the app.
 The app uses tagged releases only, so it sees nothing until a release exists.
 
 - Before 1.0, any minor version (0.x.0) may change the interface. Patch versions (0.x.y) never do.
-- A release bumps the version, moves the "Unreleased" entries in `CHANGELOG.md` under the new version, commits, and tags `adjudicator-vX.Y.Z`. That will be a script in `bin/`. Until the script exists, do these steps by hand in that order.
+- Release with `bin/release major|minor|patch|X.Y.Z`. It bumps the version, moves the "Unreleased" entries in `CHANGELOG.md` under `## X.Y.Z (date)` and leaves a fresh empty "Unreleased", regenerates `Gemfile.lock`, commits "Release adjudicator-vX.Y.Z", and creates the tag `adjudicator-vX.Y.Z`.
+- It refuses to run when the working tree has any uncommitted change anywhere in the repository (a dry run is refused too), when "Unreleased" has no entries, or when the tag already exists. It warns when you are not on `main`.
+- `bin/release --dry-run minor` prints the plan and writes nothing. Run it first.
+- It never pushes. It prints the `git push --atomic` command; you run it after checking the commit.
 - Don't publish to RubyGems. The name stays off public registries until it is final.
