@@ -1,7 +1,7 @@
 # Feature 027: The host's position editor
 
 **Status:** Approved
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #27
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.4 | 2026-11-26 | Approved at Gate B (the maintainer's delegate): the app's coast labels are the existing `OrderLabelHelper::COASTS` ("north coast", ...), so `RulesEngine.coast_name` is not built and D5's `coast_name` is struck; `RulesEngine.coasts` returns the three identifiers. Fewer moving parts: one coast-label table in the app, not two. |
 | 1.0.3 | 2026-11-26 | Approved at Gate A (the maintainer's delegate): D2 option (a), D3, D4, D5, the screens and the amendments. Option (c) of D2, the host-toggled hold, is follow-up Issue #113, the first remedy if the repeated wipes hurt at the table. The engine's new methods are kept in one contiguous block of `rules_engine.rb`, because #29 edits that file. |
 | 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): the "Choose ..." checks run before any gem call and unknown identifiers are `other` (D5); `RulesEngine.coast_name` added; AC-1.5 and AC-1.9 agree with the stage order; the unit that vanishes under the lock is the stranger response (D7, AC-7.12); AC-3.3 covers a non-province value; spec 023's note is amended too (AC-10.2); stale Open Question references and the status-scan wording corrected. |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **D5/D8:** the plain words no longer rest on the gem's message text, which `web/AGENTS.md` forbids using. `RulesEngine` builds each edit in stages and explains a refusal from the documented map queries (province type, coasts, occupied provinces), only after the gem has refused. Open Question 1 is gone.<br>• **D3:** the clearing rule is now "an edit that changes where units stand". A season-and-year edit keeps orders, as an ownership edit does (orders are keyed to the phase and checked against units); the notice shows only the latest clearing time.<br>• **D7:** the guard on `Phase#position` is new behaviour (a model validation) and has ACs; `edit_position!` compares the locked open phase with the phase the URL named; stale and in-lock cases both go to the host page like the reveal.<br>• **D4:** `change` becomes `detail`, `kind` becomes `action`, moves carry `from_coast` and `to_coast`, removals carry the coast, years are integers; one `Game` method reads the notice's times.<br>• **D6/D8/AC-1.x:** coast field and the "Choose ..." sentences defined; which reason wins; both "set" forms use PUT.<br>• **Story 7/10:** route-table entries (`revealed: :none`, not `numbered`) and the `why` texts of three existing entries; named versions for the amended specs and the amendments spec; the stylesheet budget; ACs rewritten as Given/When/Then and the untestable ones replaced. |
@@ -136,7 +137,7 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
   - `RulesEngine.remove_unit(position, province:)`
   - `RulesEngine.set_owner(position, center:, power:)` (a nil power removes the entry)
   - `RulesEngine.set_date(position, season:, year:)`
-  - the lists the forms need: `RulesEngine.provinces` (each with its id, full name and coasts), `RulesEngine.supply_centers` (identifiers) and `RulesEngine.coast_name(id)` ("north", "south", "east", the app's own labels for the three coast identifiers), read from the map or its identifiers; the province list in the forms is sorted by name in the view.
+  - the lists the forms need: `RulesEngine.provinces` (each with its id, full name and coasts), `RulesEngine.supply_centers` (identifiers) and `RulesEngine.coasts` (the three coast identifiers, read from the provinces; the words for them are `OrderLabelHelper::COASTS`), read from the map; the province list in the forms is sorted by name in the view.
 - These are **new methods in `rules_engine.rb`**. #29 (the gem upgrade) also edits that file, so the pull request says so, and `main` is merged when told. The methods use only what gem 0.1.0 documents (`TA::Position.new`, `TA::Unit.new`, `TA::Location.new`, `Map#province`, `Map#provinces`, `Map#supply_centers`) and need nothing from 0.2.0, so #29 should keep them as they are.
 - **No map rule is written in the app, and the engine decides.** The gem builds the position: one unit per province, no fleet inland, no army at sea, a coast exactly when a fleet is in a split-coast province, an owner only for a supply center. The forms offer every province and let the engine refuse, instead of the app filtering lists by rules it would have to know.
 - **The reason is found without reading the gem's messages.** The gem documents only that an error message "includes the offending key or value", so the app does not read it (`web/AGENTS.md`: use nothing beyond the interface). Each method builds in the documented stages, and the stage that raises names the reason, with the documented map queries used only to word a refusal the gem has already made:
@@ -338,7 +339,7 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 
 - [ ] **AC-8.1** Given each new engine method When it is called with valid arguments Then it returns a position that `RulesEngine.load_position` accepts (a round trip through `to_h`) and leaves the argument position unchanged; and When it is called with each impossible object of the gem's "Impossible objects" that an edit can reach Then it raises `RulesEngine::EditRefused`
 - [ ] **AC-8.2** Given each reason of D8 When the matching impossible edit is made Then the error's reason is the one named in D5's stages, and a refusal the stages don't name has the reason `other`
-- [ ] **AC-8.3** Given the source When the boundary spec runs Then no file but `rules_engine.rb` names a gem constant, and no view, controller or model other than `RulesEngine` holds a list of provinces, coasts or supply centers (the lists come from `RulesEngine.provinces`, `RulesEngine.supply_centers` and `RulesEngine.coast_name`)
+- [ ] **AC-8.3** Given the source When the boundary spec runs Then no file but `rules_engine.rb` names a gem constant, and no view, controller or model other than `RulesEngine` holds a list of provinces, coasts or supply centers (the lists come from `RulesEngine.provinces`, `RulesEngine.supply_centers` and `RulesEngine.coasts`)
 - [ ] **AC-8.4** Given a refusal When the host sees the page Then it shows the sentence of D8 only; the gem's message is neither shown nor logged
 
 ### Story 9: The screens at 360 pixels
