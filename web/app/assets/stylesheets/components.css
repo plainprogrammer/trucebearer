@@ -1,0 +1,262 @@
+@layer reset, base, layout, components, styleguide;
+
+@layer components {
+  /* ---- Button: <button>, <a> or <input type="submit"> with class "button" ----
+     Each variant sets four local properties from tokens. A pressed button also
+     thickens its edge by drawing an inset ring, so it changes shape as well as fill. */
+  .button {
+    --_fill: var(--color-primary);
+    --_fill-pressed: var(--color-primary-pressed);
+    --_edge: var(--color-primary);
+    --_edge-pressed: var(--color-primary-pressed);
+    --_ink: var(--color-on-primary);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-4);
+    border: var(--border-width) solid var(--_edge);
+    border-radius: var(--radius);
+    background: var(--_fill);
+    color: var(--_ink);
+    font-size: var(--text-base);
+    font-weight: var(--weight-strong);
+    line-height: var(--leading-tight);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .button--secondary {
+    --_fill: var(--color-surface);
+    --_fill-pressed: var(--color-page);
+    --_edge: var(--color-border);
+    --_edge-pressed: var(--color-border);
+    --_ink: var(--color-text);
+  }
+
+  .button--danger {
+    --_fill: var(--color-danger);
+    --_fill-pressed: var(--color-danger-pressed);
+    --_edge: var(--color-danger);
+    --_edge-pressed: var(--color-danger-pressed);
+    --_ink: var(--color-on-danger);
+  }
+
+  @media (hover: hover) {
+    .button:hover:not(:disabled):not([aria-disabled="true"]) {
+      background: var(--_fill-pressed);
+    }
+  }
+
+  .button:active:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--_fill-pressed);
+    box-shadow: inset 0 0 0 var(--border-width) var(--_edge-pressed);
+  }
+
+  .button:disabled,
+  .button[aria-disabled="true"] {
+    --_fill: var(--color-disabled-fill);
+    --_edge: var(--color-disabled-text);
+    --_ink: var(--color-disabled-text);
+    pointer-events: none;
+  }
+
+  /* ---- List: <ul class="list"> of <li><a|button|div class="list__row"> ---- */
+  .list {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .list > li + li {
+    border-top: var(--border-width) solid var(--color-border);
+  }
+
+  .list__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-align: start;
+    text-decoration: none;
+  }
+
+  a.list__row,
+  button.list__row {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  a.list__row:visited {
+    color: var(--color-text);
+  }
+
+  /* The list clips its corners, so the ring sits inside the row */
+  .list__row:focus-visible {
+    outline-offset: calc(var(--focus-width) * -1);
+  }
+
+  @media (hover: hover) {
+    a.list__row:hover,
+    button.list__row:hover {
+      background: var(--color-page);
+    }
+  }
+
+  a.list__row:active,
+  button.list__row:active {
+    background: var(--color-page);
+    box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  /* ---- Field: label above the control, optional hint and error ---- */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .field__label {
+    font-weight: var(--weight-strong);
+  }
+
+  .field__hint {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* The text starts with the word "Error:", so color is not the only signal */
+  .field__error {
+    color: var(--color-danger);
+    font-weight: var(--weight-strong);
+  }
+
+  .control {
+    display: block;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+
+  textarea.control {
+    min-height: calc(var(--tap-min) * 2.5);
+    resize: vertical;
+  }
+
+  .control[aria-invalid="true"] {
+    border-color: var(--color-danger);
+    box-shadow: inset 0 0 0 var(--border-width) var(--color-danger);
+  }
+
+  .control:disabled {
+    border-color: var(--color-disabled-text);
+    background: var(--color-disabled-fill);
+    color: var(--color-disabled-text);
+    pointer-events: none;
+  }
+
+  /* ---- Choice: checkbox or radio, label inside the tappable row ---- */
+  .choices {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-width) solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  /* Rows touch and share one edge, so each keeps its full 44 pixels */
+  .choice + .choice {
+    border-top-width: 0;
+  }
+
+  .choice:first-of-type {
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+  }
+
+  .choice:last-of-type {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+  }
+
+  .choice input {
+    flex: none;
+    width: var(--space-5);
+    height: var(--space-5);
+    margin: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .choice:active {
+    background: var(--color-page);
+    box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+  }
+
+  .choice[aria-disabled="true"] {
+    border-color: var(--color-disabled-text);
+    background: var(--color-disabled-fill);
+    color: var(--color-disabled-text);
+    pointer-events: none;
+  }
+
+  /* ---- Power badge: made only by the power_badge helper, always with the name ---- */
+  .power-badge {
+    --_fill: var(--color-surface);
+
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border: var(--border-width) solid var(--_fill);
+    border-radius: var(--radius);
+    background: var(--_fill);
+    color: var(--color-on-power);
+    font-weight: var(--weight-strong);
+    line-height: var(--leading-tight);
+  }
+
+  .power-badge--austria { --_fill: var(--color-power-austria); }
+  .power-badge--england { --_fill: var(--color-power-england); }
+  .power-badge--france { --_fill: var(--color-power-france); }
+  .power-badge--germany { --_fill: var(--color-power-germany); }
+  .power-badge--italy { --_fill: var(--color-power-italy); }
+  .power-badge--russia { --_fill: var(--color-power-russia); }
+  .power-badge--turkey { --_fill: var(--color-power-turkey); }
+
+  /* ---- Reduced motion: no transition runs ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .button {
+      transition: none;
+    }
+  }
+}
