@@ -73,6 +73,14 @@ RSpec.describe "Who writes and broadcasts the status" do
       "broadcast_refresh_to(x)", "Turbo::StreamsChannel.broadcast_refresh_to(:results, id)" ].each { |line| expect(line).to match(cable), line }
     expect("game.broadcast_seat_status").not_to match(cable)
     expect("game.broadcast_results_refresh").not_to match(cable)
+    # The ways a third sender would show itself: a transmit outside the channels, a channel class in another file.
+    [ "transmit game.seat_status_message", "transmit(x)" ].each { |line| expect(line).to match(/\btransmit\b/), line }
+    expect("class OtherChannel < Turbo::StreamsChannel").to match(cable)
+    expect("# transmit is only a word in a comment".lines.reject { |line| line.strip.start_with?("#") }.join).not_to match(/\btransmit\b/)
+  end
+
+  it "renders the status partial only from the helper and from the message builder (AC-9.7)" do
+    expect(named.call(%r{render\b[^\n]*["']shared/seat_status["']|partial:\s*["']shared/seat_status["']})).to match_array(%w[app/helpers/seat_status_helper.rb app/models/game.rb])
   end
 
   it "keeps the status code away from saved orders (AC-3.7)" do
@@ -82,7 +90,10 @@ RSpec.describe "Who writes and broadcasts the status" do
     end
     status_code = [ source.call("app/views/shared/_seat_status.html.erb"), source.call("app/helpers/seat_status_helper.rb"),
                     source.call("app/models/game.rb", /def broadcast_seat_status.*?\n  end\n/m),
+                    source.call("app/models/game.rb", /def seat_status_message.*?\n  end\n/m),
                     source.call("app/models/game.rb", /def broadcast_results_refresh.*?\n  end\n/m),
+                    source.call("app/models/game.rb", /def results_refresh_message.*?\n  end\n/m),
+                    source.call("app/channels/seat_status_channel.rb"), source.call("app/channels/results_channel.rb"),
                     source.call("app/models/phase.rb", /def seat_statuses.*?\n  end\n/m) ]
 
     expect(status_code).to all(be_present)
