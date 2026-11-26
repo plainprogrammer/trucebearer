@@ -1,0 +1,16 @@
+<% content_for :title, "Create a game" %>
+
+<div class="stack">
+  <h1>Create a game</h1>
+  <% if @error %>
+    <p role="alert"><%= @error %></p>
+  <% end %>
+  <%= form_with url: games_path, class: "stack" do %>
+    <div class="field">
+      <label class="field__label" for="passphrase">Passphrase</label>
+      <input class="control" id="passphrase" type="text" name="passphrase" autocomplete="off" autocapitalize="off">
+    </div>
+    <p>Then take your power.</p>
+    <%= power_tiles %>
+  <% end %>
+</div>

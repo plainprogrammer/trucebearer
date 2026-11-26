@@ -71,6 +71,12 @@ RSpec.configure do |config|
   # To enable this behaviour uncomment the line below.
   # config.infer_spec_type_from_file_location!
 
+  # One process and one address serve the whole suite, so every request and system example starts with empty
+  # rate-limit buckets (spec 021 FR-8). Request specs may also travel in time.
+  config.include ActiveSupport::Testing::TimeHelpers, type: :request
+  config.before(:each, type: :request) { Rails.cache.clear }
+  config.before(:each, type: :system) { Rails.cache.clear }
+
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:

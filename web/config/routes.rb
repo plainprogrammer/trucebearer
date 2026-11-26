@@ -10,6 +10,27 @@ Rails.application.routes.draw do
     get "styleguide" => "styleguide#show"
   end
 
+  # Games and joining (spec 021). Only GamesController exists so far; the rest arrive in later phases.
+  get "games/new", to: "games#new", as: :new_game
+  post "games", to: "games#create"
+
+  scope "games/:public_id", constraints: { public_id: %r{[^/]+} }, format: false do
+    get "/", to: "games#show", as: :game
+    get "host", to: "hosts#show", as: :game_host
+    get "host-link", to: "host_links#show", as: :game_host_link
+    get "seat-link", to: "seat_links#show", as: :game_seat_link
+    get "host/close", to: "closings#show", as: :game_close
+    post "host/close", to: "closings#create"
+    get "host/seats/:power/reissue", to: "reissues#show", as: :game_reissue
+    post "host/seats/:power/reissue", to: "reissues#create"
+    get "host/seats/:power/qr", to: "reissues#qr", as: :game_seat_qr
+  end
+
+  get "join", to: "joins#index", as: :join
+  post "join", to: "joins#create"
+  get "join/:code", to: "joins#show", as: :join_game, constraints: { code: %r{[^/]+} }, format: false
+  post "join/:code/seat", to: "join_seats#create", as: :join_seat, constraints: { code: %r{[^/]+} }, format: false
+
   root "home#index"
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
