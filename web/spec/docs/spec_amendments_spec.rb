@@ -49,7 +49,7 @@ RSpec.describe "Spec amendments" do
 
   it "records spec 029's retirement of the stand-in in spec 019's changelog (spec 029 AC-5.1)" do
     _, row, version = amendment_row("019-adjudicator-boundary")
-    expect(version).to eq("1.3.0")
+    expect(version).to match(/\A1\.(?:[3-9]|\d{2,})\.0\z/) # 1.3.0, or later if another amendment came first
     expect(row).to include("FR-3").and include("AC-5.1").and include("test double").and include("RulesEngine.adjudicate").and include("load_adjudication")
   end
 
@@ -61,7 +61,7 @@ RSpec.describe "Spec amendments" do
 
   it "records spec 029's retirement of the practice note in spec 025's changelog (spec 029 AC-5.3)" do
     _, row, version = amendment_row("025-reveal-results")
-    expect(version).to eq("1.1.0")
+    expect(version).to match(/\A1\.(?:[1-9]|\d{2,})\.0\z/) # 1.1.0, or 1.2.0 if the results catch-up (#105) amended spec 025 first
     expect(row).to include("D6").and include("AC-7.1").and include("AC-7.3").and include("AC-8.1").and include("AC-8.4").and include("stand_in?")
   end
 end

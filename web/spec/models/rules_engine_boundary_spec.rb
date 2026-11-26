@@ -62,7 +62,7 @@ RSpec.describe "The gem boundary (AC-2.7, AC-2.8, spec 029 AC-3.1, AC-3.5)" do
   it "keeps no stand-in and no made-up adjudication under spec (AC-3.5)" do
     expect(File.exist?(File.join(root, "spec/models/rules_engine_stand_in_spec.rb"))).to be(false)
     hits = spec_files.select { |p| File.file?(p) && !File.binread(p).include?("\0") }
-                     .select { |p| File.binread(p).force_encoding("UTF-8").scrub.match?(/StandIn|receive\(:adjudicate\)\.and_return/) }
+                     .select { |p| File.binread(p).force_encoding("UTF-8").scrub.match?(/StandIn|receive\(:adjudicate\)\s*(\{|do\b|\.and_return)/m) }
     expect(hits.map { |p| p.delete_prefix("#{root}/") }).to be_empty
   end
 end

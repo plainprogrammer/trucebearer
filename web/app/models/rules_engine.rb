@@ -36,9 +36,9 @@ module RulesEngine
     def adjudicate(position, orders) = TA.adjudicate(position, orders)
 
     # The playtest's own rule for the phase that follows a reveal (spec 022 D3). It stays until 1.0 uses what gem 0.3.0
-    # works out. Dislodged units leave the board, standoffs are cleared, and
-    # ownership is kept. Spring becomes fall of the same year, and fall becomes spring of the next. The position must be the
-    # retreat position an adjudication returns. The message names no order.
+    # works out. Dislodged units leave the board, standoffs are cleared, and ownership is kept. Spring becomes fall of the
+    # same year, and fall becomes spring of the next. The position must be the retreat position an adjudication returns.
+    # The message names no order.
     def next_movement_position(position)
       unless position.is_a?(TA::Position) && position.phase == :retreat
         phase = position.respond_to?(:phase) ? position.phase.inspect : "none"

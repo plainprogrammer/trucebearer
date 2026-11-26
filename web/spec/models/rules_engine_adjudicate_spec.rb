@@ -23,9 +23,13 @@ RSpec.describe "RulesEngine.adjudicate and load_adjudication" do
       good = result.to_h
       void = RulesEngine.adjudicate(start, [ rules_order(:hold, :france, :lon) ]).to_h # England's London: a void order
       void["outcomes"].first["dislodged"] = true # a void order can't be dislodged: an impossible object
-      bad = [ good.merge("format" => 2), good.except("format"), good.merge("extra" => 1), good.except("paradox"),
-              good.merge("outcomes" => [ good["outcomes"].first.merge("result" => "bogus") ]), void, 42, "x", [] ]
-      bad.each { |value| expect { RulesEngine.load_adjudication(value) }.to raise_error(RulesEngine::InvalidInput), value.inspect[0, 60] }
+      # Each bad value is paired with a word its message must carry, so the error is the one meant (the gem names the key or value).
+      bad = { good.merge("format" => 2) => /format 2/, good.except("format") => /"format"/, good.merge("extra" => 1) => /"extra"/,
+              good.except("paradox") => /"paradox"/, good.merge("outcomes" => [ good["outcomes"].first.merge("result" => "bogus") ]) => /bogus/,
+              void => /void order cannot be dislodged/, 42 => /got 42/, "x" => /got "x"/, [] => /got \[\]/ }
+      bad.each do |value, message|
+        expect { RulesEngine.load_adjudication(value) }.to raise_error(RulesEngine::InvalidInput, message), value.inspect[0, 60]
+      end
     end
   end
 
