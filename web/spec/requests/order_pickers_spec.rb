@@ -27,6 +27,24 @@ RSpec.describe "The picker steps", type: :request do
     phone.put form["action"], params: { orders: { "lvp" => form.at_css("input[name='orders[lvp]']")["value"] } }
     expect(phone.response).to have_http_status(:see_other)
     expect(created.game.seats.find_by(power: "england").orders_for(created.game.current_phase).keys).to eq([ "lvp" ])
+    phone.follow_redirect!
+    expect(page.css(".unit-row__body").last.text.squish).to eq("Army in Liverpool (LVP) Hold")
+    expect(page.at_css(".submit-bar").text.squish).to include("1 of 3 ordered")
+  end
+
+  it "clears a saved order with the picker's own No order button, and a submitted seat goes back to Not submitted (AC-2.3, AC-4.3)" do
+    england = created.game.seats.find_by(power: "england")
+    england.save_orders!(created.game.current_phase, { "lvp" => json_of(rules_order(:hold, :england, :lvp)) }, submit: true)
+    phone.get "#{base}/lvp"
+    expect(choices.map { |li| li.text.squish }).to eq([ "Hold", "Move", "Support", "No order (holds)" ])
+    form = choices.last.at_css("form")
+    expect(form.at_css("input[name='orders[lvp]']")["value"]).to eq("")
+    phone.post form["action"], params: form.css("input").to_h { |input| [ input["name"], input["value"] ] }
+    expect(phone.response).to have_http_status(:see_other)
+    phone.follow_redirect!
+    expect(page.css(".unit-row__order").map { |row| row.text.squish }).to eq(%w[holds holds holds])
+    expect(page.at_css(".submit-bar__state").text).to eq("Not submitted")
+    expect(england.orders_for(created.game.current_phase.reload)).to be_empty
   end
 
   # AC-2.10 over real pages: follow the page's own links, read the forms' fields, compare to the gem's legal orders.
@@ -66,7 +84,7 @@ RSpec.describe "The picker steps", type: :request do
       phone.get "#{base}/lvp?#{query}"
       expect(phone.response).to have_http_status(:see_other), query
       expect(phone.response.location).to end_with("#{base}/lvp")
-      expect(phone.response.body).not_to include("xyz")
+      %w[xyz teleport zzz text].each { |echoed| expect(phone.response.body).not_to include(echoed), "#{query} echoed #{echoed}" }
     end
   end
 

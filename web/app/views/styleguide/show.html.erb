@@ -206,7 +206,7 @@
   <section data-component="banner" class="stack" aria-labelledby="sg-banner">
     <h2 id="sg-banner">Banner</h2>
     <p>One sentence. Warnings and errors start with a word, so the kind never rests on colour.</p>
-    <%= render "shared/banner", kind: "info", text: "Orders saved." %>
+    <%= render "shared/banner", kind: "info", text: "Submitted." %>
     <%= render "shared/banner", kind: "warning", text: "Austria's army in SER was dislodged. Settle it by hand." %>
     <%= render "shared/banner", kind: "danger", text: "The host has already revealed this phase. Your orders were not saved." %>
   </section>
@@ -224,12 +224,13 @@
     <% end %>
   </section>
 
-  <% sample_game = Struct.new(:public_id).new("sample") %>
+  <% sample_game = StyleguideHelper::SAMPLE_GAME %>
   <% sample_position = RulesEngine.starting_position %>
   <% sample_unit = sample_position.units.find { |u| u.location.province == :kie } %>
   <% sample_order = RulesEngine.load_order("format" => 1, "type" => "move", "power" => "germany", "at" => "kie",
                                            "destination" => { "province" => "den", "coast" => nil }) %>
-  <% sample_phase = Struct.new(:number).new(1) %>
+  <% sample_phase = StyleguideHelper::SAMPLE_PHASE %>
+  <% sample_step = OrderChoices.new(sample_position, sample_unit, ordered: true).step("kind" => "move") %>
 
   <section data-component="unit-row" class="stack" aria-labelledby="sg-unit-row">
     <h2 id="sg-unit-row">Unit row</h2>
@@ -243,9 +244,9 @@
   <section data-component="picker" class="stack picker" aria-labelledby="sg-picker">
     <h2 id="sg-picker">Picker step</h2>
     <p>The order so far, then the choices. Each step is a page; a choice is a link, and the last pick saves.</p>
-    <%= render "order_pickers/draft", unit: sample_unit, trail: [ OrderChoices::Trail.new("Move", nil) ] %>
+    <%= render "order_pickers/draft", unit: sample_unit, trail: sample_step.trail %>
     <ul class="list">
-      <% OrderChoices.new(sample_position, sample_unit, ordered: true).step({}).choices.each do |choice| %>
+      <% sample_step.choices.each do |choice| %>
         <li><%= link_to "#sg-picker", class: "list__row" do %><%= render "order_pickers/choice", choice: choice %><% end %></li>
       <% end %>
       <li><%= link_to "#sg-picker", class: "list__row" do %><%= render "order_pickers/choice", choice: OrderChoices::Choice.new(nil, "nwy", "needs a convoy", nil, nil) %><% end %></li>

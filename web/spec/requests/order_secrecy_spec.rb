@@ -155,22 +155,27 @@ RSpec.describe "Order secrecy", type: :request do
       expect(england_phone.response).to have_http_status(:ok)
     end
 
-    it "shows England no order of France's on any picker page (spec 023 AC-5.3)" do
+    it "shows England no order of France's on any picker page, the support steps that list France's unit included (spec 023 AC-5.3)" do
+      # A French army stands in Wales, next to England's units, so England's support steps list it: a unit on the board is public.
+      phase.update_columns(position: rules_position(units: [ [ :england, :fleet, :lon ], [ :england, :fleet, :edi ], [ :england, :army, :lvp ],
+                                                              [ :france, :army, :wal ] ]))
       france_seat = game.seats.find_by(power: "france")
-      france_seat.save_orders!(phase, { "par" => json_of(move(:france, :par, :bur)), "mar" => json_of(rules_order(:hold, :france, :mar)) })
+      france_seat.save_orders!(phase.reload, { "wal" => json_of(move(:france, :wal, :yor)) })
       pages = []
       %w[lon edi lvp].each do |province|
-        [ "", "?draft%5Bkind%5D=move", "?draft%5Bkind%5D=support", "?draft%5Bkind%5D=support&draft%5Btarget%5D=edi" ].each do |query|
+        [ "", "?draft%5Bkind%5D=move", "?draft%5Bkind%5D=support", "?draft%5Bkind%5D=support&draft%5Btarget%5D=wal" ].each do |query|
           england_phone.get "/games/#{id}/phases/1/orders/#{province}#{query}"
           pages << england_phone.response.body if england_phone.response.status == 200
         end
       end
       expect(pages.size).to be > 6
-      france_json = france_seat.orders_for(phase).values.map { |order| ERB::Util.html_escape(json_of(order)) }
+      # The positive control: France's unit is shown on England's support step, so a leak would have somewhere to appear.
+      expect(pages.grep(/Army in/).grep(/France/)).not_to be_empty
+      france_json = ERB::Util.html_escape(json_of(move(:france, :wal, :yor)))
       pages.each do |body|
-        france_json.each { |text| expect(body).not_to include(text) }
-        expect(body).not_to include("2 of 3 ordered")
-        expect(body).not_to include("Move to Burgundy (BUR)")
+        expect(body).not_to include(france_json)
+        expect(body).not_to include("&quot;france&quot;") # France's order JSON names its power; England's legal orders never do
+        expect(body).not_to include("1 of 3 ordered")
       end
     end
 

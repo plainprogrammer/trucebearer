@@ -9,9 +9,12 @@ RSpec.describe "Entering orders with the pickers", type: :system do
 
   def max_seconds = 45
 
-  def tap_on(text)
+  # One tap: a click on a link or button. It waits for the page the tap leads to (its heading) before returning, so the next tap
+  # and every measurement are made on that page and not on the one before it (Turbo renders after the click returns).
+  def tap_on(text, see:)
     @taps += 1
     click_on text
+    expect(page).to have_css("h1", text: see)
   end
 
   def screenshot(name)
@@ -48,24 +51,32 @@ RSpec.describe "Entering orders with the pickers", type: :system do
       visit "/games/#{game.public_id}/phases/1/orders"
       expect(page).to have_css(".unit-row", count: 5)
       measure_step("the list", 360)
-      screenshot("01-list")
+      screenshot("01-order-screen")
 
-      tap_on "Fleet in Edinburgh"; tap_on "Move"; tap_on "Norwegian Sea"                                # 3
-      tap_on "Fleet in London"; tap_on "Move"; tap_on "English Channel"                                  # 3
-      tap_on "Army in Yorkshire"; tap_on "Hold"                                                          # 2
-      tap_on "Army in Liverpool"
-      measure_step("the action step", 360); screenshot("action")
-      tap_on "Support"
-      measure_step("support which unit", 360); screenshot("support-unit")
-      tap_on "Fleet in Edinburgh"
-      measure_step("support it how", 360); screenshot("support-how")
-      tap_on "Move to Clyde"                                                                              # 4
-      tap_on "Fleet in Mid-Atlantic Ocean"; tap_on "Move"; tap_on "Spain"; tap_on "North coast"         # 4
+      tap_on "Fleet in Edinburgh", see: "What should it do?"                                              # 3
+      tap_on "Move", see: "Move where?"
+      tap_on "Norwegian Sea", see: "Your orders"
+      tap_on "Fleet in London", see: "What should it do?"                                                 # 3
+      tap_on "Move", see: "Move where?"
+      tap_on "English Channel", see: "Your orders"
+      tap_on "Army in Yorkshire", see: "What should it do?"                                               # 2
+      tap_on "Hold", see: "Your orders"
+      tap_on "Army in Liverpool", see: "What should it do?"                                               # 4
+      measure_step("the action step", 360); screenshot("02-action")
+      tap_on "Support", see: "Support which unit?"
+      measure_step("support which unit", 360); screenshot("06-support-which-unit")
+      tap_on "Fleet in Edinburgh", see: "Support it how?"
+      measure_step("support it how", 360); screenshot("07-support-how")
+      tap_on "Move to Clyde", see: "Your orders"
+      tap_on "Fleet in Mid-Atlantic Ocean", see: "What should it do?"                                     # 4
+      tap_on "Move", see: "Move where?"
+      tap_on "Spain", see: "Which coast?"
+      tap_on "North coast", see: "Your orders"
       expect(page).to have_css(".submit-bar", text: "5 of 5 ordered")
-      tap_on "Submit orders"                                                                             # 1
-
+      click_on "Submit orders" # the last tap
+      @taps += 1
       expect(page).to have_css(".banner--info", text: "Submitted.")
-      measure_step("the submitted list", 360); screenshot("submitted")
+      measure_step("the submitted list", 360); screenshot("11-submitted")
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - began
       expect(@taps).to be <= max_taps
       expect(elapsed).to be <= max_seconds
@@ -78,27 +89,31 @@ RSpec.describe "Entering orders with the pickers", type: :system do
   it "completes a by-land-or-convoy move, a convoy order and the other steps, with no sideways scroll and no small control (AC-7.3, AC-7.4)" do
     started = start_game_with([ [ :england, :army, :lon ], [ :england, :fleet, :nth ], [ :england, :fleet, :mao ] ])
     seat = started.game.seats.find_by(power: "england")
+    @taps = 0
     with_viewport(360) do
       visit "/games/#{started.game.public_id}/phases/1/orders"
-      click_on "Army in London"; click_on "Move"
-      measure_step("the destinations", 360); screenshot("02-destinations")
-      click_on "Yorkshire"                                    # land and convoy both legal: the "How" step
-      expect(page).to have_css("h1", text: "How does it get there?")
-      measure_step("by land or convoy", 360); screenshot("03-how")
-      click_on "By convoy"
+      tap_on "Army in London", see: "What should it do?"
+      tap_on "Move", see: "Move where?"
+      measure_step("the destinations", 360); screenshot("03-move-where")
+      tap_on "Yorkshire", see: "How does it get there?" # land and convoy both legal: the "How" step
+      measure_step("by land or convoy", 360); screenshot("04-by-land-or-convoy")
+      tap_on "By convoy", see: "Your orders"
       expect(page).to have_css(".unit-row__order", text: "Move to Yorkshire (YOR) by convoy")
 
-      click_on "Fleet in North Sea"; click_on "Convoy"
-      measure_step("which army", 360); screenshot("04-convoy-army")
-      click_on "Army in London"; measure_step("convoy where", 360); screenshot("05-convoy-where")
-      click_on "Yorkshire"
+      tap_on "Fleet in North Sea", see: "What should it do?"
+      tap_on "Convoy", see: "Convoy which army?"
+      measure_step("which army", 360); screenshot("08-convoy-which-army")
+      tap_on "Army in London", see: "Convoy it where?"
+      measure_step("convoy where", 360); screenshot("09-convoy-where")
+      tap_on "Yorkshire", see: "Your orders"
 
-      click_on "Fleet in Mid-Atlantic Ocean"; click_on "Move"; click_on "Spain"
-      expect(page).to have_css("h1", text: "Which coast?")
-      measure_step("which coast", 360); screenshot("06-coast")
-      click_on "South coast"
+      tap_on "Fleet in Mid-Atlantic Ocean", see: "What should it do?"
+      tap_on "Move", see: "Move where?"
+      tap_on "Spain", see: "Which coast?"
+      measure_step("which coast", 360); screenshot("05-which-coast")
+      tap_on "South coast", see: "Your orders"
       expect(seat.orders_for(started.game.current_phase.reload).keys).to match_array(%w[lon nth mao])
-      screenshot("07-list-ordered")
+      screenshot("10-order-screen-ordered")
     end
   end
 
