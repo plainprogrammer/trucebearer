@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
-                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar]
+                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status]
   # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
@@ -100,6 +100,17 @@ RSpec.describe "Style guide", type: :request do
       host = page.css("section[data-component=host-section] .host-section")
       expect(host.size).to eq(1)
       expect(host.first.css(".button, a").size).to be >= 4
+    end
+
+    it "shows the seat status with all submitted, none submitted and a mix, each list with an id of its own (spec 024 AC-8.1)" do
+      section = page.at_css("section[data-component=seat-status]")
+      lists = section.css("ul.seat-status")
+      states = lists.map { |list| list.css(".seat-status__state").map(&:text).uniq.sort }
+
+      expect(lists.size).to eq(3)
+      expect(lists.map { |list| list[:id] }.uniq.size).to eq(3)
+      expect(states).to contain_exactly([ "Submitted" ], [ "Not submitted" ], [ "Not submitted", "Submitted" ])
+      expect(lists.map { |list| list.css("li").size }).to eq([ 7, 7, 7 ])
     end
 
     it "shows open power tiles as buttons and taken ones as plain text, each with a power name (AC-9.3)" do

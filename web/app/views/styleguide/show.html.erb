@@ -263,6 +263,15 @@
     <%= render "shared/save_status", state: :saved, saving: true %>
   </section>
 
+  <% sample_powers = RulesEngine.powers.map { |power| power.id.to_s } %>
+  <section data-component="seat-status" class="stack" aria-labelledby="sg-seat-status">
+    <h2 id="sg-seat-status">Seat status</h2>
+    <p>Who has submitted: one row for each of the seven powers, the badge and then the state in words. On the seat page and next to the host's reveal button the list is live, and a changed row is the only part announced.</p>
+    <%= seat_status(sample_powers.map { |power| Phase::Status.new(power: power, submitted: true) }, id: "sg-seat-status-all") %>
+    <%= seat_status(sample_powers.map { |power| Phase::Status.new(power: power, submitted: false) }, id: "sg-seat-status-none") %>
+    <%= seat_status(sample_powers.map { |power| Phase::Status.new(power: power, submitted: %w[england france].include?(power)) }, id: "sg-seat-status-mix") %>
+  </section>
+
   <section class="stack" aria-labelledby="sg-colors">
     <h2 id="sg-colors">Colors</h2>
     <ul class="sg-swatches">
