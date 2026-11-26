@@ -48,6 +48,6 @@ RSpec.describe "TA.legal_orders speed" do
     slow = median(Array.new(3) { seconds { filtered = filter_every_candidate(start) } })
 
     expect(slow).to be >= 10 * fast
-    expect(listed.zip(filtered).all? { |a, b| a.sort_by(&:inspect) == b.sort_by(&:inspect) }).to be(true)
+    expect(listed.map { |orders| orders.sort_by(&:inspect) }).to eq(filtered.map { |orders| orders.sort_by(&:inspect) })
   end
 end

@@ -151,6 +151,8 @@ RSpec.describe "TA.legal_orders" do
     end
 
     it "depends on the position alone, and changes neither argument (AC-3.8)" do
+      # TA::Position puts its units in a fixed order when it is built, so the reordering half
+      # holds because of that guarantee; the half that can fail here is that neither argument changes.
       ln = LegalPositions.ln
       reversed = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
                                   dislodged_units: [], standoffs: [], units: ln.units.reverse)
