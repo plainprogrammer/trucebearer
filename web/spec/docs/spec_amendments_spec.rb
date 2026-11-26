@@ -27,6 +27,17 @@ RSpec.describe "Spec amendments" do
     expect(row).to include("AC-2.13").and include("spec 025")
   end
 
+  it "records the catch-up (#105) in spec 024's 1.2.0 row and spec 025's 1.2.0 row, and in the README (spec 024 AC-9.8)" do
+    docs = Pathname.new(File.expand_path("../../docs/specs", __dir__))
+    row = ->(dir, version) { File.read(docs.join(dir, "spec.md")).lines.find { |line| line.start_with?("| #{version} |") } }
+    mine = row.call("024-live-status", "1.2.0")
+    theirs = row.call("025-reveal-results", "1.2.0")
+
+    expect(mine).to include("SeatStatusChannel").and include("ResultsChannel").and include("#105")
+    expect(theirs).to include("spec 024").and include("ResultsChannel").and include("AC-9.4")
+    expect(File.read(File.expand_path("../../README.md", __dir__))).to include("caught up").and include("ResultsChannel")
+  end
+
   it "records spec 025's changes to spec 024 in a 1.1.0 changelog row (spec 025 AC-9.1)" do
     spec = File.read(File.expand_path("../../docs/specs/024-live-status/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| 1.1.0 |") }
