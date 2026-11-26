@@ -1,10 +1,10 @@
 GIT
   remote: https://github.com/plainprogrammer/trucebearer.git
-  revision: db8c4b278ef1ffcd63638da4de6b92726c9a2227
-  tag: adjudicator-v0.1.0
+  revision: c0150498716aa660f996505964ddbf67927d43dc
+  tag: adjudicator-v0.2.0
   glob: adjudicator/*.gemspec
   specs:
-    trucebearer-adjudicator (0.1.0)
+    trucebearer-adjudicator (0.2.0)
 
 GEM
   remote: https://rubygems.org/
@@ -601,7 +601,7 @@ CHECKSUMS
   thruster (0.1.28-arm64-darwin) sha256=3984853754e3ce3f41564e2ad72e117a77974429086e801ddab33a058bd1dd3f
   thruster (0.1.28-x86_64-linux) sha256=309c22dca620dc4974bd5672d18afe3d2383899dc712acb1c1d902ad55f2eef4
   timeout (0.6.1) sha256=78f57368a7e7bbadec56971f78a3f5ecbcfb59b7fcbb0a3ed6ddc08a5094accb
-  trucebearer-adjudicator (0.1.0)
+  trucebearer-adjudicator (0.2.0)
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   turbo-rails (2.0.23) sha256=ee0d90733aafff056cf51ff11e803d65e43cae258cc55f6492020ec1f9f9315f
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b

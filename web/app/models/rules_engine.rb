@@ -33,7 +33,7 @@ module RulesEngine
       TA::Map.classic.adjacent?(:army, TA::Location.new(province: from.to_sym), TA::Location.new(province: to.to_sym))
     end
 
-    def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
+    def adjudicate(position, orders) = TA.adjudicate(position, orders)
 
     # STAND-IN, until gem 0.2.0 (#29): true while adjudicate is answered by the stand-in, so results views say they are practice results
     # (spec 025 D6). #29 deletes this with the stand-in and the note's partial.
@@ -66,7 +66,7 @@ module RulesEngine
 
     def load_check_result(value) = coerce(value, "check result", TA::CheckResult, ->(h) { TA::CheckResult.from_h(h) })
 
-    def load_adjudication(value) = coerce(value, "adjudication", StandInAdjudication, ->(h) { StandInAdjudication.from_h(h) })
+    def load_adjudication(value) = coerce(value, "adjudication", TA::Adjudication, ->(h) { TA::Adjudication.from_h(h) })
 
     private
 
@@ -80,155 +80,4 @@ module RulesEngine
       build.call(value)
     end
   end
-
-  RESULTS = %w[void held no_route bounced succeeded unmatched cut given disrupted].freeze
-  OUTCOME_KEYS = %w[order result submitted dislodged].to_set.freeze
-  ADJUDICATION_KEYS = %w[format outcomes paradox position].to_set.freeze
-  private_constant :RESULTS, :OUTCOME_KEYS, :ADJUDICATION_KEYS
-
-  # STAND-IN, until gem 0.2.0 (#29). Its outcomes are FAKE. It answers in the documented shape of
-  # TA.adjudicate (interface.md, "Adjudicating a movement phase") and follows exactly these rules
-  # (spec 019, FR-3):
-  #  1. The position must be in the movement phase, and one power may not give two orders for units
-  #     in the same province. Otherwise InvalidInput is raised.
-  #  2. Each submitted order is checked with check. An order that fails is :void.
-  #  3. A legal hold is :held. A legal support or convoy is :given. Supports and convoys have no
-  #     other effect.
-  #  4. A legal move (Move or MoveViaConvoy) targets a province (the move's destination, or the
-  #     via-convoy move's to). Its result is found like this:
-  #       1. Every legal move starts as :succeeded.
-  #       2. Every move whose target is also the target of another legal move becomes :bounced.
-  #       3. Repeat until nothing changes: a move that is still :succeeded becomes :bounced when its
-  #          target province holds a unit that is not making a move that is still :succeeded.
-  #     Each step only turns moves into bounces, so it ends, and it has one answer. Moves that swap
-  #     two units, or rotate three or more, succeed. That is a fake result: under the real rules a
-  #     swap bounces unless convoyed, and the real adjudicator in 0.2.0 corrects it. A convoy chain
-  #     is not looked at.
-  #  5. A unit stays when its order is a hold, a support, a convoy, is void, or is a bounced move. A
-  #     unit with no legal order from its owner gets an implied hold.
-  #  6. The outcome list is the submitted orders in the order given, then one implied hold per
-  #     remaining unit sorted by province, submitted false. No outcome is dislodged. paradox is false.
-  #  7. The next position keeps season, year and ownership, has phase :retreat, moves each unit whose
-  #     move succeeded (an army keeps no coast, a fleet takes the destination's coast), has no
-  #     dislodged units, and lists in standoffs, once each, every province that two or more legal
-  #     moves targeted and that is empty afterward.
-  #  8. The result's to_h is the documented form, with format 1.
-  # No support is counted, no convoy route is worked out, no strength is compared, no unit is
-  # dislodged. Only from_h validates a stand-in result (the gem's classes validate on construction).
-  # At 0.2.0 delete this, and let adjudicate and load_adjudication call TA.
-  StandInOutcome = Data.define(:order, :result, :submitted, :dislodged) do
-    def self.from_h(hash)
-      raise InvalidInput, "an outcome must be a Hash, got #{hash.inspect}" unless hash.is_a?(Hash)
-      unless hash.keys.to_set == OUTCOME_KEYS
-        raise InvalidInput, "an outcome needs exactly the keys #{OUTCOME_KEYS.to_a.inspect}, got #{hash.keys.inspect}"
-      end
-      unless RESULTS.include?(hash["result"])
-        raise InvalidInput, "\"result\" must be one of #{RESULTS.inspect}, got #{hash["result"].inspect}"
-      end
-      %w[submitted dislodged].each do |key|
-        raise InvalidInput, "#{key.inspect} must be true or false, got #{hash[key].inspect}" unless [ true, false ].include?(hash[key])
-      end
-      raise InvalidInput, "\"order\" must be a Hash, got #{hash["order"].inspect}" unless hash["order"].is_a?(Hash)
-
-      new(order: RulesEngine.load_order(hash["order"]), result: hash["result"].to_sym,
-          submitted: hash["submitted"], dislodged: hash["dislodged"])
-    end
-
-    def to_h = { "order" => order.to_h, "result" => result.to_s, "submitted" => submitted, "dislodged" => dislodged }
-  end
-
-  StandInAdjudication = Data.define(:outcomes, :paradox, :position) do
-    def initialize(outcomes:, paradox:, position:) = super(outcomes: outcomes.dup.freeze, paradox: paradox, position: position)
-
-    def self.from_h(hash)
-      raise InvalidInput, "an adjudication must be a Hash, got #{hash.inspect}" unless hash.is_a?(Hash)
-      unless hash.keys.to_set == ADJUDICATION_KEYS
-        raise InvalidInput, "an adjudication needs exactly the keys #{ADJUDICATION_KEYS.to_a.inspect}, got #{hash.keys.inspect}"
-      end
-      raise InvalidInput, "\"format\" must be 1, got #{hash["format"].inspect}" unless hash["format"] == 1
-      raise InvalidInput, "\"outcomes\" must be an Array, got #{hash["outcomes"].inspect}" unless hash["outcomes"].is_a?(Array)
-      raise InvalidInput, "\"paradox\" must be true or false, got #{hash["paradox"].inspect}" unless [ true, false ].include?(hash["paradox"])
-      raise InvalidInput, "\"position\" must be a Hash, got #{hash["position"].inspect}" unless hash["position"].is_a?(Hash)
-
-      new(outcomes: hash["outcomes"].map { |h| StandInOutcome.from_h(h) }, paradox: hash["paradox"],
-          position: RulesEngine.load_position(hash["position"]))
-    end
-
-    def to_h = { "format" => 1, "outcomes" => outcomes.map(&:to_h), "paradox" => paradox, "position" => position.to_h }
-  end
-
-  module StandIn
-    MOVES = [ TA::Order::Move, TA::Order::MoveViaConvoy ].freeze
-    SUPPORTS_AND_CONVOYS = [ TA::Order::SupportHold, TA::Order::SupportMove, TA::Order::Convoy ].freeze
-
-    def self.adjudicate(position, orders)
-      unless position.is_a?(TA::Position) && orders.is_a?(Array)
-        raise InvalidInput, "adjudicate needs a position and an Array of orders, got #{position.class} and #{orders.class}"
-      end
-      raise InvalidInput, "the phase must be :movement, got #{position.phase.inspect}" unless position.phase == :movement
-
-      legal = orders.map { |order| TA.check(position, order).legal }
-      reject_duplicates(orders)
-      units = position.units.to_h { |u| [ u.location.province, u ] }
-      followed = orders.zip(legal).select(&:last).map(&:first)
-      implied = units.values.reject { |u| followed.any? { |o| o.at == u.location.province } }
-                     .sort_by { |u| u.location.province }
-                     .map { |u| TA::Order::Hold.new(power: u.power, at: u.location.province) }
-
-      targets = followed.select { |o| MOVES.any? { |c| c === o } }.to_h { |o| [ o.at, target_of(o) ] }
-      succeeded = surviving_moves(targets, units)
-
-      outcomes = orders.zip(legal).map { |order, ok| outcome(order, ok ? result_for(order, succeeded) : :void, true) } +
-                 implied.map { |order| outcome(order, :held, false) }
-      StandInAdjudication.new(outcomes: outcomes, paradox: false, position: next_position(position, targets, succeeded))
-    end
-
-    def self.reject_duplicates(orders)
-      twice = orders.group_by { |o| [ o.power, o.at ] }.find { |_, list| list.size > 1 }
-      raise InvalidInput, "#{twice.first.first} gave #{twice.last.size} orders for the unit in #{twice.first.last}" if twice
-    end
-
-    def self.target_of(order)
-      order.is_a?(TA::Order::Move) ? order.destination : TA::Location.new(province: order.to)
-    end
-
-    # Rule 4: start with every move succeeding, bounce contested targets, then repeat bouncing any
-    # move whose target holds a unit not making a move that still succeeds, until nothing changes.
-    def self.surviving_moves(targets, units)
-      succeeded = targets.keys.to_set
-      contested = targets.group_by { |_, loc| loc.province }.select { |_, list| list.size > 1 }.keys
-      succeeded.reject! { |from| contested.include?(targets[from].province) }
-      loop do
-        blocked = succeeded.select { |from| units.key?(targets[from].province) && !succeeded.include?(targets[from].province) }
-        break if blocked.empty?
-
-        succeeded.subtract(blocked)
-      end
-      succeeded
-    end
-
-    def self.result_for(order, succeeded)
-      case order
-      when TA::Order::Hold then :held
-      when *SUPPORTS_AND_CONVOYS then :given
-      else succeeded.include?(order.at) ? :succeeded : :bounced
-      end
-    end
-
-    def self.outcome(order, result, submitted) = StandInOutcome.new(order: order, result: result, submitted: submitted, dislodged: false)
-
-    def self.next_position(position, targets, succeeded)
-      units = position.units.map do |unit|
-        from = unit.location.province
-        succeeded.include?(from) ? TA::Unit.new(power: unit.power, type: unit.type, location: targets[from]) : unit
-      end
-      occupied = units.map { |u| u.location.province }
-      contested = targets.values.group_by(&:province).select { |_, list| list.size > 1 }.keys
-      TA::Position.new(map: position.map, season: position.season, year: position.year, phase: :retreat, units: units,
-                       ownership: position.ownership, dislodged_units: [], standoffs: contested - occupied)
-    end
-
-    private_class_method :reject_duplicates, :target_of, :surviving_moves, :result_for, :outcome, :next_position
-  end
-  private_constant :StandIn, :StandInOutcome, :StandInAdjudication
 end
