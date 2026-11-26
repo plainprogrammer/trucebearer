@@ -110,7 +110,7 @@ RSpec.describe "The position editor screens", type: :system do
       history = find("[data-seat-history]")
       expect(history).to have_text("board changed: France's army added in BUR")
       expect(history).to have_text("board changed: BEL given to Germany")
-      measure("the host page with the Seat history")
+      measure("the host page with the History")
       execute_script("document.querySelector('[data-seat-history]').scrollIntoView({ block: 'center' })")
       screenshot("07-host-history")
     end

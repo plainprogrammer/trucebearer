@@ -4,7 +4,7 @@
   <h1>Your game</h1>
   <%= render "phases/header", phase: @phase %>
   <%= render "results/live", game: @game, phase: @phase %>
-  <%= render "results/section", results: @results, kind: :host, game: @game, earlier: @earlier, banners: true, skip: false if @results %>
+  <%= render "results/section", results: @results, kind: :host, game: @game, earlier: [], banners: true, skip: false if @results %>
 
   <% if @host_token %>
     <div class="field">
@@ -42,19 +42,6 @@
       <% end %>
     </ul>
     <%= render "step_ins/entry", game: @game, seats: @seats, phase: @phase %>
-  </section>
-
-  <section class="stack" aria-labelledby="history-heading" data-history>
-    <h2 id="history-heading">Revealed phases</h2>
-    <% if @history.empty? %>
-      <p>No phase has been revealed yet.</p>
-    <% else %>
-      <ul class="list">
-        <% @history.each do |past| %>
-          <li><div class="list__row"><span class="mono"><%= past.title %></span> <span class="text-muted">revealed</span></div></li>
-        <% end %>
-      </ul>
-    <% end %>
   </section>
 
   <%= render "step_ins/history", game: @game %>

@@ -97,13 +97,29 @@ class Game < ApplicationRecord
   # Every hand edit of the position in this game, oldest first (spec 027 D4). Read through the phases, as the other histories are.
   def position_edit_history = PositionEdit.joins(:phase).where(phases: { game_id: id }).includes(:phase).order(:id)
 
-  SEAT_HISTORY_ORDER = { reissue: 0, step_in: 1, position_edit: 2 }.freeze
+  # Spec 026 D11: the kind order at one instant. A reveal comes last, because it closes the phase the other rows belong to.
+  SEAT_HISTORY_ORDER = { reissue: 0, step_in: 1, position_edit: 2, reveal: 3 }.freeze
+
+  # One reveal as a row of the host page's history: it answers what the other rows answer, so the partial names no constant. It holds
+  # the phase and nothing else, and only a revealed phase is ever wrapped.
+  RevealEntry = Data.define(:phase) do
+    def kind = :reveal
+    def created_at = phase.revealed_at
+    def id = phase.id
+  end
 
   # The reissues, the step-ins and the position edits together, oldest first; at the same instant a reissue comes before a step-in
   # (spec 026 D10) and a position edit after both (spec 027 D4).
   def seat_history
     (reissue_history.to_a + step_in_history.to_a + position_edit_history.to_a)
       .sort_by { |entry| [ entry.created_at, SEAT_HISTORY_ORDER.fetch(entry.kind), entry.id ] }
+  end
+
+  # The host page's one history (spec 026 D11): the seat history and the reveals, oldest first. At one instant the rows of an earlier
+  # phase come first, then within a phase a reissue, a step-in, a position edit and the reveal, then the id (compared within one kind).
+  def host_history
+    (seat_history + history.map { |revealed| RevealEntry.new(phase: revealed) })
+      .sort_by { |entry| [ entry.created_at, entry.phase.number, SEAT_HISTORY_ORDER.fetch(entry.kind), entry.id ] }
   end
 
   # When the latest edit that moved units was made in this phase, or nil: what a seat's notice says (spec 027 D3).

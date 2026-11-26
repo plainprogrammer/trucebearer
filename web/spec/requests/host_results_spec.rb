@@ -83,7 +83,8 @@ RSpec.describe "The host's reading view", type: :request do
 
     host.get "/games/#{id}/host"
     expect(page.css("[data-dislodged]").map(&:text)).to eq([ "Warning: England's fleet in LON was dislodged. Settle it by hand." ])
-    expect(page.css("section[data-results] ul.list a").map { |link| link["href"] }).to eq([ "/games/#{id}/host/phases/1/results" ])
+    expect(page.css("section[data-results] h3").map(&:text)).not_to include("Earlier results") # the earlier phases are rows of the one History (spec 026 D11)
+    expect(page.css("[data-seat-history] a").map { |link| link["href"] }).to eq([ "/games/#{id}/host/phases/1/results", "/games/#{id}/host/phases/2/results" ])
   end
 
   it "shows the host no order of the open phase, whatever the seats saved after the reveal (AC-2.5)" do

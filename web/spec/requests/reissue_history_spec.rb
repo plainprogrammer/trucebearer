@@ -52,7 +52,7 @@ RSpec.describe "The reissue history", type: :request do
     first_title = game.current_phase.title
     travel_to(Time.utc(2026, 11, 26, 20, 30)) { host.post "/games/#{id}/host/seats/england/phases/1/step-in" }
     travel_to(Time.utc(2026, 11, 26, 20, 40)) { reissue("france") }
-    game.current_phase.reveal!
+    travel_to(Time.utc(2026, 11, 26, 21, 0)) { game.current_phase.reveal! }
     second_title = game.current_phase.title
     travel_to(Time.utc(2026, 11, 26, 22, 0)) { reissue("england") }
     host.get "/games/#{id}/host"
@@ -60,6 +60,7 @@ RSpec.describe "The reissue history", type: :request do
     expect(history.css("li").map { |row| row.text.squish }).to eq([
       "#{first_title} England stepped in 8:30 PM UTC",
       "#{first_title} France seat reissued 8:40 PM UTC",
+      "#{first_title} revealed 9:00 PM UTC",
       "#{second_title} England seat reissued 10:00 PM UTC"
     ])
   end
@@ -80,7 +81,8 @@ RSpec.describe "The reissue history", type: :request do
   it "says so when nothing has happened (AC-6.4)" do
     host.get "/games/#{id}/host"
 
-    expect(history.text).to include("Nothing has happened to a seat yet.")
+    expect(history.text).to include("No phase has been revealed yet.")
+    expect(history.css("li")).to be_empty
   end
 
   it "writes no row for a reissue that is refused (AC-10.2)" do
@@ -109,6 +111,7 @@ RSpec.describe "The reissue history", type: :request do
         doc = Nokogiri::HTML5(phone.response.body)
         expect(doc.css(".banner--warning").map(&:text).join).not_to match(/reissue/i), path
         expect(phone.response.body).not_to match(/reissued|Seat history/), path
+        expect(doc.css("[data-seat-history]")).to be_empty, path
       end
     end
   end
