@@ -34,7 +34,7 @@ The host edits the open phase's position one change at a time (add, move, remove
 
 | Change | What |
 |---|---|
-| `app/models/rules_engine.rb` | one contiguous block "Editing a position (spec 027)": `EditRefused`, `provinces`, `supply_centers`, `coasts`, `add_unit`, `move_unit`, `remove_unit`, `set_owner`, `set_date` (D5). #29 also edits this file: the block sits right after `next_movement_position` and touches nothing else |
+| `app/models/rules_engine.rb` | one contiguous block "Editing a position (spec 027)" at module level: `EditRefused`, `ProvinceInfo` and `module Editing` (`provinces`, `supply_centers`, `coasts`, `add_unit`, `move_unit`, `remove_unit`, `set_owner`, `set_date`, with private helpers), extended into `RulesEngine`. #29 also edits this file: the block sits between the existing `class << self` block and `RESULTS` and touches no existing line |
 | `app/models/phase.rb` | the validation that refuses a changed `position` after the reveal (D7) |
 | `app/models/game.rb` | `edit_position!`, `position_edit_history`, `board_cleared_at`, and the three-kind order in `seat_history` |
 | `config/routes.rb` | the ten routes, inside the existing `scope "games/:public_id"` |
@@ -87,7 +87,7 @@ RSpec.describe "The position editor", type: :request do
 end
 ```
 
-**Verify:** `bundle exec rspec spec/requests/position_editor_spec.rb` fails with a routing error (no route), which is the expected red. Commit the failing spec with the plan ("Add the first failing spec for the position editor"): the commit is the evidence that it failed first.
+**Verify:** `bundle exec rspec spec/requests/position_editor_spec.rb` fails because the route does not exist (the response is the not-found page, so the first expectation on the redirect fails), which is the expected red. Commit the failing spec with the plan ("Add the first failing spec for the position editor"): the commit is the evidence that it failed first.
 
 ## Phase 2: The engine (contract first)
 
@@ -100,15 +100,28 @@ Test first: `rules_engine_position_spec.rb` (plain Ruby, built from `RulesHelper
 - `RulesEngine.provinces.size == 75`, each with `id`, `name`, `coasts`; `supply_centers.size == 34`; `coasts == %w[ec nc sc]`;
 - the error's message is the reason's name and never contains the gem's message text (`expect(error.message).to eq(error.reason.to_s)`).
 
-Code, one contiguous block after `next_movement_position`:
+Code. One contiguous block at module level, placed after the existing `class << self ... end` and before `RESULTS` (so it touches no line of the existing block, and `private` in the existing block is untouched). The methods live in a module that `RulesEngine` extends, so the helpers are private on the singleton and nothing existing becomes private:
 
 ```ruby
-    # ---- Editing a position (spec 027) ----
-    # The host's hand edits of the open phase's position. Each builds a new position through the gem, which decides what is possible. A
-    # refusal is explained from what the gem documents (the stage that raised, and the map's province types and coasts), never from the
-    # text of its messages (spec 027 D5). One contiguous block, because #29 edits this file too.
-    ProvinceInfo = Data.define(:id, :name, :coasts)
+  # ---- Editing a position (spec 027) ----
+  # The host's hand edits of the open phase's position. Each builds a new position through the gem, which decides what is possible. A
+  # refusal is explained from what the gem documents (the stage that raised, and the map's province types and coasts), never from the
+  # text of its messages (spec 027 D5). One contiguous block, because #29 edits this file too.
 
+  # A hand edit the gem refused or the app could not apply. The reason is a symbol of spec 027 D8 and the message is the symbol's
+  # name: neither carries the gem's message, a position or an order.
+  class EditRefused < StandardError
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super(reason.to_s)
+    end
+  end
+
+  ProvinceInfo = Data.define(:id, :name, :coasts)
+
+  module Editing
     def provinces = @provinces ||= TA::Map.classic.provinces.map { |p| ProvinceInfo.new(id: p.id.to_s, name: p.name, coasts: p.coasts.map(&:to_s)) }
 
     def supply_centers = @supply_centers ||= TA::Map.classic.supply_centers.map(&:to_s)
@@ -133,14 +146,17 @@ Code, one contiguous block after `next_movement_position`:
 
     # A nil power removes the entry (an unowned center is absent, interface.md "Position").
     def set_owner(position, center:, power:)
-      strings!(center, power, allow_nil: [ power ])
+      text!(center)
+      text!(power, nil_ok: true)
+      raise EditRefused.new(:other) unless RulesEngine.province?(center) && (power.nil? || power?(power))
+
       ownership = position.ownership.dup
       power ? ownership[center.to_sym] = power.to_sym : ownership.delete(center.to_sym)
       rebuilt(position, ownership: ownership) { supply_centers.include?(center) ? :other : :not_a_center }
     end
 
     def set_date(position, season:, year:)
-      strings!(season)
+      text!(season)
       raise EditRefused.new(:other) unless year.is_a?(Integer)
 
       rebuilt(position, season: season.to_sym, year: year) { :other }
@@ -148,21 +164,27 @@ Code, one contiguous block after `next_movement_position`:
 
     private
 
-    def strings!(*values, allow_nil: [])
-      raise EditRefused.new(:other) unless values.all? { |v| v.is_a?(String) || allow_nil.any? { |n| n.equal?(v) } && v.nil? }
+    # An argument that is not the text (or nil) it must be is a refusal, never a NoMethodError.
+    def text!(value, nil_ok: false)
+      raise EditRefused.new(:other) unless value.is_a?(String) || (nil_ok && value.nil?)
     end
 
+    def power?(id) = RulesEngine.powers.any? { |power| power.id.to_s == id }
+
     def unit_at(position, province)
-      strings!(province)
-      position.units.find { |u| u.location.province.to_s == province } or raise EditRefused.new(:no_unit)
+      text!(province)
+      position.units.find { |u| u.location.province.to_s == province } || raise(EditRefused.new(:no_unit))
     end
 
     def taken?(position, province) = position.units.any? { |u| u.location.province.to_s == province }
 
     # Stage 0 (an unknown identifier) is :other; stage 1 builds the location; stage 2 builds the unit (spec 027 D5).
     def build_unit(power, type, province, coast)
-      strings!(power, type, province, coast, allow_nil: [ coast ])
-      raise EditRefused.new(:other) unless province?(province) && %w[army fleet].include?(type)
+      text!(power)
+      text!(type)
+      text!(province)
+      text!(coast, nil_ok: true)
+      raise EditRefused.new(:other) unless RulesEngine.province?(province) && power?(power) && %w[army fleet].include?(type)
 
       location = begin
         TA::Location.new(province: province.to_sym, coast: coast&.to_sym)
@@ -195,24 +217,14 @@ Code, one contiguous block after `next_movement_position`:
     rescue TA::InvalidInput
       raise EditRefused.new(yield)
     end
-```
-
-and, next to `InvalidInput` at the top of the module:
-
-```ruby
-  # A hand edit the gem refused or the app could not apply. The reason is a symbol of spec 027 D8 and the message is the symbol's
-  # name: neither carries the gem's message, a position or an order.
-  class EditRefused < StandardError
-    attr_reader :reason
-
-    def initialize(reason)
-      @reason = reason
-      super(reason.to_s)
-    end
   end
+  extend Editing
+  private_constant :Editing
 ```
 
-`private` in the existing `class << self` already follows the public methods; the plan puts this block's public methods before the existing `private` line and its helpers after it, so the diff for #29 is one hunk of public methods and one of private helpers (both new lines only).
+Inside `module Editing`, `TA` resolves lexically (as in `StandIn`), `RulesEngine.province?` and `RulesEngine.powers` are the existing singleton methods. Because a private method of an extended module stays private on the singleton, `RulesObjectType#load_value`'s `public_send` of the existing loaders is unaffected. The spec's `ProvinceInfo` and `EditRefused` are `RulesEngine::ProvinceInfo` and `RulesEngine::EditRefused` as the specs expect.
+
+Two more engine examples, written first: `set_owner(center: nil, power: nil)` and `add_unit(power: nil, type: "fleet", province: "mun", coast: nil)` are `EditRefused(:other)`, not a `NoMethodError`; an unknown power with a fleet in `mun` is `:other` (stage 0 comes first), and `set_owner(center: "xyz", ...)` is `:other`.
 
 **Verify:** `bundle exec rspec spec/models/rules_engine_position_spec.rb spec/models/rules_engine_boundary_spec.rb` green.
 
@@ -222,9 +234,9 @@ and, next to `InvalidInput` at the top of the module:
 
 Test first (each written and seen failing before its code):
 
-- `position_edit_spec.rb`: a row with each of the five valid `detail` shapes saves; a row whose `action` is unknown, whose keys differ from the shape, or whose value is not a string or null (an integer year excepted) is invalid; `update` and `destroy` of a saved row raise `ActiveRecord::ReadOnlyRecord`; `clears_orders?` is true for the three unit actions and false for the other two; `PositionEdit.apply(position, intent)` returns the new position and the `detail` for each action, including the old owner in `owner_set` and the coasts in `unit_moved` (SPA north to SPA south).
+- `position_edit_spec.rb` (also AC-6.7's schema check: `db/schema.rb`'s `position_edits` table has exactly the columns `phase_id`, `detail`, `created_at`, plus the id): a row with each of the five valid `detail` shapes saves; a row whose `action` is unknown, whose keys differ from the shape, or whose value is not a string or null (an integer year excepted) is invalid; `update` and `destroy` of a saved row raise `ActiveRecord::ReadOnlyRecord`; `clears_orders?` is true for the three unit actions and false for the other two; `PositionEdit.apply(position, intent)` returns the new position and the `detail` for each action, including the old owner in `owner_set` and the coasts in `unit_moved` (SPA north to SPA south).
 - `phase_position_guard_spec.rb` (AC-7.13): an open phase accepts a changed `position`; after `revealed_at` is set (through `Phase#reveal!`) assigning another position and `save` is false with an error on `:position`; `reveal!` itself still works (it writes with `update_all`).
-- `game_position_edit_spec.rb`: AC-5.1 (three seats, orders, two submissions: add, move, remove each clear all of them and leave a revealed phase's orders untouched); AC-5.2 (an owner edit and a date edit keep every order and submission); AC-5.3 (a refused edit, and a no-change edit, clear nothing and write no row); AC-5.4 (`PositionEdit.create!` stubbed to raise: position, orders and submissions unchanged); AC-5.5 (`broadcast_seat_status` expected once when a submission was withdrawn, not at all when none was, and a cable failure, simulated by raising in `Turbo::StreamsChannel.broadcast_update_to`, leaves the edit stored); AC-7.11 (`edit_position!(1, …)` after a reveal raises `Phase::Revealed` and phase 2's position is unchanged); AC-7.12 (two sequential edits build on each other, and a `move_unit` for a unit the first edit removed raises `EditRefused` with reason `:no_unit`, writing nothing); AC-6.2 (`seat_history` order: a reissue, a step-in and an edit at one stub time list in that order); `board_cleared_at` is the latest clearing edit's time, nil when there is none or only owner and date edits.
+- `game_position_edit_spec.rb`: AC-5.1 (three seats, orders, two submissions: add, move, remove each clear all of them and leave a revealed phase's orders untouched); AC-5.2 (an owner edit and a date edit keep every order and submission); AC-5.3 (a refused edit, and a no-change edit, clear nothing and write no row); AC-5.4 (`PositionEdit.create!` stubbed to raise: position, orders and submissions unchanged); AC-5.5 (`broadcast_seat_status` expected once when a submission was withdrawn, not at all when none was, and a cable failure, simulated by raising in `Turbo::StreamsChannel.broadcast_update_to`, leaves the edit stored); AC-7.11 (`edit_position!(1, …)` after a reveal raises `Phase::Revealed` and phase 2's position is unchanged); AC-7.12 (in a separate spec file `spec/models/game_position_edit_concurrency_spec.rb` in the style of `phase_concurrency_spec.rb`: `self.use_transactional_tests = false`, two threads on two connections, the first held inside `RulesEngine.add_unit` until the second has waited on the database lock, then released; the second edit is built from the first's stored position, and a `move_unit` for a unit the first edit removed raises `EditRefused` with reason `:no_unit` and writes nothing; its `after` deletes `PositionEdit`, `Submission`, `SavedOrder`, `Phase`, `Seat`, `Game` in that order, because of the foreign key); AC-6.2 (`seat_history` order: a reissue, a step-in and an edit at one stub time list in that order); `board_cleared_at` is the latest clearing edit's time, nil when there is none or only owner and date edits.
 
 Migration:
 
@@ -358,7 +370,9 @@ and `seat_history` becomes
 
 `seats.map` loads every seat; `clear_orders!` raises `Phase::Revealed` if a guard refused. `no_change` is checked before any write; the `EditRefused` rolls the (still empty) transaction back.
 
-**Verify:** `bundle exec rspec spec/models` green, including the untouched `seat_spec`, `reissue_spec`, `status_broadcast_scan_spec` (its count example for `game.rb` now fails: that is the change of AC-7.9, made in Phase 5).
+In the same phase, change `status_broadcast_scan_spec.rb` (AC-7.9): `"app/models/game.rb" => 3` with the comment "the definition and two calls in Game (reissue and edit)", and add, beside the `reissue_seat!` body check, the same check for `edit_position!` (an addition: the example's title and its other checks stay). Write the new `Game` comments without the words "submissions" and "saved_orders": the scans read comments too.
+
+**Verify:** `bundle exec rspec spec/models` green, including the untouched `seat_spec`, `reissue_spec`, `seat_write_scan_spec` and `saved_order_boundary_spec`.
 
 ## Phase 4: Routes, controllers and the editor pages
 
@@ -401,7 +415,7 @@ module PositionEditing
     before_action :require_host
     before_action :find_open_phase
     before_action :editor_headers
-    helper_method :editor_path
+    helper_method :editor_path, :field
   end
 
   private
@@ -509,7 +523,7 @@ class PositionUnitsController < ApplicationController
 end
 ```
 
-`find_unit` runs after `find_open_phase` (concern callbacks run first) so a stranger or revealed number never reaches it; `@refused_province` is a string the host chose, already checked by `province!` only when the sentence needs a name (`refusal_text` looks the name up with `RulesEngine.province_name` only for a known province and falls back to "That province"). The date and owner controllers: `field(:date, :season)` checked with `choose!(..., SEASONS, "Choose a season.")`, the year with `Integer(value, exception: false)` and `YEARS.cover?` else `raise Choose, "The year must be a whole number from 1901 to 1999."`; `field(:owner, :center)` with `choose!(…, RulesEngine.supply_centers, ...)` replaced by `province!` (so a real non-center reaches the engine and gets `:not_a_center`) and `field(:owner, :power)` blank or `"nobody"` meaning nil.
+`find_unit` runs after `find_open_phase` (concern callbacks run first) so a stranger or revealed number never reaches it; `@refused_province` is a string the host chose, already checked by `province!` only when the sentence needs a name (`refusal_text` looks the name up with `RulesEngine.province_name` only for a known province and falls back to "That province"). The date and owner controllers: `field(:date, :season)` checked with `choose!(..., SEASONS, "Choose a season.")`, the year with `value.match?(/\A\d{4}\z/) && YEARS.cover?(value.to_i)` else `raise Choose, "The year must be a whole number from 1901 to 1999."`; `@refused_province = field(:owner, :center)` checked with `province!` (so a real non-center reaches the engine and gets `:not_a_center`) and `field(:owner, :power)` blank or `"nobody"` meaning nil.
 
 Helper:
 
@@ -536,18 +550,12 @@ end
 Views, all with `content_for :head` Turbo no-cache meta and the standard `.stack`:
 
 - `positions/show.html.erb`: `<h1>Edit the board</h1>`, `phases/header`, the note `positions/_form_note` ("Changing where units stand clears every seat's saved orders for this phase. Changing a supply center's owner, or the season and year, keeps them. Fix the board before the players order."), then the units grouped by power in `RulesEngine.powers` order (`<h2>` with `power_badge`; each unit a `.list__row` link to `game_position_unit_path` holding `unit_icon(power, type, size: 32, decorative: true)` and the visible words "Army in Burgundy (BUR)" with `province_label` and the coast), supply centers by owner (a `.list` of rows, each `supply_center_icon(power, size: 32, decorative: true)`, the power's name, and its centers' abbreviations in `.mono`, plus an "Unowned" row), and three buttons in `.app-actions`: "Add a unit", "Set a supply center's owner", "Season and year", then a secondary "Back to the host page".
-- `position_units/new.html.erb`: `form_with url: game_position_units_path(...)` containing a `.field` select `unit[power]` (the seven powers, blank "Choose a power" first), `shared/segmented` (`legend: "Unit"`, `name: "unit[type]"`, `options: [["army","Army"],["fleet","Fleet"]]`, `selected: params.dig(:unit, :type) || "army"`), a `.field` select `unit[province]` (provinces sorted by name, each "Burgundy (BUR)"), a `.field` select `unit[coast]` ("No coast" then the three coasts from `RulesEngine.coasts` labelled by `OrderLabelHelper::COASTS`) with a hint "Only a fleet on Bulgaria, Spain or St. Petersburg needs one.", the `positions/form_note`, the refusal banner (`@refusal`, kind danger) above the form, and a submit button "Add unit" in `content_for :actions` through `form="..."` (the button sits in `.app-actions`, so the form carries an id).
+- `position_units/new.html.erb`: `form_with url: game_position_units_path(...)` containing a `.field` select `unit[power]` (the seven powers, blank "Choose a power" first), `shared/segmented` (`legend: "Unit"`, `name: "unit[type]"`, `options: [["army","Army"],["fleet","Fleet"]]`, `selected: field(:unit, :type) || "army"` (`field` is also a `helper_method`, so a posted string where a form group belongs reads as blank and never raises)), a `.field` select `unit[province]` (provinces sorted by name, each "Burgundy (BUR)"), a `.field` select `unit[coast]` ("No coast" then the three coasts from `RulesEngine.coasts` labelled by `OrderLabelHelper::COASTS`) with the hint "If a fleet needs a coast, the page will say so." (no map rule in the view), the `positions/form_note`, the refusal banner (`@refusal`, kind danger) above the form, and a submit button "Add unit" in `content_for :actions` through `form="..."` (the button sits in `.app-actions`, so the form carries an id).
 - `position_units/show.html.erb`: the unit's words and icon, a move form (`method: :patch`, province and coast selects, "Move unit"), and `button_to "Remove unit", ..., method: :delete, class: "button button--danger"`.
 - `position_owners/show.html.erb`, `position_dates/show.html.erb`: one form each (`method: :put`), selects for the center (34, by name) and the owner (the seven powers and "Nobody"); season (a `.segmented` of Spring and Fall) and a number input `date[year]` (`inputmode: "numeric"`, min 1901, max 1999).
 - `hosts/show.html.erb`: in the `.host-section`, after "Reveal orders": `<%= link_to "Edit the board", game_position_path(@game.public_id, @phase.number), class: "button button--secondary" %>`.
 
-**Verify:** `bundle exec rspec spec/requests/position_editor_spec.rb spec/requests/host_spec.rb` green.
-
-## Phase 5: Secrecy table, sweep and scans
-
-**Implements:** Story 7 (AC-7.5, AC-7.6, AC-7.9), AC-6.6, AC-6.7. **Files:** `spec/support/secrecy_routes.rb`, `spec/requests/order_secrecy_spec.rb`, `spec/models/step_in_boundary_spec.rb`, `spec/models/status_broadcast_scan_spec.rb`.
-
-Test first: these specs already fail or will fail by themselves: the route-table example fails on the ten unclassified routes, and the status scan's count example fails on `game.rb` (three). Make them pass by changing the table and the scan, which is the change itself:
+Classify the ten routes in `spec/support/secrecy_routes.rb` in this phase, so the route-table example (which fails on unclassified routes from the moment the routes exist) is green at the end of it:
 
 ```ruby
     "GET /games/:public_id/host/phases/:number/position" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/#{c.open}/position" }, why: "the board: units and supply-center owners of the open phase, never an order (spec 027)" },
@@ -562,9 +570,17 @@ Test first: these specs already fail or will fail by themselves: the route-table
     "PUT /games/:public_id/host/phases/:number/position/date" => { shows: :none, revealed: :none, why: "sets the season and year; keeps saved orders" },
 ```
 
-(No `numbered: true`: AC-7.5.) The `why` texts of `GET /games/:public_id/host` (history also lists board edits), `GET /games/:public_id` and the two `orders` GETs (the "board changed" notice) get one clause each. In `order_secrecy_spec.rb` the sweep needs no new example: the existing "answers every viewer … whatever England has ordered" already requests every readable route; add one setup line to the sweep's `let!` block (next to the reissue): `game.edit_position!(1, { "action" => "owner_set", "center" => "bel", "to" => "germany" })` is not enough for AC-7.6's "position edit in the history" because an owner edit keeps orders, which is what we want: it puts a position-edit row in the host page every snapshot compares, without touching England's orders. Add the assertion next to "has a reissue row and a step-in row": the history also holds "board changed". The unit page of `ber` needs Germany's Berlin army in the position: Germany is the host's power in the sweep.
+(No `numbered: true`: AC-7.5.) The `why` texts of `GET /games/:public_id/host` (history also lists board edits), `GET /games/:public_id` and the two `orders` GETs (the "board changed" notice) get one clause each. In `order_secrecy_spec.rb` the sweep needs no new example, because it already requests every readable route as every viewer. Phase 5 adds the position-edit row to the host page's history before the baseline.
 
-`step_in_boundary_spec.rb` gets the AC-6.7 examples, copied in shape from the reissue ones:
+**Verify:** `bundle exec rspec spec/requests/position_editor_spec.rb spec/requests/host_spec.rb spec/requests/order_secrecy_spec.rb` green (the route-table examples included).
+
+## Phase 5: The sweep and the scans
+
+**Implements:** Story 7 (AC-7.6), AC-6.6, AC-6.7, AC-8.3. **Files:** `spec/requests/order_secrecy_spec.rb`, `spec/models/step_in_boundary_spec.rb`.
+
+Test first: in `order_secrecy_spec.rb`'s sweep setup, after the reissue line, add `game.edit_position!(1, { "action" => "owner_set", "center" => "bel", "to" => "germany" })` (an owner edit keeps orders, so England's orders stay what the examples set, and the host page every snapshot compares now holds a "board changed" row), and an example next to "has a reissue row and a step-in row" that the history also holds "board changed" (red until the history row of Phase 6, so it is written here and seen failing, then passes in Phase 6). The viewers' unit page is `/units/ber`: the host plays Germany in the sweep, and no German order is given.
+
+`step_in_boundary_spec.rb` also gets AC-8.3's scan: no file under `app/` other than `rules_engine.rb` holds a literal list of five or more three-letter province identifiers or a literal list of coast identifiers (`/(?:%w\[|\[)\s*(?:"?[a-z]{3}"?[,\s]+){5,}/`); if the scan finds a list in an existing file, the pattern is tightened until it finds none and the spec names what it left out. It also gets the AC-6.7 examples, copied in shape from the reissue ones:
 
 ```ruby
   position_edit_pattern = /\bPositionEdit(?:\.|::|\s*<)/
@@ -586,7 +602,7 @@ Test first: these specs already fail or will fail by themselves: the route-table
   end
 ```
 
-and the existing reissue reader scan's regex already covers `seat_history` in new views: the new notice partial uses `board_cleared_at`, not `seat_history`. In `status_broadcast_scan_spec.rb`: `"app/models/game.rb" => 3` with the comment "the definition and two calls in Game (reissue and edit)", and the example titled for AC-2.7b keeps its `reissue_seat!` body check and adds the same check for `edit_position!`. `seat_write_scan_spec` and `saved_order_boundary_spec` stay unchanged and must pass.
+The existing reissue reader scan already covers `seat_history` in new views: the notice partial uses `board_cleared_at`, not `seat_history`. `seat_write_scan_spec` and `saved_order_boundary_spec` stay unchanged and must pass.
 
 **Verify:** `bundle exec rspec spec/requests/order_secrecy_spec.rb spec/models` green.
 
@@ -594,7 +610,7 @@ and the existing reissue reader scan's regex already covers `seat_history` in ne
 
 **Implements:** AC-5.6, AC-5.7, AC-6.3, AC-6.4, AC-6.6, AC-5.8 (an existing refusal). **Files:** `app/views/positions/_notice.html.erb`, `app/views/games/show.html.erb`, `app/views/seat_orders/show.html.erb`, `app/views/step_ins/_history.html.erb`, `spec/requests/position_notice_spec.rb`.
 
-Test first (`position_notice_spec.rb`, request): a seat's page and order screen show "The host changed the board at <time>. Orders saved before then were cleared, so check yours." with `<time datetime>` after a unit edit and with only the later time after two (assert the earlier time's text is absent by stubbing `created_at` through `travel_to`); none after an owner or date edit; identical markup for a seat with orders and a seat without (AC-5.7); not drawn on the stepped-in order screen; the host page's history lists "board changed: France's army added in BUR" in the order of AC-6.2 and keeps "Seat history", `data-seat-history` and the empty text (AC-6.4); AC-5.8: a stale phone's `PUT` for a moved unit is refused with "You have no unit in BUR." and stores nothing. Failing first because the partial and the row do not exist.
+Test first (`position_notice_spec.rb`, request): a seat's page and order screen show "The host changed the board at <time>. Orders saved before then were cleared, so check yours." with `<time datetime>` after a unit edit and with only the later time after two (assert the earlier time's text is absent by stubbing `created_at` through `travel_to`); none after an owner or date edit; identical markup for a seat with orders and a seat without (AC-5.7); not drawn on the stepped-in order screen; the host page's history lists "board changed: France's army added in BUR" in the order of AC-6.2 and keeps "Seat history", `data-seat-history` and the empty text (AC-6.4); AC-5.8: a stale phone's `PUT` for a moved unit is refused with "You have no unit in BUR." and stores nothing. Failing first because the partial and the row do not exist. A helper example pins `position_edit_text` for every action, including the coast sentence of AC-2.3 ("from SPA (north coast) to SPA (south coast)").
 
 Partial:
 
@@ -614,13 +630,13 @@ Rendered after `step_ins/notices` on `games/show` (`render "positions/notice", g
 <% else %> ...the existing row... <% end %>
 ```
 
-**Verify:** `bundle exec rspec spec/requests spec/views` green.
+**Verify:** `bundle exec rspec spec/requests spec/views` green (`spec/views` holds `results_partials_spec.rb`, which must stay green).
 
 ## Phase 7: `.segmented`, the style guide and the design system
 
 **Implements:** D9, AC-9.2, AC-9.4, AC-9.5, AC-10.6. **Files:** `app/views/shared/_segmented.html.erb`, `components.css`, `styleguide.css`, `styleguide/show.html.erb`, `styleguide_helper.rb`, `docs/design-system.md`, the specs named in Files.
 
-Test first: add `segmented` to the `components` list in `styleguide_spec.rb` and `styleguide_layout_spec.rb` (red: no section); a design-system example finds the `.segmented` catalog line with "#27", "built" and `shared/_segmented`; a styleguide example asserts the section holds one checked radio and a legend and at least two `supply_center_icon`s in its sample row.
+Test first: add `segmented` to the `components` list in `styleguide_spec.rb` and `.segmented__label` to the `tappable` list in `styleguide_layout_spec.rb` (red: no section); a design-system example finds the `.segmented` catalog line with "#27", "built" and `shared/_segmented`; a styleguide example asserts each `.segmented` sample holds a legend and exactly one checked radio.
 
 Partial:
 
@@ -643,21 +659,21 @@ Partial:
 CSS (inside the components layer, in the existing nesting style of the file; target about 1.2 KB):
 
 ```css
-  /* ---- Segmented toggle (#27): a radio group as joined buttons; the radios stay real ---- */
+  /* ---- Segmented toggle (#27): a radio group as joined buttons; the radios stay real. No opacity: the input is clipped, not faded ---- */
   .segmented { border: 0; margin: 0; padding: 0; min-width: 0; }
   .segmented__options { display: flex; margin-top: var(--space-1); }
   .segmented__option { position: relative; flex: 1; display: flex; }
-  .segmented__input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-  .segmented__label { flex: 1; display: flex; align-items: center; justify-content: center; min-height: var(--tap-min);
+  .segmented__input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .segmented__label { flex: 1; display: flex; align-items: center; justify-content: center; min-height: var(--tap-min); cursor: pointer;
     padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--color-border); background: var(--color-surface); color: var(--color-text); }
   .segmented__option + .segmented__option .segmented__label { border-left-width: 0; }
   .segmented__option:first-child .segmented__label { border-radius: var(--radius) 0 0 var(--radius); }
   .segmented__option:last-child .segmented__label { border-radius: 0 var(--radius) var(--radius) 0; }
   .segmented__input:checked + .segmented__label { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); font-weight: var(--weight-strong); }
-  .segmented__input:focus-visible + .segmented__label { outline: var(--focus-width, 3px) solid var(--color-focus); outline-offset: 2px; }
+  .segmented__input:focus-visible + .segmented__label { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
 ```
 
-(Variable names are checked against `tokens.css` while writing; where a name differs the existing token is used, and no raw color, no new token, no new pair appears: `stylesheet_rules_spec.rb` enforces that.) The style-guide section `data-component="segmented"` shows one group with Army selected, one with Fleet selected, and a row of `supply_center_icon` for two owners and unowned; the focused sample is the first radio given `autofocus`-free by a `:focus-visible` rule check in the system spec instead. `docs/design-system.md` line becomes: `| Segmented toggle | .segmented | #27 (built) | Army or fleet, season; a radio group drawn as joined buttons (partial shared/_segmented); the selected option uses primary and on-primary |`.
+(Every token named here exists in `tokens.css`; no raw color, no new token, no new pair, no `opacity`: `stylesheet_rules_spec.rb` enforces that. A tap on the label checks the clipped radio, the label is the 44-pixel target, and a keyboard focus shows the ring.) The style-guide section `data-component="segmented"` shows one group with Army selected and one with Fleet selected. `supply_center_icon` already has its own section in `/styleguide`, so no second sample is added. The focus ring is checked in the system spec: it focuses the first radio from the keyboard (`send_keys :tab`) and reads the label's computed `outline-style`. `docs/design-system.md` line becomes: `| Segmented toggle | .segmented | #27 (built) | Army or fleet, season; a radio group drawn as joined buttons (partial shared/_segmented); the selected option uses primary and on-primary |`.
 
 **Verify:** `bundle exec rspec spec/styles spec/docs spec/requests/styleguide_spec.rb`; `wc -c app/assets/stylesheets/*.css` totals at most 32,768 (AC-9.5). If it does not fit, stop and ask for a ruling (D9).
 
@@ -665,7 +681,7 @@ CSS (inside the components layer, in the existing nesting style of the file; tar
 
 **Implements:** Story 9 (AC-9.1 to AC-9.3), Story 10 (AC-10.1 to AC-10.7). **Files:** `spec/system/position_editor_screens_spec.rb`, `docs/specs/027-position-editor/screens/`, specs 022, 023, 024, 026, `spec/docs/spec_amendments_spec.rb`, `README.md`, spec 027 itself.
 
-Test first: `position_editor_screens_spec.rb`, in the shape of `step_in_screens_spec.rb` (same `measure` and `screenshot` helpers, `SCREENSHOTS` env var). One example walks: host page with "Edit the board" → board → add form → tap "Fleet" (AC-9.2: the Fleet option has the selected state, check `:checked` and the label's computed background) → submit a fleet in Burgundy (refused page, screenshot 03) → add an army in Burgundy (board with banner, screenshot 01) → a unit's page → owners → date → host page with the Seat history row (screenshot 07) → France's seat page with the notice (screenshot 08, a second Capybara session as in the step-in spec). Each page is measured at 360 by 800: no sideways scroll, every `a`, `button`, `input`, `select` and `.segmented__label` at least 44 pixels high, the primary button visible without scrolling on each form page (button bottom at most the viewport height; the buttons live in `.app-actions`). The radio inputs are `opacity: 0` over the label, so the measurement covers the label. Run once with `SCREENSHOTS=docs/specs/027-position-editor/screens` to write the eight PNGs (file names `01-board.png` … `08-seat-notice.png`).
+Test first: `position_editor_screens_spec.rb`, in the shape of `step_in_screens_spec.rb` (same `measure` and `screenshot` helpers, `SCREENSHOTS` env var). One example walks: host page with "Edit the board" → board → add form → tap "Fleet" (AC-9.2: the Fleet option has the selected state, check `:checked` and the label's computed background) → submit a fleet in Burgundy (refused page, screenshot 03) → add an army in Burgundy (board with banner, screenshot 01) → a unit's page → owners → date → host page with the Seat history row (screenshot 07) → France's seat page with the notice (screenshot 08, a second Capybara session as in the step-in spec). Each page is measured at 360 by 800: no sideways scroll, every `a`, `button`, `input`, `select` and `.segmented__label` at least 44 pixels high, the primary button visible without scrolling on each form page (button bottom at most the viewport height; the buttons live in `.app-actions`). The radio inputs are clipped to one pixel, so the spec's `measure` helper excludes `.segmented__input` and measures `.segmented__label` (the real target) instead. Run once with `SCREENSHOTS=docs/specs/027-position-editor/screens` to write the eight PNGs (file names `01-board.png` … `08-seat-notice.png`).
 
 Documents, each with its changelog row and `spec_amendments_spec.rb` example written first:
 
