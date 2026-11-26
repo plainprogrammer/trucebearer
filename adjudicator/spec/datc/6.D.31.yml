@@ -7,5 +7,11 @@ position:
 orders:
   - order: {type: move, power: austria, at: rum, destination: arm}
     check: {legal: true}
+    result: no_route
   - order: {type: support_move, power: turkey, at: bla, from: rum, to: arm}
     check: {legal: false, reason: move_impossible}
+    result: void
+after:
+  units:
+    - {power: austria, type: army, at: rum}
+    - {power: turkey, type: fleet, at: bla}

@@ -1,0 +1,35 @@
+case: "6.D.7"
+summary: A hold support for a unit that moves is unmatched, so the unit gets none and is dislodged
+position:
+  units:
+    - {power: germany, type: fleet, at: bal}
+    - {power: germany, type: fleet, at: pru}
+    - {power: russia, type: fleet, at: lvn}
+    - {power: russia, type: fleet, at: bot}
+    - {power: russia, type: army, at: fin}
+orders:
+  - order: {type: move, power: germany, at: bal, destination: swe}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+  - order: {type: support_hold, power: germany, at: pru, target: bal}
+    check: {legal: true}
+    result: unmatched
+  - order: {type: move, power: russia, at: lvn, destination: bal}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: bot, from: lvn, to: bal}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: fin, destination: swe}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: fleet, at: pru}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: fleet, at: bot}
+    - {power: russia, type: army, at: fin}
+  dislodged:
+    - {power: germany, type: fleet, at: bal, from: lvn}
+  standoffs: [swe]

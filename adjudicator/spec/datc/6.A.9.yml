@@ -6,3 +6,7 @@ position:
 orders:
   - order: {type: move, power: italy, at: rom, destination: ven}
     check: {legal: false, reason: not_reachable}
+    result: void
+after:
+  units:
+    - {power: italy, type: fleet, at: rom}

@@ -13,6 +13,10 @@ require_relative "adjudicator/check_result"
 require_relative "adjudicator/reach"
 require_relative "adjudicator/check"
 require_relative "adjudicator/legal_orders"
+require_relative "adjudicator/outcome"
+require_relative "adjudicator/adjudication"
+require_relative "adjudicator/resolver"
+require_relative "adjudicator/adjudicate"
 
 module Trucebearer
   # The rules engine: checks orders and adjudicates each phase of a game turn.
@@ -26,5 +30,12 @@ module Trucebearer
     # "Legal orders"). Empty when the position isn't in a movement phase or the unit isn't on
     # the board. Raises InvalidInput only for an argument of the wrong class.
     def self.legal_orders(position, unit) = LegalOrders.call(position, unit)
+
+    # Adjudicates a movement phase without convoys (docs/interface.md, "Adjudicating a movement
+    # phase"): one outcome for every order, then an implied hold for every unit that has none,
+    # and the position after the moves. Raises InvalidInput for an argument of the wrong class,
+    # a position that isn't in the movement phase, or one power giving two orders for one
+    # province; a broken rule is an outcome, never an error. Convoys arrive with #15.
+    def self.adjudicate(position, orders) = Adjudicate.call(position, orders)
   end
 end

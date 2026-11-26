@@ -1,0 +1,37 @@
+case: "6.E.7"
+summary: A unit isn't dislodged when its own support is what makes the attack against it strong enough
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: fleet, at: yor}
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: nwy}
+orders:
+  - order: {type: hold, power: england, at: nth}
+    check: {legal: true}
+    result: held
+  - order: {type: support_move, power: england, at: yor, from: nwy, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: hol, from: hel, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: hel, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: ska, from: nwy, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: nwy, destination: nth}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: fleet, at: yor}
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: nwy}

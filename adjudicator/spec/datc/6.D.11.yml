@@ -1,0 +1,28 @@
+case: "6.D.11"
+summary: A unit whose move failed still can't be dislodged by its own power
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
+    - {power: russia, type: army, at: war}
+orders:
+  - order: {type: move, power: germany, at: ber, destination: pru}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: germany, at: kie, destination: ber}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: mun, from: kie, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: war, destination: pru}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
+    - {power: russia, type: army, at: war}
+  standoffs: [pru]

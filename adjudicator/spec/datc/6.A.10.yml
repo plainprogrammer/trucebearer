@@ -8,7 +8,15 @@ position:
 orders:
   - order: {type: hold, power: austria, at: ven}
     check: {legal: true}
+    result: held
   - order: {type: support_move, power: italy, at: rom, from: apu, to: ven}
     check: {legal: false, reason: not_reachable}
+    result: void
   - order: {type: move, power: italy, at: apu, destination: ven}
     check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: austria, type: army, at: ven}
+    - {power: italy, type: fleet, at: rom}
+    - {power: italy, type: army, at: apu}

@@ -1,0 +1,32 @@
+case: "6.D.5"
+summary: A unit that supports a move may receive a hold support
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}
+orders:
+  - order: {type: support_move, power: germany, at: ber, from: mun, to: sil}
+    check: {legal: true}
+    result: cut
+  - order: {type: support_hold, power: germany, at: kie, target: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: mun, destination: sil}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: bal, from: pru, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: pru, destination: ber}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: sil}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}

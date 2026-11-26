@@ -1,0 +1,34 @@
+case: "6.D.2"
+summary: An attack on a supporter cuts the support, and the unsupported holder is dislodged
+position:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+orders:
+  - order: {type: support_move, power: austria, at: adr, from: tri, to: ven}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: austria, at: tri, destination: ven}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: austria, at: vie, destination: tyr}
+    check: {legal: true}
+    result: bounced
+  - order: {type: hold, power: italy, at: ven}
+    check: {legal: true}
+    result: held
+    dislodged: true
+  - order: {type: support_hold, power: italy, at: tyr, target: ven}
+    check: {legal: true}
+    result: cut
+after:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: ven}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: tyr}
+  dislodged:
+    - {power: italy, type: army, at: ven, from: tri}

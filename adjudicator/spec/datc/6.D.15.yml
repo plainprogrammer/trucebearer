@@ -1,0 +1,24 @@
+case: "6.D.15"
+summary: A unit can't keep its place by attacking the supporter of the attack on itself
+position:
+  units:
+    - {power: russia, type: fleet, at: con}
+    - {power: russia, type: fleet, at: bla}
+    - {power: turkey, type: fleet, at: ank}
+orders:
+  - order: {type: support_move, power: russia, at: con, from: bla, to: ank}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: bla, destination: ank}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+after:
+  units:
+    - {power: russia, type: fleet, at: con}
+    - {power: russia, type: fleet, at: ank}
+  dislodged:
+    - {power: turkey, type: fleet, at: ank, from: bla}

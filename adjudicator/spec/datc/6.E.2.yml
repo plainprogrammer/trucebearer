@@ -1,0 +1,22 @@
+case: "6.E.2"
+summary: Two units of one power can't dislodge each other in a head-to-head battle
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
+orders:
+  - order: {type: move, power: germany, at: ber, destination: kie}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: germany, at: kie, destination: ber}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: mun, from: ber, to: kie}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}

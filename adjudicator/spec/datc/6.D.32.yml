@@ -1,0 +1,27 @@
+case: "6.D.32"
+summary: An army's move with no convoy chain available is void, so the unit holds and receives support
+position:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: army, at: lvp}
+    - {power: france, type: fleet, at: lon}
+    - {power: germany, type: army, at: yor}
+orders:
+  - order: {type: support_move, power: england, at: edi, from: lvp, to: yor}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: lvp, destination: yor}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_hold, power: france, at: lon, target: yor}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: yor, destination: hol}
+    check: {legal: false, reason: not_reachable}
+    result: void
+after:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: army, at: lvp}
+    - {power: france, type: fleet, at: lon}
+    - {power: germany, type: army, at: yor}

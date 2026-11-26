@@ -1,0 +1,27 @@
+case: "6.D.28"
+summary: A fleet's illegal move is void, so it holds and receives support
+position:
+  units:
+    - {power: austria, type: army, at: bud}
+    - {power: russia, type: fleet, at: rum}
+    - {power: turkey, type: fleet, at: bla}
+    - {power: turkey, type: army, at: bul}
+orders:
+  - order: {type: support_hold, power: austria, at: bud, target: rum}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: rum, destination: hol}
+    check: {legal: false, reason: not_reachable}
+    result: void
+  - order: {type: move, power: turkey, at: bla, destination: rum}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: turkey, at: bul, from: bla, to: rum}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: austria, type: army, at: bud}
+    - {power: russia, type: fleet, at: rum}
+    - {power: turkey, type: fleet, at: bla}
+    - {power: turkey, type: army, at: bul}
