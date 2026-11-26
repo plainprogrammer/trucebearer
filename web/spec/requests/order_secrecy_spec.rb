@@ -7,6 +7,8 @@ require_relative "../support/rules_helpers"
 # every route the app answers is classified in spec/support/secrecy_routes.rb (a new route fails here until it is); the sweep
 # below requests every readable route as every kind of viewer and requires the answers not to depend on England's orders; and
 # spec/models/saved_order_boundary_spec.rb limits which files may name the saved-orders model.
+RSpec::Matchers.define_negated_matcher :not_include, :include
+
 RSpec.describe "Order secrecy", type: :request do
   include RulesHelpers
 
@@ -128,6 +130,24 @@ RSpec.describe "Order secrecy", type: :request do
       history = Nokogiri::HTML5(created.session.response.body).at_css("[data-seat-history]")
 
       expect(history.css("li").map { |row| row.text.squish }.join(" ")).to include("board changed: BEL given to Germany")
+    end
+
+    it "lists on the home page exactly what each viewer's cookies verify for (spec 028 AC-3.9)" do
+      viewers
+      listed = viewers.to_h do |name, session|
+        session.cookies["seat_#{id}"] = @wearing_france_cookie if name == "the host, with France's seat cookie"
+        session.get "/"
+        [ name, Nokogiri::HTML5(session.response.body).css("a.game-card").map { |card| [ card["href"], card.text.squish ] } ]
+      end
+
+      expect(listed["another seat"].map(&:first)).to eq([ "/games/#{id}" ])
+      expect(listed["another seat"].first.last).to include("France").and not_include("You host this game")
+      expect(listed["the host, with a seat of its own"].map(&:first)).to eq([ "/games/#{id}" ])
+      expect(listed["the host, with a seat of its own"].first.last).to include("Germany").and include("You host this game")
+      expect(listed["the host, with no seat"].map(&:first)).to eq([ "/games/#{id}/host" ])
+      expect(listed["a stranger"]).to be_empty
+      expect(listed["the host, with France's seat cookie"].map(&:first)).to eq([ "/games/#{id}/host" ])
+      expect(listed["the host, stepped into France"].map(&:first)).to eq([ "/games/#{id}/host" ])
     end
 
     ENTRIES = {
