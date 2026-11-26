@@ -13,6 +13,7 @@ require_relative "adjudicator/check_result"
 require_relative "adjudicator/reach"
 require_relative "adjudicator/check"
 require_relative "adjudicator/legal_orders"
+require_relative "adjudicator/outcome"
 
 module Trucebearer
   # The rules engine: checks orders and adjudicates each phase of a game turn.
