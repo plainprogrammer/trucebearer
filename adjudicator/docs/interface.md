@@ -764,10 +764,11 @@ TA.legal_orders(retreat, fleet)                                                 
 
 `TA.adjudicate(position, orders)` takes a `TA::Position` in the movement phase and an `Array` of orders, and returns a `TA::Adjudication`: an outcome for every order, whether a convoy paradox was found, and the position after the moves.
 
-It raises `TA::InvalidInput` in two cases only:
+It raises `TA::InvalidInput` in three cases only:
 
+- an argument is of the wrong class: `position` isn't a `TA::Position`, `orders` isn't an `Array`, or an element of `orders` isn't one of the six order classes;
 - the position isn't in the movement phase;
-- one power gives two orders for units in the same province, whether the two orders are identical or not. The app keeps one order per unit, so this is an input-contract choice, not one of the options in DATC 4.D.3.
+- one power gives two orders that name the same province in `at`, whether or not a unit stands there, and whether the two orders are identical or not. The app keeps one order per unit, so this is an input-contract choice, not one of the options in DATC 4.D.3.
 
 Orders from different powers for the same unit never raise. Any order from a power that doesn't own the unit is void, and the owner's order stands.
 
@@ -904,7 +905,7 @@ result.paradox                           # => true
 
 ### The next position
 
-In 0.2, `position` is a snapshot taken after the moves. It has:
+In 0.2.0, `position` is a snapshot taken after the moves. It has:
 
 - the same season and year, with phase `:retreat`, whether or not any unit was dislodged;
 - in `units`, every unit that wasn't dislodged, at its location after the moves;
@@ -961,11 +962,11 @@ It is raised for:
 - a coast in a province field (see [Province fields and location fields](#province-fields-and-location-fields));
 - an impossible value object (see [Impossible objects](#impossible-objects));
 - an unknown power, province or coast given to a map query, or a bad unit type or location given to `Map#adjacent?` (see [Map](#map));
-- an argument of the wrong class given to `TA.check` or `TA.legal_orders`;
-- from 0.2.0, one power giving two orders for units in the same province (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
+- an argument of the wrong class given to `TA.check`, `TA.legal_orders` or (from 0.2.0) `TA.adjudicate`;
+- from 0.2.0, one power giving two orders that name the same province, whether or not a unit stands there (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
 - from 0.2.0, adjudicating a position that isn't in the movement phase.
 
-Every message includes the offending key or value.
+Every message includes the offending key or value. The one exception, from 0.2.0, is three messages for impossible adjudication objects (a void order that is dislodged, a move that succeeded and was dislodged, and a submitted outcome after an implied hold). They name the rule that was broken, not a value.
 
 A rules failure is never an exception. A broken rule shows up as a rejection reason from `TA.check` (from 0.2.0, also as an outcome from `TA.adjudicate`). Once positions and orders have been built without raising, checking and listing legal orders raise nothing else, and from 0.2.0 neither does adjudicating.
 
