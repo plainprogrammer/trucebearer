@@ -1,0 +1,50 @@
+name: Web
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - ".ruby-version"
+      - ".github/workflows/web.yml"
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".ruby-version"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # setup-ruby has no input for a version file outside its working
+      # directory, so read the root .ruby-version here. Run steps start in
+      # web/, hence the relative path.
+      - name: Read the Ruby version from the root .ruby-version
+        id: ruby
+        run: echo "version=$(tr -d '[:space:]' < ../.ruby-version)" >> "$GITHUB_OUTPUT"
+
+      # Runs against the gem release pinned in web/Gemfile. The app does not
+      # depend on the gem yet (Issue #19 adds the pin), so today this runs the
+      # app's own specs.
+      - name: Set up Ruby and install gems
+        uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
+        with:
+          ruby-version: ${{ steps.ruby.outputs.version }}
+          bundler-cache: true
+          working-directory: web
+
+      - name: Run the specs
+        run: bundle exec rspec
