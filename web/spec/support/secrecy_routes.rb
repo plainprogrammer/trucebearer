@@ -1,5 +1,5 @@
 # Which routes can show what about orders (spec 022 FR-9). Every route the app answers is classified here; the secrecy spec
-# fails on a route that is not, so a later Issue that adds a page (#24 and its streams, #25 and its results) must say what
+# fails on a route that is not, so a later Issue that adds a page (#25 and its results) must say what
 # the new page can show. `shows: :own` means a seat's own orders to that seat and no one else; `:none` means no order data at all.
 # `sweep` gives the path the invariance sweep requests for a readable GET; `fresh` means each request is made in a session of its
 # own, because the route sets a cookie.
@@ -16,8 +16,8 @@ module SecrecyRoutes
     "POST /join" => { shows: :none, why: "looks a code up" },
     "GET /join/:code" => { shows: :none, sweep: ->(c) { "/join/#{c.code}" }, why: "open powers only" },
     "POST /join/:code/seat" => { shows: :none, why: "takes a power" },
-    "GET /games/:public_id" => { shows: :own, sweep: ->(c) { "/games/#{c.id}" }, why: "the seat's own state and count, never an order" },
-    "GET /games/:public_id/host" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host" }, why: "phase header, history, dislodged units" },
+    "GET /games/:public_id" => { shows: :own, sweep: ->(c) { "/games/#{c.id}" }, why: "the seat's own count, never an order; the status list of the seven powers (spec 024)" },
+    "GET /games/:public_id/host" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host" }, why: "phase header, history, dislodged units, the status list of the seven powers (spec 024)" },
     "GET /games/:public_id/host-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/host-link?token=#{c.host_token}" }, why: "sets a cookie and redirects" },
     "GET /games/:public_id/seat-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/seat-link?token=#{c.france_token}" }, why: "sets a cookie and redirects" },
     "GET /games/:public_id/host/close" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/close" }, why: "a confirmation page" },
@@ -34,14 +34,14 @@ module SecrecyRoutes
     },
     "PUT /games/:public_id/phases/:number/orders" => { shows: :own, why: "saves the seat's own orders; the reply and the redirect show only its own" },
     "GET /games/:public_id/host/phases/:number/reveal" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/1/reveal" }, why: "names the powers that have not submitted" },
-    "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, why: "reveals; redirects to the host page" }
+    "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, why: "reveals; redirects to the host page" },
+    "MOUNT /cable" => { shows: :none, why: "state-only stream of the seven submitted states (spec 024): its signed name is only in pages behind a seat or the host cookie" }
   }.freeze
 
   # Routes the framework engines add. They hold no game data and no model attaches to a game.
   FRAMEWORK = [
     [ %r{\A(?:GET|POST|PUT|PATCH|DELETE) /rails/(?:action_mailbox|active_storage|conductor|info|mailers)(?:/|\z)}, "Action Mailbox, Active Storage, mailer previews and info pages: no game data" ],
-    [ %r{\AGET /(?:recede|resume|refresh)_historical_location\z}, "Turbo's historical-location routes: empty pages" ],
-    [ /\AMOUNT \/cable\z/, "no channel exists yet; #24 adds the first stream and must classify it" ]
+    [ %r{\AGET /(?:recede|resume|refresh)_historical_location\z}, "Turbo's historical-location routes: empty pages" ]
   ].freeze
 
   def self.key_for(route) = "#{route.verb.presence || 'MOUNT'} #{route.path.spec.to_s.sub('(.:format)', '')}"

@@ -3,10 +3,10 @@
 <div class="stack">
   <h1>You hold <%= power_name(@seat.power) %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
-  <p><%= @seat.submitted?(@phase) ? "Submitted" : "Not submitted" %></p>
   <p><%= @ordered %> of <%= @units %> units ordered.</p>
   <%= link_to "Enter orders", game_seat_orders_path(@game.public_id, @phase.number), class: "button" %>
   <p>Keep this page. The host reveals each phase when the table is ready.</p>
+  <%= render "phases/status", game: @game, phase: @phase, level: 2 %>
   <% if @host %>
     <section class="host-section stack" aria-labelledby="host-link-heading">
       <h2 id="host-link-heading">Host</h2>

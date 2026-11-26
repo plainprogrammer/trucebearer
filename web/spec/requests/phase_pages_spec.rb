@@ -9,7 +9,7 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
   let(:id) { game.public_id }
 
   describe "the seat page (AC-1.5)" do
-    it "has a phase header with the player's badge, and the player's own state" do
+    it "has a phase header with the player's badge, and the status list of the seven powers (spec 024 AC-2.1)" do
       game.take_seat!("france")
       created.session.get "/games/#{id}"
 
@@ -17,10 +17,12 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
       header = page.at_css(".phase-header")
       expect(header.at_css(".phase-header__title").text).to eq("Spring 1901 · Movement")
       expect(header.at_css(".power-badge--england").text).to eq("England")
-      expect(page.text).to include("Not submitted")
+      expect(page.at_css("#seat-status [data-power='england'] .seat-status__state").text).to eq("Not submitted")
       expect(page.text).to include("Keep this page. The host reveals each phase when the table is ready.")
       expect(page.text).not_to include("The host will start the game")
-      expect(page.text).not_to include("France")
+      # Another power appears only as a row of the status list (spec 024 AC-2.1): never an order, a count or a link of its own.
+      expect(page.css(".power-badge--france").size).to eq(1)
+      expect(page.css("#seat-status .power-badge--france").size).to eq(1)
     end
 
     it "links to the orders page of the current phase and shows the seat's own count, never an order (AC-1.5)" do
@@ -38,12 +40,14 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
       expect(page.at_css("select")).to be_nil
     end
 
-    it "says Submitted once the seat has submitted" do
+    it "says Submitted in the seat's own row once the seat has submitted, and Not submitted in the others (spec 024 AC-2.1)" do
       Submission.create!(phase: game.current_phase, seat: game.seats.find_by(power: "england"))
       created.session.get "/games/#{id}"
 
-      expect(Nokogiri::HTML5(created.session.response.body).text).to include("Submitted")
-      expect(created.session.response.body).not_to include("Not submitted")
+      page = Nokogiri::HTML5(created.session.response.body)
+      states = page.css("#seat-status li").to_h { |row| [ row["data-power"], row.at_css(".seat-status__state").text ] }
+      expect(states["england"]).to eq("Submitted")
+      expect(states.except("england").values.uniq).to eq([ "Not submitted" ])
     end
   end
 

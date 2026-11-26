@@ -1,5 +1,4 @@
 <% content_for :title, "Your game" %>
-<% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") if @host_token %>
 
 <div class="stack">
   <h1>Your game</h1>
@@ -19,6 +18,7 @@
 
   <section class="host-section stack" aria-labelledby="host-heading">
     <h2 id="host-heading">Host</h2>
+    <%= render "phases/status", game: @game, phase: @phase, level: 3 %>
     <%= link_to "Reveal orders", game_reveal_path(@game.public_id, @phase.number), class: "button" %>
     <% if @game.open? %>
       <% join_link = join_game_url(@game.join_code) %>

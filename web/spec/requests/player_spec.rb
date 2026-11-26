@@ -12,7 +12,7 @@ RSpec.describe "The player's page and seat links", type: :request do
   end
 
   describe "the player's page (AC-4.10)" do
-    it "shows the holder's power and the phase, and no other seat" do
+    it "shows the holder's power and the phase, and no other seat but as a row of the status list (spec 024 AC-2.1)" do
       game.take_seat!("france")
       created.session.get "/games/#{id}"
 
@@ -21,7 +21,9 @@ RSpec.describe "The player's page and seat links", type: :request do
       expect(page.at_css("h1").text).to eq("You hold England")
       expect(page.at_css(".power-badge--england").text).to eq("England")
       expect(page.text).to include("Keep this page. The host reveals each phase when the table is ready.")
-      expect(page.text).not_to include("France")
+      expect(page.css(".power-badge--france").size).to eq(1) # France is only a row of the status list
+      expect(page.css("#seat-status .power-badge--france").size).to eq(1)
+      expect(page.css("a").map { |link| link["href"] }.grep(/france/)).to be_empty
       expect(page.css("title").text).to eq("Your seat")
     end
 
