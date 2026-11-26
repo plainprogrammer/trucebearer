@@ -46,5 +46,9 @@
 
   <%= render "step_ins/history", game: @game %>
 
-  <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
+  <% if own_seat_target(@game) == game_path(@game.public_id) %>
+    <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
+  <% else %>
+    <p class="text-muted">This phone doesn't hold your seat. To play here, reissue your own seat from the Seats list. That clears its saved orders for this phase.</p>
+  <% end %>
 </div>
