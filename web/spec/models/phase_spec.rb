@@ -72,4 +72,31 @@ RSpec.describe Phase do
       expect(phase.pending.map(&:power)).to include("england")
     end
   end
+
+  describe "#seat_statuses (spec 024 FR-1)" do
+    let(:phase) { game.current_phase }
+
+    it "gives seven statuses in the gem's power order, none submitted at the start" do
+      statuses = phase.seat_statuses
+
+      expect(statuses.map(&:power)).to eq(RulesEngine.powers.map { |power| power.id.to_s })
+      expect(statuses.size).to eq(7)
+      expect(statuses.map(&:submitted)).to all(be(false))
+    end
+
+    it "marks a seat that has submitted, and a power nobody holds is not submitted" do
+      Submission.create!(phase: phase, seat: game.seats.find_by(power: "england"))
+
+      by_power = phase.seat_statuses.to_h { |status| [ status.power, status.submitted ] }
+      expect(by_power["england"]).to be(true)
+      expect(by_power.except("england").values).to all(be(false))
+    end
+
+    it "reads seats and submissions only, never an order" do
+      source = File.read(Rails.root.join("app/models/phase.rb"))[/def seat_statuses.*?\n  end\n/m]
+
+      expect(source).to be_present
+      expect(source).not_to match(/saved_orders?|SavedOrder|orders_for/i)
+    end
+  end
 end
