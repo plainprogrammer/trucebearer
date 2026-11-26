@@ -61,7 +61,7 @@ The gem knows maps as data, powers, provinces, coasts, units, order types, check
 
 The gem does not know games, seats, accounts, hosts, clocks, persistence, HTTP, or display.
 
-Everything that crosses the boundary is an immutable value object built on Ruby's `Data`. Each one has a documented hash form, reached through `to_h` and rebuilt through `from_h`, and that hash form carries a format version. The app stores the hash form as JSON, so any phase can be replayed from what was saved. The contract is written down in `adjudicator/docs/interface.md`.
+Everything that crosses the boundary is an immutable value object built on Ruby's `Data`, except read-only queries such as the map, which have no hash form. What the app stores or replays (positions, orders, check results and adjudication results) has a documented hash form, reached through `to_h` and rebuilt through `from_h`, and that hash form carries a `format` version. The app stores the hash form as JSON, so any phase can be replayed from what was saved. Objects that only appear nested inside a stored object have a hash form too, but no `format` of their own. The contract is written down in `adjudicator/docs/interface.md`.
 
 ## Game rules in the app
 
