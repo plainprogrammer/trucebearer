@@ -8,6 +8,14 @@ Releases are git tags named `adjudicator-vX.Y.Z`.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## 0.1.0 (2026-11-26)
+
+### Added
+
 - The gem skeleton: gemspec, Gemfile, Rakefile, `Trucebearer::Adjudicator::VERSION` (`0.0.0`) and RSpec with a first passing spec. The gem has no runtime dependencies. (#6)
 - `docs/interface.md` now defines the movement-phase interface. It covers the classic map and its queries; the value objects and their hash form (`format` 1); checking one order; listing a unit's legal orders; and the `InvalidInput` error. Adjudicating a movement phase is documented for 0.2.0, and retreats and adjustments are placeholders until 0.3. (#5)
 - `docs/ruleset.md` records the DATC v3.4 options the interface relies on, and where it departs from the preferred results. (#5)
@@ -23,5 +31,3 @@ Releases are git tags named `adjudicator-vX.Y.Z`.
 
 - `docs/interface.md`: the "Impossible objects" list now names two more cases that raise `TA::InvalidInput`: the same province twice in `standoffs`, and two dislodged units in one province. No release carried the old list. (#10)
 - `docs/interface.md` now says in which release each part arrives, so that it matches what 0.1.0 ships. `TA::Outcome` and `TA::Adjudication` are marked as arriving in 0.2.0, with a matching row in the "Releases" table, and so are the rules that mention them (the `format` note, the canonical order of `outcomes`, and the two adjudication errors). The `Order::Move` text no longer points at adjudication for how an army moves by convoy, and the example error message for a coast in a province field now matches the gem. The "Errors" section now lists the map-query and argument-class errors, and says that `new` with a missing or unknown keyword raises `ArgumentError`. No release carried the old text, so this needs no Issue for the app. (#13)
-
-### Fixed
