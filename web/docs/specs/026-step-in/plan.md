@@ -2,6 +2,8 @@
 
 Spec: `spec.md` v1.0.2 (Approved at Gate A). Branch `web/26-step-in`. Everything here is under `web/`.
 
+Version 1.0.1 of this plan follows the first Opus review: the suite stays green between phases (the route table, the `reveal_post_spec` route list, the reissue and host specs' list selectors, the missing-callback setting), the sweep's two new viewers are built so they can't undo themselves, no live time is drawn on a swept page, and the 409 page has no bar.
+
 ## Goal
 
 Build the step-in in six phases, each ending with a green suite. Every phase starts with a request, model or system spec that is red for the right reason, then the code that turns it green. No new CSS, no JavaScript, no new gem: the pages are `.confirm`, `.banner`, `.button`, `.list`, `.host-section` and `.stack`.
@@ -23,7 +25,7 @@ Build the step-in in six phases, each ending with a green suite. Every phase sta
 ## Phase 1: The first test, the table, the model and the confirmation page
 
 **Implements:** FR-1; D1, D9, D8's route. **Satisfies:** AC-1.1 to AC-1.5, AC-1.7, AC-2.7.
-**Files:** create `spec/requests/step_in_confirm_spec.rb`, `db/migrate/20261126140500_create_step_ins.rb`, `app/models/step_in.rb`, `app/controllers/step_ins_controller.rb`, `app/views/step_ins/show.html.erb`, `spec/models/step_in_spec.rb`; change `config/routes.rb`, `app/models/game.rb`, `app/models/seat.rb`, `db/schema.rb` (generated), `spec/models/game_spec.rb`.
+**Files:** create `spec/requests/step_in_confirm_spec.rb`, `db/migrate/20261126140500_create_step_ins.rb`, `app/models/step_in.rb`, `app/controllers/step_ins_controller.rb`, `app/views/step_ins/show.html.erb`, `spec/models/step_in_spec.rb`; change `config/routes.rb`, `spec/support/secrecy_routes.rb`, `spec/requests/reveal_post_spec.rb`, `app/models/game.rb`, `app/models/seat.rb`, `db/schema.rb` (generated), `spec/models/game_spec.rb`.
 
 ### 1a. The first test (red). It fails until the route exists
 
@@ -121,7 +123,7 @@ end
 
 ### 1c. The route, controller and page
 
-`config/routes.rb`, inside the `scope "games/:public_id"` block, after the reveal routes:
+`config/routes.rb`, inside the `scope "games/:public_id"` block, right after the `host/seats/:power/qr` route (not at the end of the block, where #24 will add its own):
 
 ```ruby
     # Stepping into another seat (spec 026). The confirmation and the record carry the phase number, as the reveal does (D9).
@@ -136,8 +138,9 @@ end
 # The host's confirmation page for stepping into a seat, the record, and leaving (spec 026 D9, D2).
 class StepInsController < ApplicationController
   before_action :require_host
-  before_action :find_seat, only: %i[show create]
-  before_action :find_phase_or_redirect, only: %i[show create]
+  # `only:` names actions that exist: the test environment raises on a callback for a missing action. Phase 2 adds create.
+  before_action :find_seat, only: :show
+  before_action :find_phase_or_redirect, only: :show
 
   def show; end
 
@@ -171,31 +174,35 @@ end
 <%= render layout: "shared/confirm", locals: { title: "Step into #{name}'s seat", confirm_label: "Step into #{name}", danger: true,
       confirm_path: game_step_in_path(@game.public_id, @seat.power, @phase.number), cancel_path: game_host_path(@game.public_id) } do %>
   <p>You will be able to see and change <%= name %>'s orders for <%= @phase.title %>.</p>
-  <p>This is recorded in the game. <%= name %> will see: "The host entered your orders at <%= table_time(Time.current) %>".</p>
+  <p>This is recorded in the game. <%= name %> will see that the host entered their orders, and the time you confirmed.</p>
   <p>It ends when you tap Leave, when you reveal the phase, or after 30 minutes. Your own seat stays your main screen.</p>
 <% end %>
 ```
 
-(`table_time` is added in Phase 4; Phase 1 uses the literal words "at the time you confirm" in its place, replaced in Phase 4. To keep Phase 1 self-contained the line reads: `<%= name %> will see that the host entered their orders, and when.`)
+The page draws no clock: the confirmation is swept for every host viewer, and a changing time would make the sweep's snapshots differ.
 
 ### 1d. More specs in this phase (red first, then green)
 
-In `spec/requests/step_in_confirm_spec.rb`: AC-1.2 (danger variant `.button--danger`, names the phase "Spring 1901", says "recorded", "30 minutes", shows no order: seed France with a saved order and assert its JSON and "Hold" are absent); AC-1.3 (the Back link goes to `/games/:id/host`, and a GET writes nothing); AC-1.4 (a seat phone, a stranger, and another game's host each get the stranger page for GET and POST, using `comparable(response, id)` against a missing id); AC-1.5 (the host's own power `germany`, an empty power `italy`, and `nope` are the stranger response); AC-1.7 (after `game.current_phase.reveal!`, GET `.../phases/1/step-in` redirects 303 to `.../phases/2/step-in` with the banner, `StepIn.count` is 0; `.../phases/9/step-in` and `.../phases/01/step-in` are strangers).
+In `spec/requests/step_in_confirm_spec.rb`: AC-1.2 (danger variant `.button--danger`, names the phase "Spring 1901", says "recorded", "30 minutes", shows no order: seed France with a saved order and assert its JSON and "Hold" are absent); AC-1.3 (the Back link goes to `/games/:id/host`, and a GET writes nothing); AC-1.4 for GET (a seat phone, a stranger, and another game's host each get the stranger page, using `comparable(response, id)` against a missing id; the POST cases are added in Phase 2 with the action); AC-1.5 (the host's own power `germany`, an empty power `italy`, and `nope` are the stranger response); AC-1.7 for GET (after `game.current_phase.reveal!`, GET `.../phases/1/step-in` redirects 303 to `.../phases/2/step-in` with the banner, `StepIn.count` is 0; `.../phases/9/step-in` and `.../phases/01/step-in` are strangers; the POST case moves to Phase 2).
 
-`spec/models/step_in_spec.rb`: `record!` writes one row with the phase and seat; a seat of another game is invalid; `update` and `destroy` raise `ActiveRecord::ReadOnlyRecord`; `active?` is true at 29 minutes, false at 31 (`travel`), false once `phase.reveal!` ran. `spec/models/game_spec.rb`: `host_seat` is the seat made with the game even after `take_seat!` of two more; `step_in_history` lists the game's rows oldest first and none of another game's.
+`spec/models/step_in_spec.rb` (it includes `ActiveSupport::Testing::TimeHelpers`, which `rails_helper` gives request specs only): `record!` writes one row with the phase and seat; a seat of another game is invalid; `update` and `destroy` raise `ActiveRecord::ReadOnlyRecord`; `active?` is true at 29 minutes, false at 31 (`travel`), false once `phase.reveal!` ran. `spec/models/game_spec.rb`: `host_seat` is the seat made with the game even after `take_seat!` of two more; `step_in_history` lists the game's rows oldest first and none of another game's.
 
-**Verify:** `bundle exec rspec spec/requests/step_in_confirm_spec.rb spec/models/step_in_spec.rb spec/models/game_spec.rb` is green; `bundle exec rspec` stays green (the new route fails the route-table spec until Phase 5 classifies it, so in this phase add the three new rows to `spec/support/secrecy_routes.rb` as `shows: :none` with a sweep path for the GET: `"/games/#{c.id}/host/seats/france/phases/1/step-in"`. Phase 5 finishes the table).
+**Keeping the suite green in this phase.** Adding routes fails two existing specs, so both change here:
+- `spec/support/secrecy_routes.rb` gets the three new routes (`GET` and `POST` step-in, `DELETE` step-in) as `shows: :none`, the GET with the sweep path `"/games/#{c.id}/host/seats/england/phases/1/step-in"`.
+- `spec/requests/reveal_post_spec.rb:136-144` ("no undo") lists exactly the routes whose path contains "phases". Its `match_array` gains `GET` and `POST /games/:public_id/host/seats/:power/phases/:number/step-in`, and the commit message and the PR say so.
+
+**Verify:** `bundle exec rspec spec/requests/step_in_confirm_spec.rb spec/models/step_in_spec.rb spec/models/game_spec.rb spec/requests/reveal_post_spec.rb spec/requests/order_secrecy_spec.rb` is green; then the whole suite.
 
 ## Phase 2: The record, the cookie, and acting as the seat
 
 **Implements:** FR-1, FR-2, D2, D3, D4, D7. **Satisfies:** AC-2.1 to AC-2.6, AC-3.1 to AC-3.8, AC-4.1 to AC-4.6, AC-5.1 to AC-5.4.
-**Files:** create `spec/requests/step_in_spec.rb`, `app/views/step_ins/_bar.html.erb`; change `app/controllers/concerns/game_access.rb`, `app/controllers/step_ins_controller.rb`, `app/controllers/seat_orders_controller.rb`, `app/controllers/order_pickers_controller.rb`, `app/controllers/games_controller.rb`, `config/routes.rb`, `app/views/layouts/application.html.erb`, `app/views/seat_orders/show.html.erb`, `_submit_bar.html.erb`, `_unit_row.html.erb`, `revealed.html.erb`, `app/views/order_pickers/show.html.erb`.
+**Files:** create `spec/requests/step_in_spec.rb`, `app/views/step_ins/_bar.html.erb`; change `app/controllers/concerns/game_access.rb`, `app/controllers/concerns/order_screen.rb`, `app/controllers/step_ins_controller.rb`, `spec/support/secrecy_routes.rb`, `spec/requests/reveal_post_spec.rb`, `spec/requests/step_in_confirm_spec.rb`, `app/controllers/seat_orders_controller.rb`, `app/controllers/order_pickers_controller.rb`, `app/controllers/games_controller.rb`, `config/routes.rb`, `app/views/layouts/application.html.erb`, `app/views/seat_orders/show.html.erb`, `_submit_bar.html.erb`, `_unit_row.html.erb`, `revealed.html.erb`, `app/views/order_pickers/show.html.erb`.
 
 ### 2a. Tests first (red): `spec/requests/step_in_spec.rb`
 
 A game where the host holds Germany; England and France hold seats; France has saved orders (`france.save_orders!(phase, "par" => hold)`). Helpers: `confirm(power = "france")` posts `/games/:id/host/seats/#{power}/phases/1/step-in` on the host session; `orders_path(power) = "/games/#{id}/host/seats/#{power}/phases/1/orders"`.
 
-- AC-2.1: `expect { confirm }.to change(StepIn, :count).by(1)`; the row's seat is France's and phase is the open one; the response is a 303 to `orders_path("france")`; the `Set-Cookie` line for `step_in_<id>` contains `HttpOnly`, `SameSite=Lax` and no `expires`.
+- AC-2.1: `expect { confirm }.to change(StepIn, :count).by(1)`; the row's seat is France's and phase is the open one; the response is a 303 to `orders_path("france")`; the `Set-Cookie` line for `step_in_<id>` matches `/httponly/i`, `/samesite=lax/i` and has no `expires` (Rack writes the attribute names in lower case, so the match ignores case, as `games_spec` does).
 - AC-2.2: before confirming, GET the screen, `/orders/par`, and PUT the endpoint on `orders_path("france")` each give the stranger page (`comparable` against a game that doesn't exist) with no `Hold` or `Army in Paris` in the body and `StepIn.count` unchanged.
 - AC-2.3: after confirming, the screen shows France's `.unit-row`s with "Army in Paris (PAR) Hold".
 - AC-2.4: the cookie line contains neither the France token nor the France seat's `token_digest`; France's phone (`open_session` with the seat link) still gets 200 on its own screen and saves an order.
@@ -206,7 +213,7 @@ A game where the host holds Germany; England and France hold seats; France has s
 - AC-3.5: Leave redirects 303 to `/games/:id`, a second Leave does too, France's URL is a stranger after it, and a non-host's Leave is a stranger.
 - AC-3.6: the host's own `/phases/1/orders` shows Germany's units, also with `?power=france`.
 - AC-3.8: with a step-in active, `/games/:id/phases/1/orders/xyz` and `/games/:id/phases/9/orders` are byte for byte the stranger page of a host with no step-in (`comparable`), with no `step_in_` cookie line; after the reveal the 409 page of a stale number has no bar.
-- AC-3.9: covered in Phase 3.
+- AC-3.9: covered in Phase 3. The POST cases of AC-1.4 (a seat phone, a stranger, another game's host) and AC-1.7 (a revealed number redirects 303 and writes nothing) are added to `step_in_confirm_spec.rb` here, with `create`.
 - AC-4.1: through the stepped-in picker (`PUT orders_path("france")` with `orders[par]=...`) France's `orders_for` changes and France's phone shows it; the redirect is to `orders_path("france")`.
 - AC-4.2: another power's unit, an illegal order, unreadable text: 422 with the spec 022 sentence and nothing stored.
 - AC-4.3: `submit=1` marks France submitted; a later changed pick clears it.
@@ -214,7 +221,10 @@ A game where the host holds Germany; England and France hold seats; France has s
 - AC-4.6: the stepped-in screen's `h1` is "France's orders", the submit bar's link reads "Your own seat", the picker links and forms are all under `/host/seats/france/`; the own screen's `h1` is "Your orders".
 - AC-5.1: after `game.current_phase.reveal!`, France's URL is a stranger and no page has the bar.
 - AC-5.2: `travel 29.minutes` works, `travel 31.minutes` is a stranger and has no bar.
-- AC-5.3: a garbage cookie value; the cookie of another game's step-in copied to this game's cookie name; a row of France's step-in used on England's URL; `StepIn.delete_all` after confirming; and a step-in cookie sent by a session that has lost its host cookie: each is a stranger on a stepped-in URL.
+- AC-5.3: a garbage cookie value; the cookie of another game's step-in copied to this game's cookie name (it fails the signature, because signed cookies are bound to their name); a row of France's step-in used on England's URL; `StepIn.delete_all` after confirming; and a step-in cookie sent by a session that has lost its host cookie: each is a stranger on a stepped-in URL. The explicit game check (`row.phase.game_id == game.id`) is exercised separately, with a correctly signed cookie for this game whose value is a row of another game: the example stubs the signed jar for the request, `allow_any_instance_of(ActionDispatch::Cookies::CookieJar).to receive(:signed).and_return("host_#{id}" => created.host_token, "step_in_#{id}" => other_game_row.id)`, and expects the stranger response.
+- AC-3.7: the host's own seat page shows no host controls (no "Reveal orders"), the "Host controls" link sits in a `.host-section`, and after Leave the host lands on `/games/:id`.
+- AC-8.6 (headers): the stepped-in screen and a picker step carry `Cache-Control` containing `no-store`, `Referrer-Policy: no-referrer` and the `turbo-cache-control` meta.
+- AC-3.8 (the 409): the step-in is made in phase 2 (reveal phase 1 first, then confirm for phase 2); `GET /games/:id/host/seats/france/phases/1/orders` is then the 409 page, has no bar, and its "Go to the current phase" link goes to phase 2 of the stepped-in screen.
 - AC-5.4: after the reveal, the new phase's orders URL is a stranger until a new confirmation, which is a new row for phase 2.
 
 All of these fail with routing errors or 404 until 2b to 2e.
@@ -263,13 +273,22 @@ Add (all private, with the two path helpers exposed as helpers):
   def orders_path_for(number)
     return game_seat_orders_path(@game.public_id, number) unless @stepped_in_page
 
-    game_step_in_orders_path(@game.public_id, @step_in.seat.power, number)
+    game_step_in_orders_path(@game.public_id, @seat.power, number)
   end
 
   def picker_path_for(number, province, **query)
     return game_order_picker_path(@game.public_id, number, province, **query) unless @stepped_in_page
 
-    game_step_in_picker_path(@game.public_id, @step_in.seat.power, number, province, **query)
+    game_step_in_picker_path(@game.public_id, @seat.power, number, province, **query)
+  end
+```
+
+`@seat` is the stepped-in seat on a stepped-in page, so these helpers don't need `@step_in`. `app/controllers/concerns/order_screen.rb` changes one line so the 409 page never carries the bar (D7, AC-3.8), while its link still follows the stepped-in URLs:
+
+```ruby
+  def render_revealed
+    @step_in = nil # a refusal page has no bar (spec 026 D7)
+    render("seat_orders/revealed", status: :conflict)
   end
 ```
 
@@ -317,7 +336,7 @@ Change `require_seat` to resolve a stepped-in URL (D4). It reads the path parame
   end
 ```
 
-`before_action :find_seat, :find_phase_or_redirect` stay `only: %i[show create]`.
+The two before-actions change from `only: :show` to `only: %i[show create]` in this step.
 
 ### 2d. Reuse of the order controllers (D4): the seat-scoped routes
 
@@ -339,6 +358,8 @@ Views, exact replacements:
 - `seat_orders/show.html.erb`: `<h1><%= @stepped_in_page ? "#{power_name(@seat.power)}'s orders" : "Your orders" %></h1>`, and `content_for :title` the same.
 - `seat_orders/revealed.html.erb`: the link uses `orders_path_for(@game.current_phase.number)`.
 - `order_pickers/show.html.erb`: the three `game_seat_orders_path` and two `game_order_picker_path` calls become `orders_path_for(@phase.number)` and `picker_path_for(@phase.number, @province, draft: …)`.
+
+`spec/support/secrecy_routes.rb` gets the three stepped-in order routes now, so the suite stays green (their entries are the ones in Phase 5a; Phase 5 adds the sweep viewers, not the rows). `spec/requests/reveal_post_spec.rb`'s route list gains the three stepped-in order routes too (`GET` and `PUT` orders, `GET` picker).
 
 `app/views/layouts/application.html.erb`: the first line inside `<main>`: `<%= render "step_ins/bar", step_in: @step_in if @step_in %>`.
 
@@ -366,7 +387,7 @@ Views, exact replacements:
 ## Phase 3: The reissue gap and the host page's entry list
 
 **Implements:** FR-3, D5, D8. **Satisfies:** AC-1.6, AC-3.9, AC-7.1 to AC-7.7.
-**Files:** create `spec/requests/step_in_reissue_spec.rb`, `app/views/step_ins/_entry.html.erb`; change `app/controllers/seat_links_controller.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/hosts/show.html.erb`, `app/views/reissues/show.html.erb`.
+**Files:** create `spec/requests/step_in_reissue_spec.rb`, `app/views/step_ins/_entry.html.erb`; change `spec/requests/reissue_spec.rb`, `spec/requests/host_spec.rb` (selectors only), `app/controllers/seat_links_controller.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/hosts/show.html.erb`, `app/views/reissues/show.html.erb`.
 
 ### 3a. Tests first (red): `spec/requests/step_in_reissue_spec.rb`
 
@@ -376,7 +397,7 @@ Setup as `reissue_clears_orders_spec`: the host holds Germany; France holds a se
 - AC-7.2: confirming is an ordinary step-in (a row, the cookie, the bar), and the France phone, opening the same link in a clean session, sees "The host entered your orders" (checked in Phase 4); the link's token never appears in any cookie of the host session.
 - AC-7.3: the host reissues Germany and opens that link on the host session: 302 to `/games/:id`, `seat_<id>` replaced, no step-in.
 - AC-7.4: a clean session opens a reissued link: seat cookie set, redirect to `/games/:id`.
-- AC-7.5: a session with the host cookie and France's seat cookie (clean session: seat link first, then `/host-link`) opens `/games/:id`, `/games/:id/phases/1/orders`, `/orders/par` and PUTs the endpoint: each redirects (302) to France's confirmation for phase 1, deletes the `seat_<id>` cookie in the same response, shows no France order, saves nothing and writes no row; after confirming it is an ordinary step-in.
+- AC-7.5: a session with the host cookie and France's seat cookie (clean session: seat link first, then `/host-link`) opens `/games/:id`, `/games/:id/phases/1/orders`, `/orders/par` and PUTs the endpoint. The first redirect deletes the seat cookie, so the example saves the raw `seat_<id>` cookie value after setup and puts it back in the jar before each request (`session.cookies["seat_#{id}"] = saved`); the first request also asserts the deletion. Each request redirects (302) to France's confirmation for phase 1, deletes the `seat_<id>` cookie in the same response, shows no France order, saves nothing and writes no row; after confirming it is an ordinary step-in.
 - AC-7.6: a wrong, old or malformed token gives the same stranger response with and without the host cookie.
 - AC-7.7: the reissue confirmation page says the orders are deleted and that opening the new link on the host's own phone counts as stepping in.
 - AC-3.9: a session with only the host cookie and no seat (the host link opened on a second phone) steps into France; Leave redirects to `/games/:id/host`, and so does the submit bar's own-seat link (its `href` is the host page).
@@ -449,7 +470,7 @@ with `performed?`-safe flow: after `send_to_step_in` redirects, the before-actio
 <% if others.any? %>
   <h3>Step into a seat</h3>
   <p>Enter orders for a player who can't. It is recorded, and that player is told.</p>
-  <ul class="list">
+  <ul class="list" data-step-in-entry>
     <% others.each do |seat| %>
       <li><%= link_to safe_join([ power_badge(seat.power), tag.span("Step in") ]), game_step_in_path(game.public_id, seat.power, phase.number), class: "list__row" %></li>
     <% end %>
@@ -459,12 +480,14 @@ with `performed?`-safe flow: after `send_to_step_in` redirects, the before-actio
 
 `app/views/hosts/show.html.erb`: one line at the end of the `.host-section`, after the Seats `</ul>`: `<%= render "step_ins/entry", game: @game, seats: @seats, phase: @phase %>`. `app/views/reissues/show.html.erb`: add `<p>If you open the new link on your own phone, that counts as stepping into this seat: you will be asked to confirm, and it is recorded.</p>`.
 
-**Verify:** the new spec, `spec/requests/reissue*_spec.rb`, `player_spec.rb`, `order_screen_spec.rb`, `games_spec.rb` stay green.
+**Existing specs that read the host page's lists.** `spec/requests/reissue_spec.rb` (lines 29 to 38) counts `.host-section ul.list > li` and the reissue links, and the entry list is a second `ul.list` in that section. The entry list carries `data-step-in-entry`, and those selectors become `.host-section ul.list:not([data-step-in-entry])` (the test changes, not #24's markup). `host_spec.rb:219` is checked for the same pattern.
+
+**Verify:** the new spec, `spec/requests/reissue*_spec.rb`, `host_spec.rb`, `player_spec.rb`, `order_screen_spec.rb`, `games_spec.rb` stay green.
 
 ## Phase 4: The owner's notice, the history and the time
 
 **Implements:** D6, FR-4. **Satisfies:** AC-6.1 to AC-6.6, AC-7.2's notice.
-**Files:** create `spec/requests/step_in_notices_spec.rb`, `spec/helpers/step_ins_helper_spec.rb`, `app/helpers/step_ins_helper.rb`, `app/views/step_ins/_notices.html.erb`, `app/views/step_ins/_history.html.erb`; change `app/views/games/show.html.erb`, `app/views/seat_orders/show.html.erb`, `app/views/hosts/show.html.erb`, `app/views/step_ins/show.html.erb`.
+**Files:** create `spec/requests/step_in_notices_spec.rb`, `spec/helpers/step_ins_helper_spec.rb`, `app/helpers/step_ins_helper.rb`, `app/views/step_ins/_notices.html.erb`, `app/views/step_ins/_history.html.erb`; change `app/views/games/show.html.erb`, `app/views/seat_orders/show.html.erb`, `app/views/hosts/show.html.erb`.
 
 ### 4a. Tests first (red)
 
@@ -523,7 +546,7 @@ end
 </section>
 ```
 
-Render lines: `hosts/show` after the history `</section>`: `<%= render "step_ins/history", game: @game %>`; `games/show` after the "Enter orders" link: `<%= render "step_ins/notices", seat: @seat, phase: @phase %>`; `seat_orders/show` after the phase header: `<%= render "step_ins/notices", seat: @seat, phase: @phase unless @stepped_in_page %>`. `step_ins/show` (the confirmation) replaces its literal sentence with `<%= name %> will see: "The host entered your orders at <%= table_time(Time.current) %>".`
+Render lines: `hosts/show` after the history `</section>`: `<%= render "step_ins/history", game: @game %>`; `games/show` after the "Enter orders" link: `<%= render "step_ins/notices", seat: @seat, phase: @phase %>`; `seat_orders/show` after the phase header: `<%= render "step_ins/notices", seat: @seat, phase: @phase unless @stepped_in_page %>`. The confirmation page (`step_ins/show`) keeps its time-free sentence from Phase 1: it is swept for every host viewer, so it draws no clock.
 
 **Verify:** the two new specs plus the full request suite (the existing host-page secrecy checks must stay green: no `ordered`, no `select`).
 
@@ -559,15 +582,16 @@ The `GET /games/:public_id/seat-link` entry's `why` becomes "sets a cookie and r
 ### 5b. `spec/requests/order_secrecy_spec.rb`
 
 - The "marks as showing orders only…" example keeps its four-route `:own` assertion as is and gains a second one: the `:stepped_in` keys are exactly the three stepped-in order routes (AC-8.1).
-- `viewers` gains two sessions, each built when the viewers are set up (before the baseline): `"the host, with France's seat cookie"` (a session that opens France's seat link, then the host link) and `"the host, stepped into France"` (its own session: host link, `seat-link` for the host's own seat is not needed; it posts the step-in confirmation for France, so the banner and the cookie are the same in every snapshot). The `host_without_seat` session in the existing `let` stays.
+- `viewers` gains two sessions, each built when the viewers are set up (before the baseline): `"the host, with France's seat cookie"` (a session that opens France's seat link, then the host link) and `"the host, stepped into France"` (its own session: host link, then the step-in confirmation for France, so the banner and the cookie are the same in every snapshot). The first of these undoes itself: its first own-seat request deletes the `seat_<id>` cookie (spec 026 D5). So the sweep restores it: a `restored` hash maps each such session to its saved raw cookie, and `snapshot` puts it back in the jar before every request (`session.cookies["seat_#{id}"] = value`); without that the next snapshot would see a host with no seat and the comparison would fail for the wrong reason. The `host_without_seat` session in the existing `let` stays.
+- The example "answers the same whether England has submitted or not" (`order_secrecy_spec.rb:188-190`) excepts the reveal page for `hosts`; both new viewers hold the host cookie and see the pending list, so both join `hosts`.
 - The baseline example gains positive controls: the stepped-in host's France screen is 200 and England's is 404; the host with France's cookie is redirected (302) on the own-seat routes; the host without a step-in gets 404 on both of England's stepped-in routes (AC-8.2).
 - New example (AC-8.3): the host steps into England; England's screen shows England's `.unit-row__order` text (positive control), France's URLs are 404 and carry no France order, and the host's own seat page, host page and reveal page are the same before and after England's orders change.
-- New example (AC-8.4, recorded before shown): with a `StepIn` count spy via `ActiveSupport::Notifications` on `sql.active_record` (an INSERT into `step_ins` happens in the confirming request), then the screen request carries France's order; before the confirmation, the same URL has none.
+- New example (AC-8.4, recorded before shown): a log of every request the host makes in order (the confirmation GET, the screen GET before confirming, the confirming POST, the screen GET after), each entry saying whether an `INSERT INTO "step_ins"` ran during the request (a `sql.active_record` subscriber) and whether the response body contains France's order text. The example asserts that no entry with the order text comes before the entry with the INSERT, and that the entry with the INSERT is the confirming POST (whose redirect body carries no order).
 - New example (AC-8.5): the host page, the reveal page and the confirmation page for the host stepped into France contain no France order JSON or count.
 
 ### 5c. The rest
 
-`spec/support/responses.rb`: `comparable` greps `/\A(?:host|seat|step_in)_/` (AC-8.8). `spec/requests/forgery_spec.rb`: two examples using `post_without_token`: the confirmation POST and the Leave `DELETE` are refused without a token and `StepIn.count` is unchanged; its `state` array gains `StepIn.count`. `spec/models/step_in_boundary_spec.rb`:
+`spec/support/responses.rb`: `comparable` greps `/\A(?:host|seat|step_in)_/` (AC-8.8). `spec/requests/forgery_spec.rb`: France takes a seat first (`game.take_seat!("france")`), `state` gains `StepIn.count`, and two examples use `post_without_token`: the confirmation POST and the Leave `DELETE` (verb `:delete`) are refused without a token and the state is unchanged; a control posts the confirmation with the forgery check off and sees `StepIn.count` rise by one, so the refusal is not just a missing route. `spec/models/step_in_boundary_spec.rb`:
 
 ```ruby
 require "spec_helper"
@@ -599,7 +623,7 @@ end
 
 ### 6a. The system spec (red first: the pages don't exist in a browser check until the previous phases are done, so it is written against the finished pages and run last)
 
-`spec/system/step_in_screens_spec.rb`, modelled on `order_pickers_spec.rb` (`with_viewport(360)`, `measure_step`, `screenshot` via `SCREENSHOTS`): start a game as the host (Germany) with `Game.start!`, take France, give France an order, visit the host link and the seat link to sign the browser in as the host. At 360 pixels:
+`spec/system/step_in_screens_spec.rb`, modelled on `order_pickers_spec.rb` (`with_viewport(360)` is shared; `measure_step` and `screenshot` are local `def`s there, so this spec defines its own copies, with `SCREENSHOTS` as the output directory): start a game as the host (Germany) with `Game.start!`, take France, give France an order, visit the host link and the seat link to sign the browser in as the host. At 360 pixels:
 
 1. the host page with the "Step into a seat" list (`01-host-step-in-list`);
 2. the confirmation page (`02-confirmation`), then tap "Step into France";
@@ -655,4 +679,5 @@ Then the implementation review (Opus, read-only), its findings recorded in the p
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.1 | 2026-11-26 | Changed after the first Opus review: `create` and the callbacks' `only:` arrive together; the route-table rows and the `reveal_post_spec` list are updated in the phase that adds the routes; the host page's lists get a data attribute and two specs' selectors change; no clock on the swept confirmation page; the sweep's seat-cookie viewer is restored before every request and both new viewers join the `hosts` exception; the 409 page clears the bar; helpers use `@seat`; test additions for AC-3.7, AC-8.6, AC-3.8, the explicit game check, the forgery control and the SQL-ordered record test |
 | 1.0.0 | 2026-11-26 | First draft |
