@@ -4,10 +4,10 @@ module ResponseHelpers
 
   def cookie_line(response, name) = cookie_lines(response).find { |line| line.start_with?("#{name}=") }
 
-  # What the stranger ACs compare: status, body, four headers, and the host_ and seat_ cookie lines. The game id in a
+  # What the stranger ACs compare: status, body, three headers, and the host_, seat_ and step_in_ cookie lines. The game id in a
   # cookie name is replaced by ID, and the session cookie is left out (its value differs on every response).
   def comparable(response, id)
-    cookies = cookie_lines(response).grep(/\A(?:host|seat)_/).map { |line| line.sub(id, "ID").sub(/=[^;]*/, "=VALUE") }.sort
+    cookies = cookie_lines(response).grep(/\A(?:host|seat|step_in)_/).map { |line| line.sub(id, "ID").sub(/=[^;]*/, "=VALUE") }.sort
     headers = %w[Content-Type Cache-Control Referrer-Policy].map { |name| response.headers[name] }
     [ response.status, response.body.gsub(/\s+/, " "), headers, cookies ]
   end
