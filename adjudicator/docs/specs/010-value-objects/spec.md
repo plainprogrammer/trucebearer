@@ -1,7 +1,7 @@
 # Feature 010: Value objects for positions, units and orders
 
 **Status:** Draft
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #10
@@ -16,6 +16,7 @@
 | 1.0.0 | 2026-11-25 | Initial draft |
 | 1.0.1 | 2026-11-25 | Recorded James's two decisions (keep `ArgumentError` for a missing keyword, with AC-1.10; reject duplicate standoff provinces) |
 | 1.1.0 | 2026-11-25 | Folded in the first independent review (round 1: changes required, nothing blocking).<br>• Messages are pinned: `inspect` form, and which value per case.<br>• `map` string is copied and frozen.<br>• Nested `from_h` strictness is listed case by case, including `nil` ownership and `Move#destination`.<br>• All keywords of `new` are required, with `ArgumentError` cases.<br>• `with` has a valid-path criterion, and every Must item has a criterion.<br>• Key order, `hash`/`eql?` and all six split coasts are asserted.<br>• Every example in the interface that only needs these objects builds.<br>• The stale #9 changelog sentence is trimmed.<br>• Two-dislodged-units reasoning recorded, and the follow-up owed to the maintainer is named |
+| 1.1.1 | 2026-11-25 | Folded in the second independent review (APPROVE, nothing blocking): unit and location province in placement messages, `format` then `type` checked first, single-fault specs, wording of the `new` symbols rule, a fuller list of excluded-section constructions |
 
 ## Problem Statement
 
@@ -113,7 +114,7 @@ Every acceptance criterion is verified by a passing spec in this pull request un
   - an `"ownership"` that is not a hash, a key that is not a string, or a value that is not a string, including `nil` (`{"bel" => nil}`).
 
   This includes the interface error example `TA::Position.from_h(start.to_h.merge("year" => "1901"))`
-- [ ] **AC-2.9** Given any position, unit or order hash handed to `from_h`, whether it is accepted or refused When the call returns or raises Then the hash handed in, and every hash and array inside it, is unchanged, a frozen hash (frozen all the way down) is accepted, and changing the hash afterwards leaves the object built from it unchanged
+- [ ] **AC-2.9** Given any position, unit, dislodged-unit or order hash handed to `from_h`, whether it is accepted or refused When the call returns or raises Then the hash handed in, and every hash and array inside it, is unchanged, a frozen hash (frozen all the way down) is accepted, and changing the hash afterwards leaves the object built from it unchanged
 - [ ] **AC-2.10** Given a position built from ownership given out of order When `position.ownership` is read Then its keys are in province-identifier order, as `to_h` writes them
 
 ### Story 3: Describe an order
@@ -134,7 +135,7 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 - [ ] **AC-3.2** Given any order When it is inspected Then it is frozen, its fields (`members`) are exactly the ones listed in AC-3.1 and no others, and two orders of the same class with the same contents are equal and have the same `hash`, while two orders of different classes with the same field values (`SupportMove` and `Convoy`) are not equal
 - [ ] **AC-3.3** Given a hash with `"type"` of each of the six values When `TA::Order.from_h` is called Then it returns an instance of the matching class, equal to the order the hash came from. The interface example `O.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"})` gives `O::Hold.new(power: :england, at: :lon)`
 - [ ] **AC-3.4** Given an unknown `"type"` (`"teleport"`, `"Hold"`), a `"type"` that is not a string (`:hold`, `nil`, `1`), no `"type"` key, or an argument that is not a hash When it is passed to `TA::Order.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending key or value
-- [ ] **AC-3.5** Given the valid hash of each order class When it is passed to the `from_h` of each of the other five classes Then every one of those thirty calls raises `TA::InvalidInput`, and the message includes the hash's `"type"` value. The interface example `O::Move.from_h({... "type" => "hold" ...})` is one of them
+- [ ] **AC-3.5** Given the valid hash of each order class When it is passed to the `from_h` of each of the other five classes Then every one of those thirty calls raises `TA::InvalidInput`, and the message includes the hash's `"type"` value. The `"format"` and then the `"type"` are checked before the other keys, so a hold hash given to `Move.from_h` is refused for its type and not for its missing `"destination"`. The interface example `O::Move.from_h({... "type" => "hold" ...})` is one of them
 - [ ] **AC-3.6** Given a province field (`at`, `target`, `from` or `to`) in a hash that holds a location hash with a coast (`{"province" => "spa", "coast" => "nc"}`), one without a coast, a symbol, `nil` or an unknown province When `from_h` is called, for each field of each class that has it Then it raises `TA::InvalidInput`, and the message includes the offending value. The interface example for a coast in `"at"` is one of them
 - [ ] **AC-3.7** Given a `TA::Location` or a string in a province field, or a symbol, a hash or `nil` for `Move#destination` When `new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value. A `Move` whose `destination` is a split-coast location with a coast is valid
 - [ ] **AC-3.8** Given orders that break a rule of the game but are well formed (a `Move` to the unit's own province, a fleet's `Move` to an inland province, a `Convoy` from an inland province to itself, a `SupportMove` with the same origin and destination, an order for a province where no unit stands) When they are built with `new` or with `from_h` Then they are built, with no error. Judging them is for checking (#11)
@@ -156,7 +157,7 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 - [ ] **AC-4.3** Given a position and each order When `to_h` is walked all the way down Then every key is a `String`, and every value is a `String`, an `Integer`, `true`, `false`, `nil`, an `Array` or a `Hash`, so `JSON.generate` writes it with no custom handling
 - [ ] **AC-4.4** Given the gem's code When it is read Then the format value is written in one place only, and `Position` and every order class read it from there [verified in review]
 - [ ] **AC-4.5** Given a hash with a `"format"` of `1` and one other fault When `from_h` is called Then it raises `TA::InvalidInput`. A hash is never accepted because its `"format"` is right
-- [ ] **AC-4.6** Given `from_h` Then no text from the caller becomes a `Symbol` before it has been checked against the map's identifiers, so a message shows the caller's own string and an unknown identifier is never turned into a symbol [verified in review]
+- [ ] **AC-4.6** Given the code of every `from_h` When it is read Then no text from the caller becomes a `Symbol` before it has been checked against the map's identifiers, so a message shows the caller's own string and an unknown identifier is never turned into a symbol [verified in review]
 
 ### Story 5: Impossible objects can't be built
 
@@ -166,7 +167,7 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 
 **Acceptance criteria:**
 
-Each criterion holds whether the object is built with `new`, with `from_h`, or by changing a field of a valid object with `with`. In every case the error is `TA::InvalidInput` and its message includes the offending value. Where a criterion names the value, that is the one the message must include.
+Each criterion holds whether the object is built with `new`, with `from_h`, or by changing a field of a valid object with `with`. In every case the error is `TA::InvalidInput` and its message includes the offending value. Where a criterion names the value, that is the one the message must include. For the placement and coast cases (AC-5.2 to AC-5.5) it is the unit's or location's province, and for a bad coast also the coast, as #9 does. When one object has more than one fault, which value the message shows is not specified, so each spec uses a single fault (for example, a retreat-phase position for the standoff cases).
 
 - [ ] **AC-5.1** Given two units on the board in one province When a position is built Then it raises. This covers two armies in `bur`, and an army in `stp` with a fleet on `stp/sc`. The message includes the shared province. A unit that is dislodged does not count: a position with a board unit and a dislodged unit in the same province is valid
 - [ ] **AC-5.2** Given a fleet in an inland province, or an army in a sea province When a unit is built Then it raises. This is checked for each of the 14 inland provinces with a fleet, and each of the 19 sea provinces with an army
@@ -208,10 +209,10 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 **Acceptance criteria:**
 
 - [ ] **AC-7.1** Given every Ruby example in `docs/interface.md` under `## Value objects` for `TA::Location`, `TA::Unit`, `TA::DislodgedUnit`, `TA::Position`, `TA::Order` and its six classes, under "Canonical order", under "Impossible objects", and the two `format` examples at the head of the section When each is run as a spec Then it gives the value or raises the error that the example's comment says
-- [ ] **AC-7.2** Given the `starting_position` examples under `## Map` (the overview block and the `Map#starting_position` subsection) and the `from_h` examples under `## Errors` When each is run as a spec Then it gives the value or raises the error its comment says
+- [ ] **AC-7.2** Given the `starting_position` examples under `## Map` (the overview block and the `Map#starting_position` subsection) and the `from_h` examples under `## Errors` When each is run as a spec Then it gives the value or raises the error its comment says. For the sample message in the Errors example, only the error class and the included value are asserted, not the wording
 - [ ] **AC-7.3** Given the examples this feature does not cover When the specs are read Then the specs name exactly these as excluded [verified in review]: both `TA::CheckResult` examples (the `to_h` pair under `### TA::CheckResult`) and the three `CheckResult` lines at the end of "Impossible objects" (#11); the `TA::Outcome` and `TA::Adjudication` examples (#14); and the calls to `TA.check`, `TA.legal_orders` and `TA.adjudicate` in the sections on checking, legal orders and adjudication
 - [ ] **AC-7.4** Given the specs for AC-7.1 and AC-7.2 When they build their inputs Then they build them as the examples do (with the same `army`, `fleet`, `spring` and `a` objects) and do not substitute simpler ones
-- [ ] **AC-7.5** Given the position and order constructions in the excluded sections that need only the objects built here: `start`, `retreat` (from `start.to_h.merge("phase" => "retreat")`), `at_sea`, `ln`, `pos`, `vienna`, `paradox_pos`, and the orders and units used with them When each is built Then it builds without raising, so #11 and #14 can use the examples as they stand
+- [ ] **AC-7.5** Given the position and order constructions in the excluded sections that need only the objects built here: `start`, `retreat` (from `start.to_h.merge("phase" => "retreat")`), `at_sea`, `ln`, `pos`, `vienna`, `paradox_pos`, the `orders` and `bounce` arrays, and the orders, units and dislodged units used with them (including the expected `TA::DislodgedUnit` in the `vienna` example) When each is built Then it builds without raising, so #11 and #14 can use the examples as they stand
 
 ### Story 8: The change is recorded and the old line is updated
 
@@ -281,7 +282,7 @@ A `Data` class with eight fields in the order the interface gives them: `map`, `
 These rules hold for every class above.
 
 **Must:**
-- `new` takes symbols only. `from_h` takes strings only (and `nil` where a field may be absent, which only `Location#coast` does). Anything else raises `TA::InvalidInput`.
+- For identifiers, `new` takes symbols only (the map identifier, the `String` `"classic"`, excepted), and `from_h` takes strings only (and `nil` where a field may be absent, which only `Location#coast` does). `year`, `by_convoy` and the other non-identifier fields keep their own types. Anything else raises `TA::InvalidInput`.
 - `from_h` takes a `Hash` with exactly the documented string keys. A missing key, an unknown key, a symbol key or a value of the wrong type raises `TA::InvalidInput`, and so does an argument that is not a hash.
 - `format` is a single value for the whole gem, defined once. It is the `Integer` `1`.
 - Every error message includes the offending key or value.
