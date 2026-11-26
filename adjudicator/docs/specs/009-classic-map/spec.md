@@ -1,6 +1,6 @@
 # Feature 009: The classic map as a data file
 
-**Status:** Draft
+**Status:** Approved
 **Version:** 1.1.0
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
