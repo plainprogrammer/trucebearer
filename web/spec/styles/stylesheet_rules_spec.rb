@@ -151,9 +151,12 @@ RSpec.describe "Stylesheet rules" do
       expect(Stylesheets.violations(":root { --bg: url(a.png); }", "t.css", token_file: true)).not_to be_empty
     end
 
-    it "allows a power token only inside a power badge rule (AC-4.4)" do
+    it "allows a power token only inside a badge, unit icon or supply-center icon variant rule (AC-4.4)" do
       expect(found(".power-badge--austria { --_fill: var(--color-power-austria); }")).to be_empty
+      expect(found(".unit-icon--austria { --_power: var(--color-power-austria); }")).to be_empty
+      expect(found(".supply-center-icon--austria { --_owner: var(--color-power-austria); }")).to be_empty
       expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".unit-icon { color: var(--color-power-austria); }")).not_to be_empty
       expect(found(".power-badge--austria, .button { color: var(--color-power-austria); }")).not_to be_empty
     end
   end

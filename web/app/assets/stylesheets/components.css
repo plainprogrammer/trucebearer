@@ -257,6 +257,44 @@
   .power-badge--russia { --_fill: var(--color-power-russia); }
   .power-badge--turkey { --_fill: var(--color-power-turkey); }
 
+  /* ---- Unit and supply-center icons: made only by the icon helpers ---- */
+  .unit-icon,
+  .supply-center-icon {
+    display: inline-block;
+    flex: none;
+    vertical-align: middle;
+  }
+
+  /* The silhouette is currentColor, so the power's color is the element's color. The marks keep
+     the artwork's white. The tag is a surface tile with a border and an initial in the power's color. */
+  .unit-icon { color: var(--_power, var(--color-text)); }
+  .unit-icon__tag-tile { fill: var(--color-surface); stroke: var(--_power); }
+  .unit-icon__tag-initial { fill: var(--_power); }
+
+  .unit-icon--austria { --_power: var(--color-power-austria); }
+  .unit-icon--england { --_power: var(--color-power-england); }
+  .unit-icon--france { --_power: var(--color-power-france); }
+  .unit-icon--germany { --_power: var(--color-power-germany); }
+  .unit-icon--italy { --_power: var(--color-power-italy); }
+  .unit-icon--russia { --_power: var(--color-power-russia); }
+  .unit-icon--turkey { --_power: var(--color-power-turkey); }
+
+  /* Unowned is the artwork's own look (white disk), with the edge and center in text color. Owned:
+     the disk and edge take the owner's color and the center is white. */
+  .supply-center-icon { color: var(--color-text); }
+
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__disk,
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__edge { fill: var(--_owner); }
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__center { fill: var(--color-on-power); }
+
+  .supply-center-icon--austria { --_owner: var(--color-power-austria); }
+  .supply-center-icon--england { --_owner: var(--color-power-england); }
+  .supply-center-icon--france { --_owner: var(--color-power-france); }
+  .supply-center-icon--germany { --_owner: var(--color-power-germany); }
+  .supply-center-icon--italy { --_owner: var(--color-power-italy); }
+  .supply-center-icon--russia { --_owner: var(--color-power-russia); }
+  .supply-center-icon--turkey { --_owner: var(--color-power-turkey); }
+
   /* ---- Reduced motion: no transition runs ---- */
   @media (prefers-reduced-motion: reduce) {
     .button {
