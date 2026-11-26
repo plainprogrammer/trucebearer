@@ -1,0 +1,32 @@
+case: "6.C.7"
+summary: One army of a swap by convoy is stopped by a third unit, so neither moves
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: army, at: bel}
+    - {power: france, type: army, at: bur}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: true}
+    result: bounced
+  - order: {type: convoy, power: france, at: eng, from: bel, to: lon}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: bel, destination: lon}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: france, at: bur, destination: bel}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: france, type: army, at: bel}
+    - {power: france, type: army, at: bur}
+    - {power: france, type: fleet, at: eng}
+    - {power: england, type: army, at: lon}
+    - {power: england, type: fleet, at: nth}

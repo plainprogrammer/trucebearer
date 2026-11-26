@@ -4,17 +4,18 @@ require "trucebearer/adjudicator"
 require_relative "../support/datc"
 
 # Runs every DATC fixture through TA.check (AC-8.1), and keeps the set of fixtures
-# exactly the one the specs list (AC-8.2). #14 added its cases through Datc::ADJUDICATED.
+# exactly the one the specs list (AC-8.2). #14 added its cases through Datc::ADJUDICATED, and
+# #15 added the convoy cases to it and the paradox cases that wait for #39 (Datc::PARADOX_PENDING).
 RSpec.describe "DATC fixtures: checking" do
-  # Every fixture is run for checking: the cases adjudicated by #14 (Datc::ADJUDICATED), which
-  # include all of 6.A and 6.B except the four left out, and the three encoded for checking
-  # only. See spec 011, "Cases encoded", and spec 014, "DATC cases".
-  encoded = (Datc::ADJUDICATED + Datc::CHECKING_ONLY).sort.freeze
+  # Every fixture is run for checking: the cases adjudicated (Datc::ADJUDICATED), which include
+  # all of 6.A and 6.B except the two left out, and the convoy paradoxes that wait for #39.
+  # See spec 011, "Cases encoded", spec 014 and spec 015, "DATC cases".
+  encoded = (Datc::ADJUDICATED + Datc::PARADOX_PENDING).sort.freeze
   left_out = %w[6.B.9 6.B.14].freeze
 
   it "has one fixture for each encoded case and no other (AC-8.2)" do
     names = Datc.files.map { |path| File.basename(path, ".yml") }
-    expect(encoded.size).to eq(83)
+    expect(encoded.size).to eq(138)
     expect(names).to eq(encoded)
     expect(names & left_out).to eq([])
   end

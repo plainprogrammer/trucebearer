@@ -35,16 +35,20 @@ module Datc
   RESULTS = %w[void held no_route bounced succeeded unmatched cut given disrupted].freeze
 
   # The cases that carry `after:`: the ones adjudicated. The checking runner expects these
-  # files and the three that are encoded for checking only (6.B.18, 6.B.19, 6.G.19).
+  # files and the ones with `paradox: true`.
   ADJUDICATED = (
     (1..12).map { |n| "6.A.#{n}" } +
-    [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17].map { |n| "6.B.#{n}" } +
-    [1, 2, 3, 8, 9].map { |n| "6.C.#{n}" } +
-    ((1..35).to_a - [6, 16]).map { |n| "6.D.#{n}" } +
-    ((1..15).to_a - [11]).map { |n| "6.E.#{n}" } +
-    %w[6.F.1]
+    [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18, 19].map { |n| "6.B.#{n}" } +
+    (1..9).map { |n| "6.C.#{n}" } +
+    (1..35).map { |n| "6.D.#{n}" } +
+    (1..15).map { |n| "6.E.#{n}" } +
+    ((1..30).to_a - [14, 15, 16, 17, 18, 22, 23, 24, 26, 27, 28]).map { |n| "6.F.#{n}" } +
+    ((1..20).to_a - [11]).map { |n| "6.G.#{n}" }
   ).sort.freeze
-  CHECKING_ONLY = %w[6.B.18 6.B.19 6.G.19].freeze
+  # The convoy paradoxes the contract leaves to #39 (docs/interface.md, "DATC scope").
+  PARADOX_PENDING = (
+    [14, 15, 16, 17, 18, 22, 23, 24, 26, 27, 28].map { |n| "6.F.#{n}" } + %w[6.G.11]
+  ).sort.freeze
   CHECK_KEYS = %w[legal reason].freeze
   PHASES = %w[movement retreat adjustment].freeze
 

@@ -5,17 +5,19 @@ require_relative "../support/datc"
 
 # Adjudicates every DATC fixture that has an `after:` (Story 11), and keeps the set of those
 # fixtures exactly Datc::ADJUDICATED (AC-11.2). The expectation is read from the fixture
-# alone (Datc.expected_outcomes), so it doesn't depend on the engine. See spec 014, "DATC
-# cases", for what is encoded, what is left out and why.
+# alone (Datc.expected_outcomes), so it doesn't depend on the engine. See spec 014 and spec
+# 015, "DATC cases", for what is encoded, what is left out and why. The convoy paradoxes that
+# wait for #39 (Datc::PARADOX_PENDING) are only tested for the flag and a valid position.
 RSpec.describe "DATC fixtures: adjudication" do
   cases = Datc.load_all.select(&:after)
 
   it "has an after: in exactly the encoded files, and in none of the cases left out (AC-11.2)" do
-    expect(Datc::ADJUDICATED.size).to eq(80)
+    expect(Datc::ADJUDICATED.size).to eq(126)
     expect(cases.map(&:id).sort).to eq(Datc::ADJUDICATED)
     without = Datc.load_all.reject(&:after).map(&:id)
-    expect(without).to eq(Datc::CHECKING_ONLY)
-    left_out = %w[6.B.9 6.B.14 6.C.4 6.C.5 6.C.6 6.C.7 6.D.6 6.D.16 6.E.11 6.F.12 6.G.7]
+    expect(without).to eq(Datc::PARADOX_PENDING)
+    expect(Datc.load_all.select(&:paradox).map(&:id)).to eq(Datc::PARADOX_PENDING)
+    left_out = %w[6.B.9 6.B.14]
     expect(cases.map(&:id) & left_out).to eq([])
   end
 
@@ -64,6 +66,49 @@ RSpec.describe "DATC fixtures: adjudication" do
           other = TA.adjudicate(kase.position, arranged)
           expect([outcomes_by_order(other), other.position, other.paradox]).to eq(baseline)
         end
+      end
+    end
+  end
+
+  # The convoy paradoxes of the contract's list. Their result is unspecified until 0.3 (#39),
+  # so each is tested for what the contract promises: the flag is set, nothing raises, the
+  # position is valid and every unit is in it once (AC-6.2, AC-6.7 of spec 015).
+  Datc.load_all.select(&:paradox).each do |kase|
+    describe "#{kase.id} (convoy paradox, result pending: #39)" do
+      let(:orders) { kase.entries.map(&:order) }
+      let(:units_in_place) { kase.position.units.map { |unit| [unit.power, unit.type] }.tally }
+
+      def kept_once(adjudication)
+        position = adjudication.position
+        (position.units + position.dislodged_units.map(&:unit)).map { |unit| [unit.power, unit.type] }.tally
+      end
+
+      def implied_holds(kase)
+        legal = kase.entries.select { |entry| entry.expected.legal }.map(&:order)
+        kase.position.units.count { |unit| legal.none? { |order| order.at == unit.location.province && order.power == unit.power } }
+      end
+
+      it "sets the paradox flag, builds a valid position and keeps every unit once" do
+        adjudication = TA.adjudicate(kase.position, orders)
+        expect(adjudication.paradox).to be(true)
+        expect(adjudication.position).to be_a(TA::Position)
+        expect(adjudication.position.phase).to eq(:retreat)
+        expect(kept_once(adjudication)).to eq(units_in_place)
+        expect(adjudication.outcomes.size).to eq(orders.size + implied_holds(kase))
+      end
+
+      it "gives the same flag and a valid position for the orders in any order" do
+        arrangements = Array.new(6) { |seed| orders.shuffle(random: Random.new(seed)) }
+        arrangements.each do |arranged|
+          other = TA.adjudicate(kase.position, arranged)
+          expect(other.paradox).to be(true)
+          expect(kept_once(other)).to eq(units_in_place)
+          expect(other.outcomes.size).to eq(orders.size + implied_holds(kase))
+        end
+      end
+
+      it "gives the preferred result of the DATC" do
+        skip "paradox resolution: #39"
       end
     end
   end
