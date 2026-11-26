@@ -1,7 +1,7 @@
 # Feature 020: Mobile-first base stylesheet
 
 **Status:** Approved (2.0.x approved at Gate A on 2026-11-26; 1.2.1 was approved and shipped by #20)
-**Version:** 2.1.0
+**Version:** 2.1.1
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-26
 **Issue:** #20, amended by #81
@@ -21,6 +21,7 @@
 | 2.0.1 | 2026-11-26 | Approved at Gate A. The rule for a visible name beside a unit icon under 24 pixels applies to this release's lists and screens only, and does not bind the future map (1.x), which settles its own labeling. Wording only (PATCH) |
 | 2.0.2 | 2026-11-26 | Cites Issue #86 (the root change that adds `assets/icons/**` to the web workflow's paths) in the Error Scenarios. Wording only (PATCH) |
 | 2.1.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A. The total weight limit of FR-1 and the Performance section goes from 24 KB to 32 KB (32,768 bytes), and the style guide's share from 4 KB to 6 KB (6,144 bytes). Reason: the screen components the design-system catalog plans, which were not listed when 24 KB was set. `spec/styles/stylesheet_rules_spec.rb` enforces the new numbers |
+| 2.1.1 | 2026-11-26 | Records the phone pass of Issue #71. The maintainer checked AC-1.4, AC-1.6, AC-3.2 and AC-3.5 on an iPhone in Mobile Safari, and all four passed, so their boxes are ticked. No behavior change (PATCH) |
 
 ## Problem Statement
 
@@ -68,9 +69,9 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 - [ ] **AC-1.1** Given any page that uses the layout When it is shown at a width of 360 CSS pixels Then body text is at least 16 CSS pixels and no text on the page is smaller than 14 CSS pixels. (One exemption: the initial inside a unit icon's drawing, at the sizes this app uses, 20 to 48 pixels. It is part of an image whose accessible name, or the visible label beside it, carries the full words, and it scales with the icon, so it cannot be 14 pixels inside a tag that is 12 of the icon's 32 units. See AC-7.5)
 - [ ] **AC-1.2** Given the `/styleguide` page When every button, link styled as a button, header app-name link, tappable list row, text field, select, text area, checkbox row and radio row is measured at widths of 360 and 768 CSS pixels Then each one's tappable area is at least 44 by 44 CSS pixels. (Links inside running text are exempt.)
 - [ ] **AC-1.3** Given two separate controls (buttons, links styled as buttons, fields) that sit next to each other or one above the other When they are measured Then the gap between their tappable areas is at least 8 CSS pixels. (Rows of one list, and rows of one group of choices, touch each other on purpose, and each is at least 44 pixels tall.)
-- [ ] **AC-1.4** Given a text field, select or text area When it is focused on a phone Then its text size is at least 16 CSS pixels, so Mobile Safari does not zoom the page
+- [x] **AC-1.4** Given a text field, select or text area When it is focused on a phone Then its text size is at least 16 CSS pixels, so Mobile Safari does not zoom the page
 - [ ] **AC-1.5** Given a person who has set a larger text size in the browser or the system When the page is shown Then the text grows with it, because no font size in the stylesheets is written in `px` (including inside the `font` shorthand) and no root font size is set
-- [ ] **AC-1.6** Given a touch device When a button, link styled as a button or tappable list row is tapped Then it shows a visible pressed state (a different fill and a thicker border, see FR-6), and a double tap on it does not zoom the page. Pinch zoom of the page still works
+- [x] **AC-1.6** Given a touch device When a button, link styled as a button or tappable list row is tapped Then it shows a visible pressed state (a different fill and a thicker border, see FR-6), and a double tap on it does not zoom the page. Pinch zoom of the page still works
 
 ### Story 2: Contrast that holds up
 
@@ -100,10 +101,10 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 **Acceptance criteria:**
 
 - [ ] **AC-3.1** Given a page with a header, main content and an action area When it is shown at 320, 360, 390, 768 and 1024 CSS pixels wide Then it is one column, the page never scrolls sideways, and no content is cut off
-- [ ] **AC-3.2** Given main content taller than the screen and a viewport at least 30rem tall When the page is scrolled to any position Then the action area stays at the bottom edge of the viewport and its buttons stay fully visible
+- [x] **AC-3.2** Given main content taller than the screen and a viewport at least 30rem tall When the page is scrolled to any position Then the action area stays at the bottom edge of the viewport and its buttons stay fully visible
 - [ ] **AC-3.3** Given main content taller than the screen When the page is scrolled to the end Then the last line of main content can be scrolled fully clear of the action area
 - [ ] **AC-3.4** Given main content shorter than the screen When the page is shown Then the action area sits at the bottom of the viewport, not directly under the content
-- [ ] **AC-3.5** Given a phone with a bottom home indicator or a notch When the page is shown in portrait or landscape Then the header, content and action area keep clear of the unsafe edges
+- [x] **AC-3.5** Given a phone with a bottom home indicator or a notch When the page is shown in portrait or landscape Then the header, content and action area keep clear of the unsafe edges
 - [ ] **AC-3.6** Given keyboard focus moves into a control inside main content When the browser scrolls it into view Then the control is not entirely hidden behind the action area, with the action area at its height for one row of buttons
 - [ ] **AC-3.7** Given a page that provides no action area When it is shown Then no empty bar and no reserved space appears at the bottom
 - [ ] **AC-3.8** Given a viewport wider than 40rem When the page is shown Then header text, content and action buttons line up in one centered column no wider than 40rem
@@ -521,7 +522,7 @@ Each acceptance criterion has at least one row.
 | 1.2, 3.1 (360 pixels), 3.2, 3.3, 3.6, 3.10 | The Capybara system specs of #73 (`spec/system/styleguide_layout_spec.rb`): 44 pixel targets, no sideways scroll at 360, the sticky action area and focus. They run on every `bundle exec rspec` and must pass unchanged after the re-theme: a failure is a defect in the stylesheet, not a reason to loosen a spec | Every `bundle exec rspec` |
 | 1.1, 1.2, 1.3, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8, 3.9, 3.10, 6.3 | A repeatable measurement in real Chrome at 320, 360, 390, 768 and 1024 pixels wide (and one short viewport), plus a keyboard pass and the network panel, with screenshots at 360 and 768 pixels. The measurement is a written procedure and a console snippet kept in the spec folder (not app JavaScript), and its results are recorded in the pull request | Before the pull request is ready |
 | Pressed, hover, focus ring, forced colors, reduced motion | The same Chrome session, using its state and media emulation | Before the pull request is ready |
-| 1.4 (zoom), 1.6 (touch), 3.5 (real insets), 3.2 (dynamic toolbar) | One pass on a real iPhone in Mobile Safari. No phone is available to the agent, so this is **owed to the maintainer** and is named as such in the pull request. Issue #71 tracks it and lists AC-1.4, 1.6, 3.2 and 3.5, and the pull request names it. Those four boxes stay unticked until #71 closes | Before the playtest |
+| 1.4 (zoom), 1.6 (touch), 3.5 (real insets), 3.2 (dynamic toolbar) | One pass on a real iPhone in Mobile Safari. No phone is available to the agent, so this is **owed to the maintainer** and is named as such in the pull request. Issue #71 tracks it and lists AC-1.4, 1.6, 3.2 and 3.5, and the pull request names it. Those four boxes stay unticked until #71 closes. **Done 2026-11-26:** the maintainer checked all four on an iPhone in Mobile Safari, against `/styleguide` on a development build, and all passed (#71) | Before the playtest |
 
 When version 1.2.1 was approved the Gemfile had no browser-driving gem, so geometry was measured by hand. Issue #73 has since added Capybara with headless Chrome (`spec/system/`, `web/AGENTS.md`, "Testing"), and the system specs above now cover part of the Chrome row. The hand measurement stays as the procedure in `measure.md` for what no spec covers yet.
 
