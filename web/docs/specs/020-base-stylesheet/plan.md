@@ -17,7 +17,7 @@ All paths are relative to `web/`. Nothing outside `web/` changes.
 - The name: nothing in `app/`, `lib/`, `spec/` or `config/routes.rb`, in file names or contents, matches `diplomacy` or a word starting with `dip`. (AC-6.5)
 - No text from the game's rulebook or the DATC. No logos, artwork, board images or fonts from any edition. Never edit `adjudicator/`.
 - Test first. Run `bundle exec rspec` from `web/` before every push.
-- Commit messages: plain imperative sentence, ending with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+- Commit messages: a plain imperative sentence, ending with the `Co-Authored-By` trailer the session gives for commits.
 
 ---
 
@@ -43,26 +43,30 @@ A mobile-first base stylesheet (tokens, layout, buttons, lists, form controls, p
 | Pressed shape | `box-shadow: inset 0 0 0 var(--border-width) <edge color>` on top of the border, so the border looks twice as thick with no layout shift | Spec: "thickens the border to twice `--border-width`" |
 | Per-variant state colors | Each button variant sets four local properties: `--_fill`, `--_edge`, `--_ink`, `--_fill-pressed`. They hold `var(--color-*)` only, never a color value | Keeps AC-2.4 true and each variant to a few lines |
 | Production 404 (AC-5.2) | `config.x.styleguide` is `false` in `application.rb`, `true` in `development.rb` and `test.rb`. The route sits inside `constraints(->(_) { Rails.configuration.x.styleguide })`. A request spec flips the flag to `false` and expects 404, and a file spec checks production does not set it | The route is really absent when the flag is off, and the spec exercises it without stubbing `Rails.env` |
-| Power colors (FR-9) | Seven hues from an even HSL spread, start 17 degrees, step 360/7 = 51.43 degrees, saturation 60 percent, assigned alphabetically. Lightness per color is the highest whole percent at which white reaches at least 4.7 | Reproducible, arbitrary on purpose. No tuning of hue was needed (see table) |
+| Power colors (FR-9) | Seven hues from an even HSL spread, start 17 degrees, step 360/7 = 51.43 degrees, saturation 60 percent, assigned alphabetically. Lightness per color is the highest whole percent, at most 50, at which white reaches at least 4.7 | Reproducible, arbitrary on purpose. The cap of 50 keeps every fill from turning pastel. No hand tuning was needed (see table) |
 | Neutral and accent palette | Warm paper page, cool ink text, one deep blue accent, brick red danger, burnt orange focus ring | The app's own aim; chosen without consulting any edition of the game |
 | Visual check (FR-7) | `/styleguide` | Outlives the root page, which #21 replaces |
 | Geometry proof | Real Chrome through the browser tooling: a console snippet kept in `measure.md`, run at 320, 360, 390, 768 and 1024 pixels, plus screenshots at 360 and 768 | No new dependency (Gate A, decision 5) |
 
+### CSS features used (FR-1: each must be Baseline "widely available")
+
+`@layer`; custom properties and `var()`; `calc()`, `max()`; `env()` and `viewport-fit=cover`; `dvh` with a `vh` fallback line; `position: sticky`; flexbox with `gap`; `:focus-visible`; `:not()`; `::placeholder`; `accent-color`; `color-scheme`; `scroll-padding`; `touch-action`; `text-decoration-thickness` and `text-underline-offset`; logical properties (`margin-inline`, `margin-block-start`, `text-align: start`); the media features `hover` and `prefers-reduced-motion`, and the range form `(height < 30rem)`. A reviewer checks the list against MDN's Baseline data. Two declarations that are not Baseline were dropped on review: `text-size-adjust` and `-webkit-tap-highlight-color`.
+
 ### The palette (derived once, recorded here)
 
-No edition of the game was consulted. Hue start 17 degrees, step 51.43 degrees, saturation 60 percent. Lightness is the highest whole percent at which white text reaches at least 4.7 on the fill. Contrast is computed with the WCAG 2.2 formula.
+No edition of the game was consulted. Hue start 17 degrees, step 51.43 degrees, saturation 60 percent. Lightness is the highest whole percent, at most 50, at which white text reaches at least 4.7 on the fill. Contrast is computed with the WCAG 2.2 formula and shown rounded down.
 
-| Power | Nominal hue | Hex | Hue of the hex | White on it | On `page` | On `surface` |
-|---|---|---|---|---|---|---|
-| austria | 17.0 | `#b8552e` | 17.0 | 4.80 | 4.33 | 4.80 |
-| england | 68.4 | `#6e7a1f` | 67.9 | 4.70 | 4.24 | 4.70 |
-| france | 119.9 | `#218321` | 120.0 | 4.85 | 4.37 | 4.85 |
-| germany | 171.3 | `#207e71` | 171.7 | 4.90 | 4.42 | 4.90 |
-| italy | 222.7 | `#335fcc` | 222.7 | 5.75 | 5.19 | 5.75 |
-| russia | 274.1 | `#8a33cc` | 274.1 | 6.13 | 5.53 | 6.13 |
-| turkey | 325.6 | `#cc338b` | 325.5 | 4.76 | 4.29 | 4.76 |
+| Power | Nominal hue | Lightness | Hex | Hue of the hex | White on it | On `page` | On `surface` |
+|---|---|---|---|---|---|---|---|
+| austria | 17.0 | 45% | `#b8552e` | 17.0 | 4.80 | 4.33 | 4.80 |
+| england | 68.4 | 30% | `#6e7a1f` | 67.9 | 4.70 | 4.24 | 4.70 |
+| france | 119.9 | 32% | `#218321` | 120.0 | 4.85 | 4.37 | 4.85 |
+| germany | 171.3 | 31% | `#207e71` | 171.7 | 4.90 | 4.42 | 4.90 |
+| italy | 222.7 | 50% (cap) | `#335fcc` | 222.7 | 5.75 | 5.19 | 5.75 |
+| russia | 274.1 | 50% (cap) | `#8a33cc` | 274.1 | 6.13 | 5.53 | 6.13 |
+| turkey | 325.6 | 50% | `#cc338b` | 325.5 | 4.76 | 4.29 | 4.76 |
 
-The least circular distance between two of these hues is 51.0 degrees, so the 25-degree rule holds with room. No hue moved by more than 0.5 degrees through rounding, and no tuning was needed. All seven fills sit in a narrow band of darkness and differ chiefly by hue (spec FR-4); the name is always printed on the badge.
+Italy and russia reach the cap of 50 percent; their white contrast is already well above 4.7 there. The least circular distance between two of these hues is 50.96 degrees, so the 25-degree rule holds with room. Rounding to hex moved england's hue by 0.52 degrees and no other by more than 0.4; nothing was tuned by hand, so the 5-degree allowance in FR-9 is unused. All seven fills sit in a narrow band of darkness and differ chiefly by hue (spec FR-4); the name is always printed on the badge.
 
 | Token | Hex | Contrast it must hold (see FR-3) |
 |---|---|---|
@@ -73,14 +77,14 @@ The least circular distance between two of these hues is 51.0 degrees, so the 25
 | `--color-border` | `#6a7385` | 4.30 against page, 4.77 against surface |
 | `--color-link` | `#1d4f9c` | 7.15 on page, 7.92 on surface |
 | `--color-link-visited` | `#5b3a8c` | 7.80 on page, 8.65 on surface |
-| `--color-primary` | `#1f4e8c` | 7.50 against page, 8.31 against surface |
+| `--color-primary` | `#1f4e8c` | 7.49 against page, 8.31 against surface |
 | `--color-primary-pressed` | `#163a69` | 10.28 against page, 11.39 against surface |
 | `--color-on-primary` | `#ffffff` | 8.31 on primary, 11.39 on pressed |
 | `--color-danger` | `#a3262a` | 6.61 on page, 7.32 on surface |
 | `--color-danger-pressed` | `#7e1b1e` | 9.19 against page, 10.18 against surface |
 | `--color-on-danger` | `#ffffff` | 7.32 on danger, 10.18 on pressed |
 | `--color-focus` | `#b3470a` | 4.96 against page, 5.49 against surface |
-| `--color-disabled-text` | `#5c6270` | 4.30 on disabled fill |
+| `--color-disabled-text` | `#5c6270` | 4.29 on disabled fill |
 | `--color-disabled-fill` | `#dcd8cf` | Background |
 | `--color-on-power` | `#ffffff` | See the power table |
 
@@ -164,17 +168,21 @@ module Stylesheets
     tokens(path).select { |name, _| name.start_with?("--color-") }
   end
 
-  # Problems with a stylesheet other than the token file. Each is "file:line: what".
-  def violations(css, label)
+  # Problems with a stylesheet. Each is "file:line: what". In the token file, a
+  # --color-* token may hold a six-digit hex value (and nothing else may hold a color).
+  def violations(css, label, token_file: false)
     out = []
     declarations(css).each do |prop, value, line|
       at = "#{label}:#{line}"
+      color_token = token_file && prop.start_with?("--color-") && value.match?(/\A#[0-9a-f]{6}\z/i)
       plain = value.gsub(/var\([^)]*\)/, "")
       words = plain.downcase.scan(/[a-z]+/)
-      out << "#{at}: hex color in #{prop}" if value.match?(HEX_COLOR)
-      out << "#{at}: color function in #{prop}" if value.match?(COLOR_FUNCTION)
-      out << "#{at}: named or system color in #{prop}" if (words & (NAMED_COLORS + SYSTEM_COLORS)).any?
-      out << "#{at}: banned #{prop}" if prop.match?(/\A(?:-\w+-)?(?:filter|mix-blend-mode)\z/)
+      unless color_token
+        out << "#{at}: hex color in #{prop}" if value.match?(HEX_COLOR)
+        out << "#{at}: color function in #{prop}" if value.match?(COLOR_FUNCTION)
+        out << "#{at}: named or system color in #{prop}" if (words & (NAMED_COLORS + SYSTEM_COLORS)).any?
+      end
+      out << "#{at}: banned #{prop}" if prop.match?(/\A(?:-\w+-)?(?:(?:backdrop-)?filter|mix-blend-mode)\z/)
       out << "#{at}: banned opacity" if prop == "opacity" && value != "1"
       out << "#{at}: px font size in #{prop}" if %w[font font-size].include?(prop) && value.match?(/\d\s*px/i)
       out << "#{at}: !important" if value.include?("!important")
@@ -184,7 +192,7 @@ module Stylesheets
     out << "#{label}: url(" if css.match?(/url\(/i)
     out << "#{label}: color-mix" if css.include?("color-mix(")
     rules(css).each do |selector, body|
-      next unless body.include?("--color-power-")
+      next unless body.include?("var(--color-power-")
       out << "#{label}: --color-power- used outside a power badge rule (#{selector})" unless selector.match?(/\.power-badge/)
     end
     out
@@ -236,7 +244,7 @@ module Contrast
       a, b = colors["--color-#{fg}"], colors["--color-#{bg}"]
       next "#{fg} / #{bg}: token missing" unless a && b
       r = ratio(a, b)
-      "#{fg} / #{bg}: ratio #{r.round(2)} is below #{min}" if r < min
+      "#{fg} / #{bg}: ratio #{r.floor(2)} is below #{min}" if r < min
     end
   end
 end
@@ -249,11 +257,11 @@ require "spec_helper"
 require_relative "../support/stylesheets"
 
 RSpec.describe "Palette contrast (WCAG 2.2)" do
-  POWERS = %w[austria england france germany italy russia turkey].freeze
+  powers = %w[austria england france germany italy russia turkey]
 
   # The documented pairs (spec FR-3). [foreground, background, minimum ratio].
   # Each pair appears once, with its higher minimum where the spec lists two uses.
-  DOCUMENTED_PAIRS = [
+  documented_pairs = [
     %w[text page 4.5], %w[text surface 4.5],
     %w[text-muted page 4.5], %w[text-muted surface 4.5],
     %w[link page 4.5], %w[link surface 4.5],
@@ -267,13 +275,13 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
     %w[danger-pressed page 3], %w[danger-pressed surface 3],
     %w[focus page 3], %w[focus surface 3],
     %w[disabled-text disabled-fill 3]
-  ].map { |fg, bg, min| [fg, bg, min.to_f] }.freeze
+  ].map { |fg, bg, min| [fg, bg, min.to_f] }
 
-  POWER_PAIRS = POWERS.flat_map do |id|
+  power_pairs = powers.flat_map do |id|
     [["on-power", "power-#{id}", 4.5], ["power-#{id}", "page", 3.0], ["power-#{id}", "surface", 3.0]]
-  end.freeze
+  end
 
-  PAIRS = (DOCUMENTED_PAIRS + POWER_PAIRS).freeze
+  pairs = documented_pairs + power_pairs
 
   let(:colors) { Stylesheets.color_tokens }
 
@@ -287,22 +295,22 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
   end
 
   it "documents a pair for every color token, and every pair names real tokens (AC-2.3)" do
-    used = PAIRS.flat_map { |fg, bg, _| ["--color-#{fg}", "--color-#{bg}"] }.uniq
+    used = pairs.flat_map { |fg, bg, _| ["--color-#{fg}", "--color-#{bg}"] }.uniq
     expect(colors.keys - used).to be_empty, "no documented pair uses: #{(colors.keys - used).join(', ')}"
     expect(used - colors.keys).to be_empty, "pair names a missing token: #{(used - colors.keys).join(', ')}"
   end
 
   it "meets the minimum ratio for every documented pair (AC-2.1, AC-2.2)" do
-    expect(Contrast.failures(colors, PAIRS)).to be_empty
+    expect(Contrast.failures(colors, pairs)).to be_empty
   end
 
   it "has exactly one power color for each power (AC-4.1)" do
     names = colors.keys.grep(/\A--color-power-/)
-    expect(names).to match_array(POWERS.map { |id| "--color-power-#{id}" })
+    expect(names).to match_array(powers.map { |id| "--color-power-#{id}" })
   end
 
   it "keeps the power hues at least 25 degrees apart (AC-4.2)" do
-    hexes = POWERS.to_h { |id| [id, colors.fetch("--color-power-#{id}")] }
+    hexes = powers.to_h { |id| [id, colors.fetch("--color-power-#{id}")] }
     hexes.to_a.combination(2).each do |(a, ha), (b, hb)|
       expect(Contrast.hue_distance(ha, hb)).to be >= 25, "#{a} and #{b} are too close in hue"
     end
@@ -318,7 +326,7 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
     it "reports a pair under its minimum with the pair, ratio and threshold (AC-2.6)" do
       weak = { "--color-text" => "#777777", "--color-page" => "#ffffff" }
       messages = Contrast.failures(weak, [["text", "page", 4.5]])
-      expect(messages).to eq(["text / page: ratio 4.48 is below 4.5"])
+      expect(messages).to eq(["text / page: ratio 4.47 is below 4.5"])
     end
 
     it "reports a pair that names a missing token" do
@@ -339,7 +347,7 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
 end
 ```
 
-The `#777777` on white ratio is 4.48 under the WCAG 2.2 formula; if the first run prints another two-decimal value, correct the expected string to what the formula gives, since that example tests the message format and not the number.
+The `#777777` on white ratio is 4.4781 under the WCAG 2.2 formula, and the message rounds down (spec FR-3), so it prints 4.47. If the first run prints another value, correct the expected string to what the formula gives, since that example tests the message format and not the number.
 
 - [ ] Write `spec/styles/stylesheet_rules_spec.rb`:
 
@@ -386,8 +394,10 @@ RSpec.describe "Stylesheet rules" do
     expect(sizes.map(&:to_f).min).to be >= 0.875
   end
 
-  it "has no stray colors, banned properties, px font sizes, imports, fonts or url( outside the tokens (AC-2.4, 2.8, 1.5, 6.2, 4.4)" do
-    problems = non_token_files.flat_map { |f| Stylesheets.violations(Stylesheets.read(f), File.basename(f)) }
+  it "has no stray colors, banned properties, px font sizes, imports, fonts or url( in any file (AC-2.4, 2.5, 2.8, 1.5, 6.2, 4.4)" do
+    problems = files.flat_map do |f|
+      Stylesheets.violations(Stylesheets.read(f), File.basename(f), token_file: f == Stylesheets::TOKENS)
+    end
     expect(problems).to be_empty, problems.join("\n")
   end
 
@@ -407,7 +417,7 @@ RSpec.describe "Stylesheet rules" do
 
   it "keeps total weight within 24 KB and the style guide within 4 KB (FR-1)" do
     expect(files.sum { |f| File.size(f) }).to be <= 24 * 1024
-    expect(File.size(File.join(Stylesheets::DIR, "styleguide.css"))).to be <= 4 * 1024
+    expect(File.size?(File.join(Stylesheets::DIR, "styleguide.css")).to_i).to be <= 4 * 1024
   end
 
   it "sets touch-action and safe-area insets, and sizes fields at 1rem (AC-1.4, 1.6, 3.5)" do
@@ -464,6 +474,13 @@ RSpec.describe "Stylesheet rules" do
       expect(found("a { background: url(x.png); }")).not_to be_empty
     end
 
+    it "lets the token file hold hex only in --color-* tokens (AC-2.5)" do
+      expect(Stylesheets.violations(":root { --color-page: #f6f3ec; }", "t.css", token_file: true)).to be_empty
+      expect(Stylesheets.violations(":root { --brand: #123456; }", "t.css", token_file: true)).not_to be_empty
+      expect(Stylesheets.violations(":root { --color-page: red; }", "t.css", token_file: true)).not_to be_empty
+      expect(Stylesheets.violations(":root { --bg: url(a.png); }", "t.css", token_file: true)).not_to be_empty
+    end
+
     it "allows a power token only inside a power badge rule (AC-4.4)" do
       expect(found(".power-badge--austria { --_fill: var(--color-power-austria); }")).to be_empty
       expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
@@ -478,11 +495,11 @@ end
 require "spec_helper"
 
 RSpec.describe "Words and names (AC-6.5)" do
-  ROOT = File.expand_path("../..", __dir__)
+  root = File.expand_path("../..", __dir__)
   # Built from pieces so this file does not contain the words it forbids.
-  FORBIDDEN = Regexp.new("diplo" + "macy|\\bd" + "ip[a-z]*", Regexp::IGNORECASE)
+  forbidden = Regexp.new("diplo" + "macy|\\bd" + "ip[a-z]*", Regexp::IGNORECASE)
 
-  paths = (Dir[File.join(ROOT, "{app,lib,spec}/**/*")] + [File.join(ROOT, "config/routes.rb")])
+  paths = (Dir[File.join(root, "{app,lib,spec}/**/*")] + [File.join(root, "config/routes.rb")])
           .select { |p| File.file?(p) }
           .reject { |p| p == __FILE__ }
 
@@ -492,17 +509,18 @@ RSpec.describe "Words and names (AC-6.5)" do
 
   it "has no forbidden word in any file name or content" do
     hits = paths.filter_map do |path|
-      relative = path.delete_prefix("#{ROOT}/")
-      next "#{relative}: file name" if relative.match?(FORBIDDEN)
-      next unless File.extname(path).match?(/\.(rb|erb|css|js|json|svg|md|yml|html)\z/)
-      "#{relative}: content" if File.read(path).match?(FORBIDDEN)
+      relative = path.delete_prefix("#{root}/")
+      next "#{relative}: file name" if relative.match?(forbidden)
+      next if File.extname(path).match?(/\.(png|jpe?g|gif|ico|webp|woff2?)\z/i)
+      "#{relative}: content" if File.binread(path).force_encoding("UTF-8").scrub.match?(forbidden)
     end
     expect(hits).to be_empty, hits.join("\n")
   end
 end
 ```
 
-- [ ] Run: `bundle exec rspec spec/styles` — expect FAIL: the contrast, token and file-list examples about the real stylesheets fail because `tokens.css` and the other files do not exist; the scanner and maths examples pass; the words spec passes.
+- [ ] Run: `bundle exec rspec spec/styles` — expect FAIL: the contrast examples, the token examples, the file-list, layer-line and `.control` examples fail because `tokens.css` and the other files do not exist (the layer-line example fails on `application.css`, which holds only a comment today); the scanner and maths examples and the words spec pass.
+- [ ] Run: `bin/rubocop -A spec/support spec/styles`, then rerun the line above to confirm nothing changed in meaning.
 - [ ] Commit: `Add the failing contrast and stylesheet rule specs`
 
 ---
@@ -617,7 +635,7 @@ The palette from the table above, as hex values in one file, plus the manifest t
 ```
 
 - [ ] Run: `bundle exec rspec spec/styles/contrast_spec.rb` — expect PASS (all 46 pairs). If a ratio fails, retune that token in `tokens.css`, rerun, and write the new value in the palette table above.
-- [ ] Run: `bundle exec rspec spec/styles` — expect the file-list, layer-line and `components.css` examples still FAIL (files missing), the rest PASS.
+- [ ] Run: `bundle exec rspec spec/styles` — expect the file-list example (four files missing) and the `.control` example (`components.css` missing) still FAIL; the rest PASS, including the layer-line example, the no-violations example over `tokens.css` and `application.css`, and the size examples.
 - [ ] Commit: `Add the design tokens and an original palette`
 
 ---
@@ -705,11 +723,6 @@ end
     box-sizing: border-box;
   }
 
-  html {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-
   body,
   h1,
   h2,
@@ -784,7 +797,8 @@ end
   }
 
   small,
-  .text-small {
+  .text-small,
+  code {
     font-size: var(--text-sm);
   }
 
@@ -801,7 +815,7 @@ end
     color: var(--color-link);
     text-decoration: underline;
     text-decoration-thickness: from-font;
-    text-underline-offset: 0.2em;
+    text-underline-offset: var(--space-1);
   }
 
   a:visited {
@@ -869,6 +883,10 @@ Reduced motion is handled in Phase 3, next to the only rule that has a transitio
     color: var(--color-text);
   }
 
+  .app-header__name:focus-visible {
+    text-decoration: underline;
+  }
+
   @media (hover: hover) {
     .app-header__name:hover {
       text-decoration: underline;
@@ -899,13 +917,20 @@ Reduced motion is handled in Phase 3, next to the only rule that has a transitio
     padding-bottom: var(--space-3);
   }
 
-  /* Up to two share a row. One alone, or one that no longer fits, is full width. */
-  .app-actions__inner > * {
-    flex: 1 1 8rem;
+  /* Up to two share a row (two at 34 percent fit, three do not). One alone,
+     or one that no longer fits, is full width. A button_to form wrapper is
+     flattened so its button is the flex item. */
+  .app-actions__inner > *,
+  .app-actions__inner > form > .button {
+    flex: 1 1 34%;
+  }
+
+  .app-actions__inner > form {
+    display: contents;
   }
 
   /* A short screen (a phone on its side) gives the area no room to stick */
-  @media (max-height: 30rem) {
+  @media (height < 30rem) {
     .app-actions {
       position: static;
     }
@@ -974,7 +999,8 @@ Reduced motion is handled in Phase 3, next to the only rule that has a transitio
 </div>
 ```
 
-- [ ] Run: `bundle exec rspec spec/requests spec/styles/stylesheet_rules_spec.rb` — expect request specs PASS; rules spec still FAILS on the missing `components.css` and `styleguide.css` (file list, layer line).
+- [ ] Run: `bundle exec rspec spec/requests spec/styles/stylesheet_rules_spec.rb` — expect request specs PASS; the rules spec still FAILS on the file-list example (`components.css` and `styleguide.css` missing) and the `.control` example.
+- [ ] Run: `bin/rubocop -A spec/requests`.
 - [ ] Commit: `Add base styles, the page layout and the sticky action area`
 
 ---
@@ -991,12 +1017,12 @@ Reduced motion is handled in Phase 3, next to the only rule that has a transitio
 require "rails_helper"
 
 RSpec.describe PowerBadgeHelper, type: :helper do
-  NAMES = {
+  names = {
     "austria" => "Austria", "england" => "England", "france" => "France", "germany" => "Germany",
     "italy" => "Italy", "russia" => "Russia", "turkey" => "Turkey"
-  }.freeze
+  }
 
-  NAMES.each do |id, name|
+  names.each do |id, name|
     it "prints the name of #{id} as the badge text (AC-4.3)" do
       html = Nokogiri::HTML5.fragment(helper.power_badge(id))
       badge = html.at_css("span.power-badge.power-badge--#{id}")
@@ -1078,7 +1104,6 @@ end
     text-decoration: none;
     cursor: pointer;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
     transition: background-color 120ms ease, box-shadow 120ms ease;
   }
 
@@ -1150,7 +1175,6 @@ end
   button.list__row {
     cursor: pointer;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
   }
 
   a.list__row:visited {
@@ -1224,6 +1248,7 @@ end
     border-color: var(--color-disabled-text);
     background: var(--color-disabled-fill);
     color: var(--color-disabled-text);
+    pointer-events: none;
   }
 
   /* ---- Choice: checkbox or radio, label inside the tappable row ---- */
@@ -1243,19 +1268,19 @@ end
     color: var(--color-text);
     cursor: pointer;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
   }
 
+  /* Rows touch and share one edge, so each keeps its full 44 pixels */
   .choice + .choice {
-    margin-top: calc(var(--border-width) * -1);
+    border-top-width: 0;
   }
 
-  .choice:first-child {
+  .choice:first-of-type {
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
   }
 
-  .choice:last-child {
+  .choice:last-of-type {
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
   }
@@ -1315,7 +1340,8 @@ end
 Reduced motion is handled in the component that has a transition, so no `!important` is needed and the Phase 2 base block is left out as noted there.
 
 - [ ] Run: `bundle exec rspec spec/helpers spec/styles/contrast_spec.rb` — expect PASS.
-- [ ] Run: `bundle exec rspec spec/styles/stylesheet_rules_spec.rb` — expect the remaining failures only for the missing `styleguide.css` (file list, layer line, size).
+- [ ] Run: `bundle exec rspec spec/styles/stylesheet_rules_spec.rb` — expect the one remaining failure: the file-list example, because `styleguide.css` is missing.
+- [ ] Run: `bin/rubocop -A app/helpers spec/helpers`.
 - [ ] Commit: `Add buttons, lists, fields, choices and the power badge`
 
 ---
@@ -1333,9 +1359,9 @@ require "rails_helper"
 require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
-  COMPONENTS = %w[button link list field choice power-badge heading-text].freeze
+  components = %w[button link list field choice power-badge heading-text]
   # The documented pairs other than the power pairs (spec FR-3): 25 of them.
-  NON_POWER_PAIR_COUNT = 25
+  non_power_pair_count = 25
 
   def flag = Rails.configuration.x.styleguide
 
@@ -1353,7 +1379,7 @@ RSpec.describe "Style guide", type: :request do
 
     it "responds with 200 and one section for each component (AC-5.1)" do
       expect(response).to have_http_status(:ok)
-      expect(page.css("section[data-component]").map { |s| s["data-component"] }).to match_array(COMPONENTS)
+      expect(page.css("section[data-component]").map { |s| s["data-component"] }).to match_array(components)
     end
 
     it "shows static variants: each button variant, disabled, invalid, a disabled choice (AC-5.1)" do
@@ -1380,7 +1406,7 @@ RSpec.describe "Style guide", type: :request do
 
     it "shows each non-power pair as a sample with its token names and minimum (AC-5.4)" do
       samples = page.css(".sg-sample")
-      expect(samples.size).to eq(NON_POWER_PAIR_COUNT)
+      expect(samples.size).to eq(non_power_pair_count)
       expect(samples.map { |s| s.at_css(".sg-sample__meta").text }).to all(match(/\S+ on \S+ \(min \d(\.\d)?\)/))
     end
 
@@ -1403,7 +1429,7 @@ RSpec.describe "Style guide", type: :request do
       expect(page.css(".app-actions .button").size).to eq(2)
     end
 
-    it "uses no inline styles and loads no script of its own" do
+    it "uses no inline styles (AC-1.1 in FR-1)" do
       expect(page.css("[style]")).to be_empty
       expect(page.css("style")).to be_empty
     end
@@ -1570,6 +1596,18 @@ end
       <span class="field__hint" id="sg-name-hint">What the others at the table call you.</span>
     </div>
     <div class="field">
+      <label class="field__label" for="sg-email">Email</label>
+      <input class="control" id="sg-email" type="email" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-number">Number</label>
+      <input class="control" id="sg-number" type="number" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-search">Search</label>
+      <input class="control" id="sg-search" type="search">
+    </div>
+    <div class="field">
       <label class="field__label" for="sg-power">Choose one</label>
       <select class="control" id="sg-power">
         <option>First</option>
@@ -1627,8 +1665,13 @@ end
     <p class="text-muted">Each sample shows the foreground on its background. The contrast spec measures every pair, power pairs included.</p>
     <ul class="sg-samples">
       <% StyleguideHelper::PAIRS.each do |fg, bg, min| %>
-        <li class="sg-sample sg-bg-<%= bg %> sg-fg-<%= fg %>">
-          <span>Sample text</span>
+        <% text_pair = min.to_f >= 4.5 %>
+        <li class="sg-sample sg-bg-<%= bg %><%= " sg-fg-#{fg}" if text_pair %>">
+          <% if text_pair %>
+            <span>Sample text</span>
+          <% else %>
+            <span class="sg-bar sg-bg-<%= fg %>"></span>
+          <% end %>
           <span class="sg-sample__meta"><%= fg %> on <%= bg %> (min <%= min %>)</span>
         </li>
       <% end %>
@@ -1637,7 +1680,7 @@ end
 </div>
 ```
 
-The `<code>` token names and the sample meta lines sit on `surface` and `page` backgrounds only, so they stay inside documented pairs; the sample lines inherit the sample's own foreground, which is the pair being shown.
+Pairs with a minimum of 4.5 are text pairs: the sample text and its caption are drawn in the pair's foreground on its background. Pairs with a minimum of 3 are not text (edges, rings, a disabled label): the sample draws the foreground as a bar, and the caption stays in `--color-text`, which reads on `page`, `surface` and `disabled-fill`. So no text on this page is set below 4.5. The `<code>` token names sit on `page` in `--color-text`.
 
 - [ ] Write `app/assets/stylesheets/styleguide.css`:
 
@@ -1676,6 +1719,7 @@ The `<code>` token names and the sample meta lines sit on `surface` and `page` b
 
   .sg-sample { display: flex; flex-direction: column; margin-bottom: var(--space-2); padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
   .sg-sample__meta { font-size: var(--text-sm); }
+  .sg-bar { display: block; height: var(--space-3); border-radius: var(--radius); }
 
   .sg-bg-page { background: var(--color-page); }
   .sg-bg-surface { background: var(--color-surface); }
@@ -1695,25 +1739,18 @@ The `<code>` token names and the sample meta lines sit on `surface` and `page` b
   .sg-bg-disabled-fill { background: var(--color-disabled-fill); }
   .sg-bg-on-power { background: var(--color-on-power); }
 
-  .sg-fg-page { color: var(--color-page); }
-  .sg-fg-surface { color: var(--color-surface); }
   .sg-fg-text { color: var(--color-text); }
   .sg-fg-text-muted { color: var(--color-text-muted); }
-  .sg-fg-border { color: var(--color-border); }
   .sg-fg-link { color: var(--color-link); }
   .sg-fg-link-visited { color: var(--color-link-visited); }
-  .sg-fg-primary { color: var(--color-primary); }
-  .sg-fg-primary-pressed { color: var(--color-primary-pressed); }
   .sg-fg-on-primary { color: var(--color-on-primary); }
   .sg-fg-danger { color: var(--color-danger); }
-  .sg-fg-danger-pressed { color: var(--color-danger-pressed); }
   .sg-fg-on-danger { color: var(--color-on-danger); }
-  .sg-fg-focus { color: var(--color-focus); }
-  .sg-fg-disabled-text { color: var(--color-disabled-text); }
 }
 ```
 
 - [ ] Run: `bundle exec rspec` — expect everything PASS: the contrast spec, the rules spec (all five files present, total under 24 KB, `styleguide.css` under 4 KB), helper, layout, root, style guide, words. If `styleguide.css` is over 4 KB, trim the `sg-bg-*` and `sg-fg-*` lines that no pair uses. If the words spec finds a match, rename it (do not widen the exemption).
+- [ ] Run: `bin/rubocop -A app/controllers app/helpers config spec/requests`, then `bundle exec rspec` again.
 - [ ] Commit: `Add the development-only style guide page`
 
 ---
@@ -1722,73 +1759,88 @@ The `<code>` token names and the sample meta lines sit on `surface` and `page` b
 
 **Implements:** FR-5, FR-6, FR-8 (geometry) | **Satisfies:** AC-1.1 to 1.3, 3.1 to 3.4, 3.6, 3.8 to 3.10, 6.3, and the pressed, hover, focus ring, forced colors and reduced motion checks
 **Files:** `docs/specs/020-base-stylesheet/measure.md`, `docs/specs/020-base-stylesheet/screenshots/styleguide-360.png`, `docs/specs/020-base-stylesheet/screenshots/styleguide-768.png`
-**Interfaces:** Consumes: the running `/styleguide` page. Produces: measured results for the pull request. No app code.
+**Interfaces:** Consumes: the running `/styleguide` and `/` pages. Produces: measured results for the pull request. No app code.
 
-No new dependency is added. Chrome is driven by the browser tooling in this environment, or, if that is unavailable, by `Google Chrome --headless` for screenshots and a manual run of the snippet.
+No new dependency is added. Two ways of using Chrome, because a desktop window cannot be made 320 to 390 pixels wide (its floor is about 500):
 
-- [ ] Start the app: `bin/rails server -p 3020` from `web/`, in the background. Wait until `curl -s -o /dev/null -w '%{http_code}' http://localhost:3020/styleguide` prints `200`.
-- [ ] Write `docs/specs/020-base-stylesheet/measure.md` with this procedure and this console snippet (it is documentation, not app JavaScript):
+- **Measuring:** a scratch page `public/frame.html`, never committed (it is deleted at the end of this phase and listed in `.git/info/exclude` while it exists), holds `<iframe id="f" src="/styleguide" style="width:360px;height:800px;border:0">`. It is served by the same Rails server, so it is same-origin and the snippet can reach into the frame. The frame's width and height are the viewport the page sees, so media queries, `dvh` and `sticky` behave as on a phone of that size. The snippet runs in the parent page through the browser tooling's JavaScript tool, or in DevTools.
+- **Screenshots:** headless Chrome, which can be given any window size: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=360,800 --screenshot=<path> http://localhost:3020/styleguide`. That captures the top of the page at the viewport size. A taller `--window-size` (for example `360,2600`) captures the whole page.
+
+- [ ] Start the app in the background: `bin/rails server -p 3020` from `web/`. Wait until `curl -s -o /dev/null -w '%{http_code}' http://localhost:3020/styleguide` prints `200`. Add `public/frame.html` to `.git/info/exclude`, then write it (`<!doctype html><title>frame</title><iframe id="f" src="/styleguide" style="width:360px;height:800px;border:0"></iframe>`).
+- [ ] Write `docs/specs/020-base-stylesheet/measure.md` with the procedure above and this snippet (documentation, not app JavaScript). It takes the frame's window, so the same code runs at each size:
 
 ```js
-// Run on http://localhost:3020/styleguide at each width: 320, 360, 390, 768, 1024.
-(() => {
-  const out = { width: innerWidth, problems: [] };
-  const doc = document.documentElement;
-  if (doc.scrollWidth > innerWidth) out.problems.push(`sideways scroll: ${doc.scrollWidth} > ${innerWidth}`);
+// Parent page: http://localhost:3020/frame.html. Set the frame size, load the page, then:
+//   const f = document.getElementById('f'); f.style.width = '360px'; f.style.height = '800px';
+//   measure(f.contentWindow)
+function measure(win) {
+  const d = win.document, doc = d.documentElement;
+  const out = { width: win.innerWidth, height: win.innerHeight, problems: [] };
+  if (doc.scrollWidth > doc.clientWidth) out.problems.push(`sideways scroll: ${doc.scrollWidth} > ${doc.clientWidth}`);
 
-  // AC-1.2: tap targets (running-text links are exempt)
-  const targets = [...document.querySelectorAll(
-    '.button, .app-header__name, .list__row, .control, .choice')]
-    .filter((el) => !el.matches('[disabled]') || true);
-  for (const el of targets) {
+  // AC-1.2: tap targets (links in running text are exempt)
+  for (const el of d.querySelectorAll('.button, .app-header__name, .list__row, .control, .choice')) {
     const r = el.getBoundingClientRect();
     if (r.width < 43.5 || r.height < 43.5) out.problems.push(`small target ${el.className}: ${r.width.toFixed(1)}x${r.height.toFixed(1)}`);
   }
+  // A choice row overlaps nothing: its next sibling starts at or below its bottom edge
+  for (const el of d.querySelectorAll('.choice + .choice')) {
+    const a = el.previousElementSibling.getBoundingClientRect(), b = el.getBoundingClientRect();
+    if (b.top < a.bottom - 0.5) out.problems.push('choice rows overlap');
+  }
 
-  // AC-1.3: gap of at least 8px between separate controls in a row or column
-  const rows = document.querySelectorAll('.sg-row, .app-actions__inner');
-  for (const row of rows) {
-    const kids = [...row.children].map((el) => el.getBoundingClientRect());
-    for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
-      const a = kids[i], b = kids[j];
-      const dx = Math.max(b.left - a.right, a.left - b.right), dy = Math.max(b.top - a.bottom, a.top - b.bottom);
-      if (Math.max(dx, dy) < 7.5) out.problems.push(`gap < 8px in ${row.className}`);
+  // AC-1.3: at least 8px between separate controls
+  for (const row of d.querySelectorAll('.sg-row, .app-actions__inner')) {
+    const k = [...row.children].map((el) => el.getBoundingClientRect());
+    for (let i = 0; i < k.length; i++) for (let j = i + 1; j < k.length; j++) {
+      const dx = Math.max(k[j].left - k[i].right, k[i].left - k[j].right);
+      const dy = Math.max(k[j].top - k[i].bottom, k[i].top - k[j].bottom);
+      if (Math.max(dx, dy) < 7.5) out.problems.push(`gap under 8px in ${row.className}`);
     }
   }
 
-  // AC-1.1: text sizes
-  const bodySize = parseFloat(getComputedStyle(document.body).fontSize);
-  if (bodySize < 16) out.problems.push(`body text ${bodySize}px`);
-  for (const el of document.querySelectorAll('main *, header *, .app-actions *')) {
-    if (!el.childNodes.length || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
-    const s = parseFloat(getComputedStyle(el).fontSize);
+  // AC-1.1 and AC-1.4: text sizes
+  if (parseFloat(win.getComputedStyle(d.body).fontSize) < 16) out.problems.push('body text under 16px');
+  for (const el of d.querySelectorAll('body *')) {
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    const s = parseFloat(win.getComputedStyle(el).fontSize);
     if (s < 14) out.problems.push(`text under 14px: ${el.tagName}.${el.className} ${s}px`);
   }
-  // AC-1.4: control text at least 16px
-  for (const el of document.querySelectorAll('.control')) {
-    if (parseFloat(getComputedStyle(el).fontSize) < 16) out.problems.push('control text under 16px');
+  for (const el of d.querySelectorAll('.control')) {
+    if (parseFloat(win.getComputedStyle(el).fontSize) < 16) out.problems.push('control text under 16px');
   }
 
-  // AC-3.2 to 3.4, 3.10: the action area
-  const bar = document.querySelector('.app-actions');
-  const header = document.querySelector('.app-header');
-  const tall = doc.scrollHeight > innerHeight * 1.2;
-  out.actionPosition = getComputedStyle(bar).position;
-  out.pageIsTall = tall;
-  out.barBottomGap = +(innerHeight - bar.getBoundingClientRect().bottom).toFixed(1); // expect 0 at every scroll position
-  out.headerTop = +header.getBoundingClientRect().top.toFixed(1); // expect < 0 once scrolled (AC-3.10)
-  out.mainWidth = document.querySelector('.app-main').getBoundingClientRect().width; // expect <= 640 (AC-3.8)
-  out.problems_ok = out.problems.length === 0;
+  // AC-3.2 to 3.4, 3.8, 3.10: the action area, when the page has one
+  const bar = d.querySelector('.app-actions');
+  out.actionArea = !!bar;
+  if (bar) {
+    out.position = win.getComputedStyle(bar).position;
+    out.barBottomGap = +(win.innerHeight - bar.getBoundingClientRect().bottom).toFixed(1);   // 0 when stuck or at the page bottom
+    const last = d.querySelector('.app-main').lastElementChild.getBoundingClientRect();
+    out.clearOfBar = last.bottom <= bar.getBoundingClientRect().top + 0.5;                  // check at the end of the scroll
+  }
+  out.headerTop = +d.querySelector('.app-header').getBoundingClientRect().top.toFixed(1);   // below 0 once scrolled
+  out.mainWidth = +d.querySelector('.app-main').getBoundingClientRect().width.toFixed(1);   // at most 640
+  out.pageHeight = doc.scrollHeight;
+  out.ok = out.problems.length === 0;
   return out;
-})();
+}
 ```
 
-  with the manual steps beside it: for each width, run the snippet at scroll top, scroll to the middle, scroll to the end (the bar's `barBottomGap` stays 0 and the last `main` line ends above `bar.getBoundingClientRect().top`, AC-3.3); press Tab through the page and confirm each focused control keeps its top above the bar's top (AC-3.6); check one short viewport (height 400, width 800) that `actionPosition` is `static` (AC-3.9); open the network panel and confirm no font request and only same-origin stylesheets (AC-6.3); emulate reduced motion, forced colors and hover/active/focus states (DevTools Rendering and Styles panes) and record what was seen; edit the page to show one button, two buttons, and three stacked buttons in the action area and record each.
+  Procedure beside it, for each width 320, 360, 390, 768 and 1024 (frame height 800):
+  1. Run `measure` at scroll top, at the middle (`win.scrollTo(0, doc.scrollHeight / 2)`) and at the end (`win.scrollTo(0, doc.scrollHeight)`). `barBottomGap` stays 0 at all three, `clearOfBar` is true at the end, and `headerTop` is negative once scrolled (AC-3.2, 3.3, 3.10).
+  2. AC-3.4 (short content): in the frame, remove every `section` and the intro (`f.contentDocument.querySelectorAll('.stack > *:not(h1)').forEach(e => e.remove())`) so the content is short, and confirm `barBottomGap` is 0 at scroll top.
+  3. AC-3.6: press Tab through the frame's page (focus the first control with `f.contentWindow.focus()`, then Tab with the browser tooling's key action), and after each press confirm the focused element's top is above the bar's top.
+  4. AC-3.9: set the frame to 800 wide by 400 high; `position` is `static`. At 800 by 480 (above 30rem) it is `sticky`.
+  5. AC-3.8: at 768 and 1024, `mainWidth` is at most 640, and the header text, content and buttons share one left edge.
+  6. Action area shapes: in the frame, replace the two buttons with one, then with three (`.app-actions__inner` innerHTML), and check one is full width, and three show two on a row and one below, each at least 44 high.
+  7. `/` at 360: `actionArea` is false, no empty bar (AC-3.7).
+  8. AC-6.3: with the page loaded in the tab itself (not the frame), read the network log: no font request, every stylesheet request to `localhost:3020`.
+  9. Emulation (DevTools Rendering and Styles panes, if the tooling can reach them): hover, active and focus-visible on a primary button, a secondary button and a list row; `prefers-reduced-motion: reduce`; forced colors. Record what was seen. Anything the tooling cannot reach is listed as "not checked, reason" in the results.
 
-- [ ] Run the snippet at 320, 360, 390, 768 and 1024 wide, plus the short viewport. Fix any real problem it reports in the stylesheet, add a spec if the problem can be caught in text, rerun `bundle exec rspec`, and commit each fix on its own: `Fix <what>`.
-- [ ] Take screenshots at 360 and 768 pixels wide, full page, and save them as `docs/specs/020-base-stylesheet/screenshots/styleguide-360.png` and `styleguide-768.png`.
-- [ ] Record the measured results (a short table: width, problems found, action-area position, header scrolled away) at the end of `measure.md`, and the states that could not be checked, with the reason.
-- [ ] Stop the server.
+- [ ] Run the procedure at the five widths and the short viewport. Fix any real problem in the stylesheet, add a text spec if the problem can be caught in text, rerun `bundle exec rspec`, and commit each fix on its own: `Fix <what>`.
+- [ ] Take the screenshots with headless Chrome at `--window-size=360,800` and `768,1024` (viewport at the top), and a tall `360,2600` and `768,2600` for the whole page. Save the 360 and 768 ones as `docs/specs/020-base-stylesheet/screenshots/styleguide-360.png` and `styleguide-768.png` (tall versions) and keep each under about 400 KB.
+- [ ] Record the measured results at the end of `measure.md`: a table with width, `problems`, position, `barBottomGap`, `clearOfBar` and `headerTop` for each run, and the states that could not be checked with the reason. Delete `public/frame.html` and its `.git/info/exclude` line. Stop the server.
 - [ ] Commit: `Record the browser measurements and screenshots for the base stylesheet`
 
 ---
@@ -1800,7 +1852,8 @@ No new dependency is added. Chrome is driven by the browser tooling in this envi
 - [ ] `bundle exec rspec` from `web/` — expect 0 failures. Record the counts.
 - [ ] `git diff --name-only main...HEAD` — expect every path under `web/`.
 - [ ] `git diff main...HEAD -- web/Gemfile web/Gemfile.lock web/config/importmap.rb` — expect empty (AC-6.4).
-- [ ] `bin/rubocop` from `web/` — expect no offenses in the files this branch touches.
+- [ ] `git diff --name-only main...HEAD | grep -E 'package(-lock)?\.json|yarn\.lock|node_modules'` — expect no output (AC-6.4).
+- [ ] `bin/rubocop` from `web/` (the CI script runs it over `spec/` too) — expect no offenses.
 - [ ] `bin/brakeman -q` from `web/` — expect no new warning.
 - [ ] Walk the acceptance criteria of the spec once against `measure.md`, the specs and the PR. Anything unmet gets a fix or an honest entry in the pull request, with AC-1.4, 1.6, 3.2 and 3.5 named as owed to the maintainer in Issue #71.
 - [ ] Dispatch the implementation review (read-only, Opus), record its findings and how each was handled in the pull request description.
