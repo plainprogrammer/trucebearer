@@ -61,17 +61,21 @@ RSpec.describe "The status list on the pages", type: :request do
     expect(squeeze.call(template)).to eq(squeeze.call(Nokogiri::HTML5.fragment(seat_list).at_css("ul").inner_html))
   end
 
-  it "has one stream source whose signed name verifies to this game's status stream, and never another game's (AC-4.1)" do
+  it "has one status source whose signed name verifies to this game's status stream, and never another game's (AC-4.1, read with spec 025: one results source as well)" do
     names = [ "/games/#{id}", "/games/#{id}/host" ].map do |path|
       sources = page_of(created.session, path).css("turbo-cable-stream-source")
-      expect(sources.size).to eq(1)
-      Turbo.signed_stream_verifier.verified(sources.first["signed-stream-name"])
+      verified = sources.map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
+      expect(sources.size).to eq(2)
+      expect(verified.grep(/\Aseat_status:/).size).to eq(1)
+      verified.grep(/\Aseat_status:/).first
     end
     other = create_game(power: "france")
-    other_source = page_of(other.session, "/games/#{other.game.public_id}").at_css("turbo-cable-stream-source")
+    other_names = page_of(other.session, "/games/#{other.game.public_id}").css("turbo-cable-stream-source")
+                    .map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
 
     expect(names).to eq([ "seat_status:#{id}" ] * 2)
-    expect(Turbo.signed_stream_verifier.verified(other_source["signed-stream-name"])).to eq("seat_status:#{other.game.public_id}")
+    expect(other_names).to include("seat_status:#{other.game.public_id}")
+    expect(other_names).not_to include("seat_status:#{id}")
   end
 
   it "gives no stream element to a stranger, a junk cookie, another game's cookie or a seat cookie on the host page (AC-4.2)" do

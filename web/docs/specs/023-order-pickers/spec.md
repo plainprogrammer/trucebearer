@@ -1,7 +1,7 @@
 # Feature 023: Enter movement orders with pickers
 
 **Status:** Approved
-**Version:** 1.0.3
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #23
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1.0 | 2026-11-26 | Amended by spec 025 (reveal results to every phone, #25): AC-2.13 is read as "given a revealed phase, a `GET` of any step URL on a seat's own address is a 303 to that phase's results page, before the province is looked at" (it was the 409 page). A `PUT` keeps its 409, a stepped-in step URL keeps the 409 page, and a phase number later than the open one or unknown is still the stranger response. The order screen and the picker also subscribe to the results stream (spec 025 D2). Every other criterion holds unchanged |
 | 1.0.3 | 2026-11-26 | Refinements found while planning, within what Gate A approved: the draft has three keys, `draft[kind]`, `draft[target]` and `draft[to]` (the coast step and the by-land-or-convoy step are reached from `kind=move&to=...`, and their choices are the final saves, so `draft[coast]` and `draft[via]` are not needed); a fleet's move to a split-coast province with exactly one reachable coast still saves from the destination row, and the row's note names the coast so the player sees what will be saved |
 | 1.0.2 | 2026-11-26 | Changed after the second Fable review: the list's `.save-status` has a defined resting text (D6, AC-1.8); the "needs a convoy" mark is applied by an order helper that is given the unit, armies only (FR-3, AC-1.9); the two new `RulesEngine` methods are named as added by this feature and covered by the boundary spec (FR-3); "Saving…" without `:has` leaves the resting text (D6); the deploy-note claim is dropped; smaller wording fixes |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review: the draft's log and referrer limits are stated (FR-8); the "Not submitted" words stay in the submit bar (D9, AC-8.1); the sweep may list several paths per route (AC-5.2); the walk-through is a mixed set with its per-order costs, 18 taps and 45 seconds (D7); "needs a convoy" and "by convoy" mean different things (D3); "Saving…" is two spans (D6); a complete draft is sent back to step 1 (D2); choice order is fixed (D1) |

@@ -210,12 +210,13 @@ RSpec.describe "Saving orders", type: :request do
       expect(Submission.count).to eq(0)
     end
 
-    it "gives the same page for a read, not the form" do
+    it "sends a read to that phase's results, not the form (spec 025 D5; it was a 409 page under spec 022 AC-6.3)" do
       phone.get path
 
-      expect(phone.response).to have_http_status(:conflict)
-      expect(page.at_css("form")).to be_nil
-      expect(page.text).to include("The host has already revealed this phase.")
+      expect(phone.response).to have_http_status(:see_other)
+      expect(phone.response.headers["Location"]).to end_with("/games/#{id}/phases/1/results")
+      expect(phone.response.headers["Cache-Control"]).to include("no-store")
+      expect(phone.response.body).not_to include("<form")
     end
   end
 end

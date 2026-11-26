@@ -47,7 +47,8 @@ class Game < ApplicationRecord
 
   # Tells every open seat page and host page which seats have submitted. One snapshot of the seven states, rendered from
   # Phase#seat_statuses and nothing else, on a stream of its own that only the seat and host pages subscribe to (spec 024
-  # D1, D2, D4). It is the only place the app talks to the cable; spec/models/status_broadcast_scan_spec.rb enforces that. The
+  # D1, D2, D4). With broadcast_results_refresh below, it is one of the only two places the app talks to the cable;
+  # spec/models/status_broadcast_scan_spec.rb enforces that. The
   # render is outside the rescue so a broken template raises everywhere; the cable call is inside it so a stored save is
   # never answered with an error (D7).
   def broadcast_seat_status
@@ -58,6 +59,16 @@ class Game < ApplicationRecord
     rescue StandardError => error
       Rails.logger.warn("seat status broadcast failed: #{error.class}")
     end
+  end
+
+  # Tells every open seat page, host page, order screen and picker that a phase was revealed, so each reloads itself through its own
+  # authorized request (spec 025 D1, D3). The message is a refresh with no content and no request id: it carries nothing about any order,
+  # and the pages' access checks decide what each phone then sees. Only Phase#reveal! calls it, and spec/models/status_broadcast_scan_spec.rb
+  # enforces that. A failed cable call never fails a reveal that has already been stored.
+  def broadcast_results_refresh
+    Turbo::StreamsChannel.broadcast_refresh_to(:results, public_id, request_id: nil)
+  rescue StandardError => error
+    Rails.logger.warn("results broadcast failed: #{error.class}")
   end
 
   # The host's own seat: the lowest id. Game.start! makes it in the game's own transaction and no path deletes a seat (spec 026 D5).

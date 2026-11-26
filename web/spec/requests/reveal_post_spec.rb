@@ -132,6 +132,26 @@ RSpec.describe "Revealing a phase", type: :request do
     end
   end
 
+  describe "the refresh the reveal sends (spec 025 AC-4.2, AC-4.5)" do
+    it "sends one attribute although the reveal request carries a request id, and redirects as usual" do
+      host.post reveal_path, headers: { "X-Turbo-Request-Id" => "11111111-2222-3333-4444-555555555555" }
+
+      message = JSON.parse(ActionCable.server.pubsub.broadcasts("results:#{id}").first)
+      expect(Nokogiri::HTML5.fragment(message).children.first.attributes.keys).to eq([ "action" ])
+      expect(host.response).to have_http_status(:see_other)
+      expect(host.response.headers["Location"]).to end_with("/games/#{id}/host")
+    end
+
+    it "answers the same redirect when the cable raises, and stores the reveal" do
+      allow(Turbo::StreamsChannel).to receive(:broadcast_refresh_to).and_raise(RuntimeError)
+      host.post reveal_path
+
+      expect(host.response).to have_http_status(:see_other)
+      expect(host.response.headers["Location"]).to end_with("/games/#{id}/host")
+      expect(game.history.count).to eq(1)
+    end
+  end
+
   describe "no undo (AC-4.12)" do
     it "has no route that reopens, undoes or deletes a phase" do
       routes = Rails.application.routes.routes.map { |route| [ route.verb, route.path.spec.to_s.sub("(.:format)", "") ] }
@@ -140,6 +160,8 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(phase_routes).to match_array([
         [ "GET", "/games/:public_id/phases/:number/orders" ], [ "PUT", "/games/:public_id/phases/:number/orders" ],
         [ "GET", "/games/:public_id/phases/:number/orders/:province" ],
+        # Spec 025: the results of a revealed phase, read-only pages for a seat and for the host.
+        [ "GET", "/games/:public_id/phases/:number/results" ], [ "GET", "/games/:public_id/host/phases/:number/results" ],
         [ "GET", "/games/:public_id/host/phases/:number/reveal" ], [ "POST", "/games/:public_id/host/phases/:number/reveal" ],
         # Spec 026: the step-in confirmation and its record carry the phase number, and neither touches a phase.
         [ "GET", "/games/:public_id/host/seats/:power/phases/:number/step-in" ], [ "POST", "/games/:public_id/host/seats/:power/phases/:number/step-in" ],
@@ -165,15 +187,17 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(page(england_phone).at_css("a.button[href='/games/#{id}/phases/2/orders']")).to be_present
       expect(SavedOrder.count).to eq(0)
       expect(Submission.count).to eq(0)
-      england_phone.get "/games/#{id}/phases/1/orders"
-      expect(england_phone.response).to have_http_status(:conflict)
+      england_phone.get "/games/#{id}/phases/1/orders" # a read is sent to the results (spec 025 D5); the refused write above keeps its 409
+      expect(england_phone.response).to have_http_status(:see_other)
     end
   end
 
   describe "dislodged units (AC-5.4)" do
     def stub_result_with_dislodged_unit
       result = RulesEngine.adjudicate(RulesEngine.starting_position, []).to_h
-      result["position"]["dislodged_units"] = [ { "unit" => unit_hash(:austria, :army, :ser), "attacker_from" => "bul", "by_convoy" => false } ]
+      # The position and the outcome's flag agree (spec 025 D8): the army in VIE was dislodged, so its implied hold says so too.
+      result["position"]["dislodged_units"] = [ { "unit" => unit_hash(:austria, :army, :vie), "attacker_from" => "gal", "by_convoy" => false } ]
+      result["outcomes"].find { |outcome| outcome["order"]["at"] == "vie" }["dislodged"] = true
       allow(RulesEngine).to receive(:adjudicate).and_return(RulesEngine.load_adjudication(result))
     end
 
@@ -183,7 +207,8 @@ RSpec.describe "Revealing a phase", type: :request do
       host.post reveal_path
       host.get "/games/#{id}/host"
 
-      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in SER was dislodged. Settle it by hand." ])
+      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in VIE was dislodged. Settle it by hand." ])
+      expect(page.css("[data-dislodged]").size).to eq(page.css(".outcome-tag--dislodged").size) # one banner for each Dislodged tag (spec 025 AC-2.2)
       expect(game.current_phase.position.dislodged_units).to be_empty
       expect(game.history.first.adjudication.position.dislodged_units.size).to eq(1)
     end

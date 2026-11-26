@@ -35,20 +35,28 @@ RSpec.describe "Who writes and broadcasts the status" do
     expect(calls).to eq("app/models/seat.rb" => 1, "app/models/phase.rb" => 1, "app/models/game.rb" => 2)
   end
 
-  it "names the cable and any other broadcast only inside Game#broadcast_seat_status (AC-2.7c)" do
-    cable = /Turbo::StreamsChannel|Turbo::Broadcastable|ActionCable|\bbroadcasts\w*|\.broadcast\b|\bbroadcast_(?!seat_status\b)\w+/
+  it "calls broadcast_results_refresh only from Phase#reveal!, once (spec 025 AC-4.6)" do
+    expect(named.call(/broadcast_results_refresh/)).to match_array(%w[app/models/game.rb app/models/phase.rb])
+    expect(text.call(Rails.root.join("app/models/phase.rb").to_s)[/def reveal!.*?\n  end\n/m]).to include("broadcast_results_refresh")
+    calls = %w[app/models/phase.rb app/models/game.rb].to_h { |path| [ path, code.call(Rails.root.join(path).to_s).scan("broadcast_results_refresh").size ] }
+    expect(calls).to eq("app/models/phase.rb" => 1, "app/models/game.rb" => 1) # the call, and the definition
+  end
+
+  it "names the cable and any other broadcast only inside the two broadcast methods of Game (AC-2.7c, spec 025 AC-4.6)" do
+    cable = /Turbo::StreamsChannel|Turbo::Broadcastable|ActionCable|\bbroadcasts\w*|\.broadcast\b|\bbroadcast_(?!seat_status\b|results_refresh\b)\w+/
     naming = files.select { |f| code.call(f).match?(cable) }.map(&rel)
-    outside = code.call(Rails.root.join("app/models/game.rb").to_s).sub(/def broadcast_seat_status.*?\n  end\n/m, "")
+    outside = code.call(Rails.root.join("app/models/game.rb").to_s).sub(/def broadcast_seat_status.*?\n  end\n/m, "").sub(/def broadcast_results_refresh.*?\n  end\n/m, "")
 
     expect(naming).to eq([ "app/models/game.rb" ])
     expect(outside).not_to match(cable)
   end
 
   it "control: the patterns do catch the macros and writes they are there to stop" do
-    cable = /Turbo::StreamsChannel|Turbo::Broadcastable|ActionCable|\bbroadcasts\w*|\.broadcast\b|\bbroadcast_(?!seat_status\b)\w+/
+    cable = /Turbo::StreamsChannel|Turbo::Broadcastable|ActionCable|\bbroadcasts\w*|\.broadcast\b|\bbroadcast_(?!seat_status\b|results_refresh\b)\w+/
     [ "broadcasts_to ->(s) { [:x] }", "broadcasts_refreshes", "broadcasts", "include Turbo::Broadcastable", "ActionCable.server.broadcast(a, b)",
-      "broadcast_refresh_to(x)" ].each { |line| expect(line).to match(cable), line }
+      "broadcast_refresh_to(x)", "Turbo::StreamsChannel.broadcast_refresh_to(:results, id)" ].each { |line| expect(line).to match(cable), line }
     expect("game.broadcast_seat_status").not_to match(cable)
+    expect("game.broadcast_results_refresh").not_to match(cable)
   end
 
   it "keeps the status code away from saved orders (AC-3.7)" do
@@ -58,6 +66,7 @@ RSpec.describe "Who writes and broadcasts the status" do
     end
     status_code = [ source.call("app/views/shared/_seat_status.html.erb"), source.call("app/helpers/seat_status_helper.rb"),
                     source.call("app/models/game.rb", /def broadcast_seat_status.*?\n  end\n/m),
+                    source.call("app/models/game.rb", /def broadcast_results_refresh.*?\n  end\n/m),
                     source.call("app/models/phase.rb", /def seat_statuses.*?\n  end\n/m) ]
 
     expect(status_code).to all(be_present)

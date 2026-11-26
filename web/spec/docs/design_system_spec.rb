@@ -61,4 +61,12 @@ RSpec.describe "The design-system document (AC-9.1, 9.2)" do
     expect(line).not_to be_nil, "no catalog line names .seat-status with #24 and built"
     expect(line).to include("seat_status").and include("shared/_seat_status").and include("phases/_status")
   end
+
+  it "lists the results parts of Issue 25 as built, with their classes and partials (spec 025 AC-8.1)" do
+    %w[.result-row .outcome-tag .result-group].each do |klass|
+      line = doc.lines.find { |l| l.include?("`#{klass}`") && l.include?("#25") && l.match?(/built/i) }
+      expect(line).not_to be_nil, "no catalog line names #{klass} with #25 and built"
+    end
+    expect(doc).to include("results/_outcome_tag").and include("results/_row").and include("results/_group").and include("results/_section")
+  end
 end

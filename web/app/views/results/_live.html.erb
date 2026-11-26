@@ -1,0 +1,3 @@
+<%# The stream source and the morphed refresh for a page that switches to the results at the reveal (spec 025 D1, D2). locals: game %>
+<% turbo_refreshes_with method: :morph, scroll: :preserve %>
+<%= turbo_stream_from :results, game.public_id %>

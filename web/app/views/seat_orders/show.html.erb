@@ -2,6 +2,7 @@
 <% content_for :title, heading %>
 <% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
 
+<%= render "results/live", game: @game unless @stepped_in_page %>
 <div class="stack">
   <h1><%= heading %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>

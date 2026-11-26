@@ -9,7 +9,7 @@ class SeatOrdersController < ApplicationController
   before_action :own_orders_headers
 
   def show
-    return render_revealed unless @phase.open?
+    return revealed_get unless @phase.open?
 
     load_page
   end

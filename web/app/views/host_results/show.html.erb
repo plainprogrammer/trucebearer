@@ -1,0 +1,7 @@
+<% content_for :title, "Results" %>
+
+<div class="stack">
+  <h1>Results</h1>
+  <%= render "results/section", results: @results, kind: :host, game: @game, earlier: [], banners: @latest, skip: false %>
+  <%= link_to "Host controls", game_host_path(@game.public_id), class: "button button--secondary" %>
+</div>

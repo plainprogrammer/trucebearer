@@ -8,7 +8,7 @@ class OrderPickersController < ApplicationController
   before_action :own_orders_headers
 
   def show
-    return render_revealed unless @phase.open?
+    return revealed_get unless @phase.open?
 
     @province = params[:province].to_s
     @unit = @phase.position.units.find { |u| u.power.to_s == @seat.power && u.location.province.to_s == @province }

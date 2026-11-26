@@ -35,6 +35,10 @@ module RulesEngine
 
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
 
+    # STAND-IN, until gem 0.2.0 (#29): true while adjudicate is answered by the stand-in, so results views say they are practice results
+    # (spec 025 D6). #29 deletes this with the stand-in and the note's partial.
+    def stand_in? = true
+
     # The playtest's own rule for the phase that follows a reveal (spec 022 D3). It is not part of the stand-in: it stays
     # after #29 until 1.0 uses what gem 0.3.0 works out. Dislodged units leave the board, standoffs are cleared, and
     # ownership is kept. Spring becomes fall of the same year, and fall becomes spring of the next. The position must be the

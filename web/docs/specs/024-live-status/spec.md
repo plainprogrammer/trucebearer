@@ -1,7 +1,7 @@
 # Feature 024: Show live submission status
 
 **Status:** Approved
-**Version:** 1.0.2
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #24
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1.0 | 2026-11-26 | Amended by spec 025 (reveal results to every phone, #25).<br>• AC-2.7 allows a second broadcast method, `broadcast_results_refresh` in `app/models/game.rb`, called once from `Phase#reveal!`, on a stream of its own (`results:<public id>`); the status stream and its payload proof (AC-3.1) are unchanged, and nothing else broadcasts.<br>• AC-4.1 is read as "each of the seat page and the host page holds exactly one **status** source and one results source"; the order screen and the picker hold the results source only.<br>• AC-4.5 is read as "the signed **status** name appears only on the seat page and the host page; the signed **results** name also appears on the seat's own order screen and picker", and the sweep verifies each name rather than matching the text.<br>• The Known limit "after a reveal the seat page is half stale" is closed: a reveal refreshes every subscribed page, and the seat page then shows the new phase and the results (spec 025 D1). Every other criterion holds unchanged. |
 | 1.0.2 | 2026-11-26 | Found by the implementation review, wording only: AC-8.2 also lists spec 022's AC-7.4 (the seat page shows its own count and the seven-power status list), which the amendment already does; origins are lowercased as well as stripped of a trailing slash (D5), because a browser writes the Origin header in lowercase |
 | 1.0.1 | 2026-11-26 | Found while planning, within what Gate A approved: whitespace between a row's two elements is allowed by the payload allowlist (AC-3.1) |
 | 1.0.0 | 2026-11-26 | Approved at Gate A. The maintainer ruled that the stale list after a phone wakes stays a stated known limit with no custom channel, and opened Issue #105 for it (Known limits). Origins are named in `docs/architecture.md` by a root pull request, not by this one |

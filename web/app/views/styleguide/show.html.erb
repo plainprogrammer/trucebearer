@@ -272,6 +272,15 @@
     <%= seat_status(sample_powers.map { |power| Phase::Status.new(power: power, submitted: %w[england france].include?(power)) }, id: "sg-seat-status-mix") %>
   </section>
 
+  <% player_group, reading_group = sample_result_groups %>
+  <section data-component="results" class="stack" aria-labelledby="sg-results">
+    <h2 id="sg-results">Results</h2>
+    <p>One power's orders and what became of each, after the reveal. Every outcome is words in a tag, and a dislodged unit comes first. The host's reading variant is larger.</p>
+    <%= render "results/practice_note" %>
+    <%= render "results/group", group: player_group, reading: false %>
+    <%= render "results/group", group: reading_group, reading: true %>
+  </section>
+
   <section class="stack" aria-labelledby="sg-colors">
     <h2 id="sg-colors">Colors</h2>
     <ul class="sg-swatches">

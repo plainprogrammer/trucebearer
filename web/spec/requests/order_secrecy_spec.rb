@@ -49,6 +49,14 @@ RSpec.describe "Order secrecy", type: :request do
       expect(SecrecyRoutes::FRAMEWORK.none? { |pattern, _why| "MOUNT /cable".match?(pattern) }).to be(true)
     end
 
+    it "marks exactly the seat page, the host page and the two results routes as able to show a revealed phase's orders (spec 025 AC-5.1)" do
+      all = SecrecyRoutes::APP.select { |_key, entry| entry[:revealed] == :all }.keys
+
+      expect(all).to match_array([ "GET /games/:public_id", "GET /games/:public_id/host",
+                                   "GET /games/:public_id/phases/:number/results", "GET /games/:public_id/host/phases/:number/results" ])
+      expect(SecrecyRoutes::APP.reject { |_key, entry| %i[all none].include?(entry[:revealed]) }.keys).to be_empty # every entry says
+    end
+
     it "marks as showing orders only the seat page, the orders page, the picker and the endpoint (spec 023 AC-5.1)" do
       showing = SecrecyRoutes::APP.select { |_key, entry| entry[:shows] == :own }.keys
 
@@ -77,6 +85,7 @@ RSpec.describe "Order secrecy", type: :request do
     let!(:france_seat_and_token) { game.take_seat!("france") }
     let(:england_seat) { england_seat_and_token.first }
     let(:phase) { game.current_phase }
+    let(:open_number) { 1 } # the number of the open phase the viewers are built for (spec 025: 2 after a reveal)
     let(:context) do
       SecrecyRoutes::Context.new(id: id, code: game.join_code, host_token: created.host_token, france_token: france_seat_and_token.last)
     end
@@ -94,7 +103,7 @@ RSpec.describe "Order secrecy", type: :request do
       # Stepped into France before the baseline, so its bar and cookie are the same in every snapshot.
       stepped_in = open_session.tap do |session|
         session.get "/games/#{id}/host-link", params: { token: created.host_token }
-        session.post "/games/#{id}/host/seats/france/phases/1/step-in"
+        session.post "/games/#{id}/host/seats/france/phases/#{open_number}/step-in"
       end
       { "another seat" => france, "the host, with a seat of its own" => created.session, "the host, with no seat" => host_without_seat,
         "a stranger" => open_session, "the host, with France's seat cookie" => wearing_france, "the host, stepped into France" => stepped_in }
@@ -158,6 +167,29 @@ RSpec.describe "Order secrecy", type: :request do
       end
     end
 
+    # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row. Status, headers and cookies
+    # are compared exactly as for every other page (spec 024 AC-3.5). Both worlds of the sweep use it (spec 025 AC-5.3).
+    def only_status_row_differs(listed, unsubmitted, submitted)
+      # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row. Status, headers
+      # and cookies are compared exactly as for every other page (spec 024 AC-3.5).
+      outside = lambda do |body|
+        Nokogiri::HTML5(body).tap { |doc| doc.at_css("#seat-status").remove }.to_html
+      end
+      rows = lambda do |body|
+        Nokogiri::HTML5(body).css("#seat-status li").to_h { |row| [ row["data-power"], row.text.squish ] }
+      end
+      listed.each do |viewer, key|
+        before = unsubmitted[viewer][key]
+        after = submitted[viewer][key]
+
+        expect(after.values_at(0, 2, 3)).to eq(before.values_at(0, 2, 3)), "#{viewer} on #{key}"
+        expect(outside.call(after[1])).to eq(outside.call(before[1])), "#{viewer} on #{key}"
+        changed = rows.call(after[1]).reject { |power, text| rows.call(before[1])[power] == text }.keys
+        expect(changed).to eq([ "england" ]), "#{viewer} on #{key}"
+        expect(rows.call(after[1])["england"]).to eq("England Submitted")
+      end
+    end
+
     it "answers every viewer but England the same whatever England has ordered (AC-7.2)" do
       set_orders(:none)
       baseline = snapshot
@@ -172,6 +204,15 @@ RSpec.describe "Order secrecy", type: :request do
       [ "the host, with a seat of its own", "the host, with no seat" ].each do |host|
         expect(status.call(host, "GET /games/:public_id/host")).to eq(200)
         expect(status.call(host, "GET /games/:public_id/host/phases/:number/reveal")).to eq(200)
+      end
+
+      # The two results routes before any reveal, where the swept number is the open phase's (spec 025 AC-5.2): the stranger page for every
+      # viewer, and for the host wearing France's seat cookie the step-in redirect on the seat route.
+      seat_results = "GET /games/:public_id/phases/:number/results"
+      host_results = "GET /games/:public_id/host/phases/:number/results"
+      baseline.each_key do |viewer|
+        expect(status.call(viewer, host_results)).to eq(404), viewer
+        expect(status.call(viewer, seat_results)).to eq(viewer == "the host, with France's seat cookie" ? 303 : 404), viewer
       end
 
       # The step-in controls (spec 026 AC-8.2): the host without a step-in is a stranger on England's stepped-in URLs, the host stepped into
@@ -248,47 +289,41 @@ RSpec.describe "Order secrecy", type: :request do
       expect(listed).not_to include([ "a stranger", seat_page ], [ "a stranger", host_page ], [ "another seat", host_page ], [ hosts[1], seat_page ])
       expect(differences(unsubmitted, submitted, except: hosts.map { |host| [ host, confirm ] } + listed)).to be_empty
 
-      # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row. Status, headers
-      # and cookies are compared exactly as for every other page (spec 024 AC-3.5).
-      outside = lambda do |body|
-        Nokogiri::HTML5(body).tap { |doc| doc.at_css("#seat-status").remove }.to_html
-      end
-      rows = lambda do |body|
-        Nokogiri::HTML5(body).css("#seat-status li").to_h { |row| [ row["data-power"], row.text.squish ] }
-      end
-      listed.each do |viewer, key|
-        before = unsubmitted[viewer][key]
-        after = submitted[viewer][key]
-
-        expect(after.values_at(0, 2, 3)).to eq(before.values_at(0, 2, 3)), "#{viewer} on #{key}"
-        expect(outside.call(after[1])).to eq(outside.call(before[1])), "#{viewer} on #{key}"
-        changed = rows.call(after[1]).reject { |power, text| rows.call(before[1])[power] == text }.keys
-        expect(changed).to eq([ "england" ]), "#{viewer} on #{key}"
-        expect(rows.call(after[1])["england"]).to eq("England Submitted")
-      end
+      only_status_row_differs(listed, unsubmitted, submitted)
       hosts.each do |host|
         expect(unsubmitted[host][confirm][1]).to include("England")
         expect(submitted[host][confirm][1]).not_to include("England")
       end
     end
 
-    it "puts the signed stream name only on the pages of the viewers who may see the status (spec 024 AC-4.5)" do
+    it "puts a signed stream name only on the pages of the viewers who may see it, each name verified (spec 024 AC-4.5, spec 025 AC-3.4, AC-4.3)" do
       set_orders(:none)
       shot = snapshot
+      names = lambda do |body|
+        Nokogiri::HTML5(body).css("turbo-cable-stream-source").map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }.sort
+      end
       carrying = shot.flat_map do |viewer, routes|
-        routes.select { |_key, (_status, body)| body.include?("signed-stream-name") }.keys.map { |key| [ viewer, key ] }
+        routes.filter_map { |key, (_status, body)| [ viewer, key, names.call(body) ] if body.include?("signed-stream-name") }
       end
       # Nor in a header or a cookie line, on any page.
-      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.include?("seat_status") }
+      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.match?(/seat_status|results:/) }
       expect(in_headers).to be_empty
 
+      both = [ "results:#{id}", "seat_status:#{id}" ]
+      results_only = [ "results:#{id}" ]
+      # The seat page holds both names, a seat's own order screen and picker the results name only, the host page both. The host (Germany) has
+      # no unit in LON or PAR, so both of its pickers are its stranger page; France's PAR picker is the one picker that carries a name.
+      # A stepped-in screen carries none, and a stranger's page none.
       expect(carrying).to match_array([
-        [ "another seat", "GET /games/:public_id" ],
-        [ "the host, with a seat of its own", "GET /games/:public_id" ],
-        [ "the host, with a seat of its own", "GET /games/:public_id/host" ],
-        [ "the host, with no seat", "GET /games/:public_id/host" ],
-        [ "the host, with France's seat cookie", "GET /games/:public_id/host" ],
-        [ "the host, stepped into France", "GET /games/:public_id/host" ]
+        [ "another seat", "GET /games/:public_id", both ],
+        [ "another seat", "GET /games/:public_id/phases/:number/orders", results_only ],
+        [ "another seat", "GET /games/:public_id/phases/:number/orders/:province [par]", results_only ],
+        [ "the host, with a seat of its own", "GET /games/:public_id", both ],
+        [ "the host, with a seat of its own", "GET /games/:public_id/host", both ],
+        [ "the host, with a seat of its own", "GET /games/:public_id/phases/:number/orders", results_only ],
+        [ "the host, with no seat", "GET /games/:public_id/host", both ],
+        [ "the host, with France's seat cookie", "GET /games/:public_id/host", both ],
+        [ "the host, stepped into France", "GET /games/:public_id/host", both ]
       ])
     end
 
@@ -332,19 +367,162 @@ RSpec.describe "Order secrecy", type: :request do
       expect(host.response.body).not_to match(/\bordered\b/)
     end
 
-    it "shows nobody an order or an outcome after the reveal, in this feature (AC-7.9)" do
+    it "shows a revealed phase's results only to the viewers with a right to them, and no order of the open phase (spec 025 AC-5.7, replacing spec 022 AC-7.9)" do
       set_orders(:all)
       created.session.post "/games/#{id}/host/phases/1/reveal"
 
       england_phone.get "/games/#{id}/phases/1/orders"
-      expect(england_phone.response).to have_http_status(:conflict)
-      snapshot.each do |viewer, routes|
+      expect(england_phone.response).to have_http_status(:see_other) # to the results page (spec 025 D5)
+      seats = [ "another seat", "the host, with a seat of its own" ]
+      hosts = [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ]
+      entitled = { "GET /games/:public_id" => seats, "GET /games/:public_id/phases/:number/results" => seats,
+                   "GET /games/:public_id/host" => hosts, "GET /games/:public_id/host/phases/:number/results" => hosts }
+      shot = snapshot
+      shot.each do |viewer, routes|
         routes.each do |key, (_status, body)|
           next if key == "GET /styleguide" # static samples with made-up orders, no game data
 
-          expect(Nokogiri::HTML5(body).css(".unit-row__order")).to be_empty, "#{viewer} on #{key}"
-          expect(body).not_to match(/\b(?:Succeeded|Bounced|Held)\b/), "#{viewer} on #{key}"
+          page = Nokogiri::HTML5(body)
+          expect(page.css(".unit-row__order")).to be_empty, "#{viewer} on #{key}"
+          expect(page.css(".result-row").any?).to eq(entitled.fetch(key, []).include?(viewer)), "#{viewer} on #{key}"
         end
+      end
+      # The positive control: an entitled viewer reads England's order, with the stand-in's outcome for it.
+      row = Nokogiri::HTML5(shot.fetch("another seat").fetch("GET /games/:public_id")[1]).css(".result-group[data-power=england] .result-row")
+             .find { |r| r.text.include?("Move to North Sea (NTH)") }
+      expect(row.at_css(".outcome-tag").text).to eq("Succeeded")
+    end
+
+    # Spec 025 Story 5: the same viewers after one reveal. Phase 1 is revealed, phase 2 is open, and the open phase's orders are as secret as ever.
+    describe "after one reveal (spec 025)" do
+      let(:open_number) { 2 }
+      # Phase 1: England lvp -> yor and France mar -> pie (both uncontested under the stand-in), then the host reveals. The swept picker
+      # provinces lon and par stay occupied (England keeps fleets in lon and edi and an army in yor; Paris stays French), so no swept page
+      # silently becomes a stranger page. `phase` is not touched here: it is memoised later, after the reveal, as phase 2.
+      let!(:revealed_phase) do
+        first = game.current_phase
+        england_seat.save_orders!(first, { "lvp" => json_of(move(:england, :lvp, :yor)) }, submit: true)
+        france_seat_and_token.first.save_orders!(first, { "mar" => json_of(move(:france, :mar, :pie)) }, submit: true)
+        created.session.post "/games/#{id}/host/phases/1/reveal"
+        created.session.get "/games/#{id}/host" # shows and so consumes the "was revealed" flash, which no sweep request would repeat
+        first.reload
+      end
+      let(:context) do
+        SecrecyRoutes::Context.new(id: id, code: game.join_code, host_token: created.host_token, france_token: france_seat_and_token.last, open: 2, revealed: 1)
+      end
+      let(:hosts) { [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ] }
+
+      # England's phase-2 orders: moves only (a hold is a word every implied hold in the results shares), each a legal order whose words
+      # appear in no phase-1 order.
+      ORDERS2 = { none: {}, one: { "lon" => %i[lon nth] },
+                  all: { "lon" => %i[lon nth], "edi" => %i[edi nwg], "yor" => %i[yor lvp] },
+                  other: { "lon" => %i[lon eng], "edi" => %i[edi nth], "yor" => %i[yor edi] } }.freeze
+      WORDS2 = [ "Move to North Sea (NTH)", "Move to Norwegian Sea (NWG)", "Move to Liverpool (LVP)", "Move to English Channel (ENG)", "Move to Edinburgh (EDI)" ].freeze
+
+      def set_orders2(name, submit: false)
+        entries = %w[lon edi yor].to_h { |province| [ province, ORDERS2[name][province] ? json_of(move(:england, *ORDERS2[name][province])) : "" ] }
+        england_seat.save_orders!(phase, entries)
+        england_seat.save_orders!(phase, {}, submit: true) if submit
+      end
+
+      def stream_names(body) = Nokogiri::HTML5(body).css("turbo-cable-stream-source").map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
+
+      it "answers every viewer but England the same whatever England orders in the open phase (AC-5.3)" do
+        expect(phase.number).to eq(2)
+        set_orders2(:none)
+        baseline = snapshot
+        expect(baseline.values.flat_map(&:keys).uniq.size).to eq(SecrecyRoutes.sweeps(context).size)
+        expect(SecrecyRoutes.sweeps(context).keys.grep(/\(revealed\)/)).not_to be_empty # the revealed number is requested too
+
+        %i[one all other none].each do |name|
+          set_orders2(name)
+          changed = differences(baseline, snapshot)
+          expect(changed).to be_empty, "the pages changed when England's phase-2 orders became #{name}: #{changed.join('; ')}"
+        end
+      end
+
+      it "differs, when England's submitted state flips, only in England's status row and the open number's reveal confirmation (AC-5.3)" do
+        set_orders2(:all)
+        unsubmitted = snapshot
+        set_orders2(:all, submit: true)
+        submitted = snapshot
+        confirm = "GET /games/:public_id/host/phases/:number/reveal"
+        listed = unsubmitted.flat_map do |viewer, routes|
+          routes.select { |key, response| [ "GET /games/:public_id", "GET /games/:public_id/host" ].include?(key) && response[1].include?('id="seat-status"') }
+                .keys.map { |key| [ viewer, key ] }
+        end
+
+        expect(listed).to include([ "another seat", "GET /games/:public_id" ], [ hosts[0], "GET /games/:public_id/host" ])
+        expect(differences(unsubmitted, submitted, except: hosts.map { |host| [ host, confirm ] } + listed)).to be_empty
+        only_status_row_differs(listed, unsubmitted, submitted)
+      end
+
+      it "gives each viewer the answers of D4 and spec 026 D5, with controls (AC-5.4)" do
+        set_orders2(:none)
+        shot = snapshot
+        status = ->(viewer, label) { shot.fetch(viewer).fetch(label).first }
+        seat_results = "GET /games/:public_id/phases/:number/results"
+        host_results = "GET /games/:public_id/host/phases/:number/results"
+        orders = "GET /games/:public_id/phases/:number/orders"
+        picker = "GET /games/:public_id/phases/:number/orders/:province"
+        stepped = "GET /games/:public_id/host/seats/:power/phases/:number/orders"
+
+        expect(status.call("another seat", "#{seat_results} (revealed)")).to eq(200)
+        expect(status.call(hosts[0], "#{seat_results} (revealed)")).to eq(200)
+        expect(status.call(hosts[1], "#{seat_results} (revealed)")).to eq(404) # the host with no seat holds no seat cookie
+        expect(status.call(hosts[2], "#{seat_results} (revealed)")).to eq(303) # sent to the step-in confirmation (spec 026 D5)
+        expect(status.call("a stranger", "#{seat_results} (revealed)")).to eq(404)
+        # The open number has no results page for anyone: the stranger page, or for the host wearing France's seat cookie the step-in redirect.
+        [ "another seat", hosts[0], hosts[1], hosts[3], "a stranger" ].each { |viewer| expect(status.call(viewer, seat_results)).to eq(404), viewer }
+        expect(status.call(hosts[2], seat_results)).to eq(303)
+        hosts.each { |host| expect(status.call(host, "#{host_results} (revealed)")).to eq(200), host }
+        hosts.each { |host| expect(status.call(host, host_results)).to eq(404), host } # the open number, the host included
+        [ "another seat", "a stranger" ].each do |viewer|
+          expect(status.call(viewer, "#{host_results} (revealed)")).to eq(404), viewer
+          expect(status.call(viewer, host_results)).to eq(404), viewer
+        end
+
+        expect(status.call("another seat", orders)).to eq(200) # the open phase is the live order screen
+        expect(status.call("another seat", "#{orders} (revealed)")).to eq(303) # the revealed one is sent to its results
+        expect(status.call("another seat", "#{picker} [par]")).to eq(200) # Paris is still French in phase 2
+        expect(status.call("another seat", "#{picker} [par] (revealed)")).to eq(303)
+        expect(status.call(hosts[3], "#{stepped} [france]")).to eq(200)
+        expect(status.call(hosts[3], "#{stepped} [france] (revealed)")).to eq(409) # the one GET that keeps the 409
+        expect(status.call(hosts[3], "#{stepped} [england]")).to eq(404)
+        [ hosts[0], hosts[1], "another seat", "a stranger" ].each { |viewer| expect(status.call(viewer, "#{stepped} [france]")).to eq(404), viewer }
+      end
+
+      it "puts England's phase-1 order in the results and none of its phase-2 orders in any other viewer's rows or pages (AC-5.5)" do
+        json = ORDERS2.values_at(:all, :other).flat_map(&:values).map { |at, to| ERB::Util.html_escape(json_of(move(:england, at, to))) }
+        %i[all other].each do |name|
+          set_orders2(name)
+          shot = snapshot
+          results = Nokogiri::HTML5(shot.fetch("another seat").fetch("GET /games/:public_id/phases/:number/results (revealed)")[1])
+          expect(results.css(".result-row__order").map { |node| node.text.squish }).to include("Move to Yorkshire (YOR)") # the positive control
+          shot.each do |viewer, routes|
+            routes.each do |label, (_status, body)|
+              next if label == "GET /styleguide"
+
+              page = Nokogiri::HTML5(body)
+              expect(page.css(".result-row__order, .unit-row__order").map { |node| node.text.squish } & WORDS2).to be_empty, "#{viewer} on #{label}"
+              json.each { |text| expect(body).not_to include(text), "#{viewer} on #{label}" }
+            end
+          end
+        end
+      end
+
+      it "shows a stranger no result and puts a signed name only on the four pages of spec 025 AC-3.4 (AC-4.3, AC-4.5)" do
+        set_orders2(:none)
+        shot = snapshot
+        stranger_pages = shot.fetch("a stranger").reject { |label, _| label == "GET /styleguide" }.values.map { |_status, body| body }
+        carrying = shot.flat_map { |viewer, routes| routes.filter_map { |label, (_status, body)| [ viewer, label ] if stream_names(body).any? } }
+        allowed = [ "GET /games/:public_id", "GET /games/:public_id/host", "GET /games/:public_id/phases/:number/orders",
+                    "GET /games/:public_id/phases/:number/orders/:province [par]" ]
+
+        expect(stranger_pages.grep(/result-row|outcome-tag/)).to be_empty
+        expect(carrying.map(&:last).uniq - allowed).to be_empty
+        expect(carrying.select { |viewer, _| viewer == "a stranger" }).to be_empty
+        expect(shot.values.flat_map(&:values).flat_map { |_status, body| stream_names(body) }.uniq).to contain_exactly("seat_status:#{id}", "results:#{id}")
       end
     end
 

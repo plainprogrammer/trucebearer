@@ -84,9 +84,11 @@ RSpec.describe "Screens of the phase lifecycle", type: :system do
         expect(page).to have_css(".banner--info", text: "was revealed. It is now Fall 1901 · Movement.")
         measure_screen("the host page after the reveal", width)
 
-        visit "/games/#{id}/phases/1/orders"
-        expect(page).to have_css(".banner--danger", text: "The host has already revealed this phase")
-        measure_screen("the refusal page", width)
+        visit "/games/#{id}/phases/1/orders" # a read of a revealed phase's orders lands on its results (spec 025 D5)
+        expect(page).to have_current_path("/games/#{id}/phases/1/results")
+        expect(page).to have_css("h1", text: "Results")
+        expect(page).to have_css("section[data-results] .result-row")
+        measure_screen("the results page", width)
 
         # A reveal the gem refuses leaves the phase open and says so.
         allow(RulesEngine).to receive(:adjudicate).and_raise(RulesEngine::InvalidInput, "refused")

@@ -35,4 +35,31 @@ module StyleguideHelper
   # Stand-ins for the game and phase the order screen's partials build their links from (spec 023).
   SAMPLE_GAME = Struct.new(:public_id).new("sample").freeze
   SAMPLE_PHASE = Struct.new(:number).new(1).freeze
+
+  # Made-up result groups for the style guide's Results section (spec 025 AC-8.1): a player group and a reading group between them
+  # showing every tag. The partials take the presenter's own value types.
+  def sample_result_groups
+    order = ->(type, power, at, **rest) { { "format" => 1, "type" => type, "power" => power, "at" => at }.merge(rest.transform_keys(&:to_s)) }
+    move = ->(power, at, to) { order.call("move", power, at, destination: { "province" => to, "coast" => nil }) }
+    unit = ->(type) { PhaseResults::UnitRef.new(type: type) }
+    row = lambda do |order_hash, type, result, submitted: true, dislodged: false|
+      PhaseResults::Row.new(order: order_hash, power: order_hash["power"], province: order_hash["at"], unit: type && unit.call(type),
+                            result: result, submitted: submitted, dislodged: dislodged)
+    end
+    player = PhaseResults::Group.new(power: "england", rows: [
+      row.call(move.call("england", "lon", "nth"), :fleet, "succeeded"),
+      row.call(move.call("england", "lvp", "yor"), :army, "bounced"),
+      row.call(order.call("support_hold", "england", "edi", target: "lvp"), :fleet, "given"),
+      row.call(order.call("hold", "england", "wal"), :army, "held", submitted: false)
+    ])
+    reading = PhaseResults::Group.new(power: "france", rows: [
+      row.call(order.call("hold", "france", "par"), :army, "held", dislodged: true),
+      row.call(order.call("convoy", "france", "bre", from: "par", to: "lon"), :fleet, "disrupted", dislodged: true),
+      row.call(order.call("support_move", "france", "mar", from: "par", to: "bur"), :army, "cut"),
+      row.call(order.call("move_via_convoy", "france", "gas", to: "nwy"), :army, "no_route"),
+      row.call(order.call("convoy", "france", "mao", from: "bre", to: "spa"), :fleet, "unmatched"),
+      row.call(move.call("france", "lon", "eng"), nil, "void")
+    ])
+    [ player, reading ]
+  end
 end

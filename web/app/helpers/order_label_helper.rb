@@ -9,7 +9,8 @@ module OrderLabelHelper
     safe_join([ RulesEngine.province_name(id), " (", tag.span(id.upcase, class: "mono"), ")" ])
   end
 
-  # An order in words with full names. It is given the unit as well, because a move's hash has no unit type.
+  # An order in words with full names. It is given the unit as well, because a move's hash has no unit type. The unit may be nil (a
+  # result row for an order whose unit is not on the board, spec 025 D8): the move then has no "needs a convoy" remark.
   def order_words(order, unit)
     h = order.to_h
     case h["type"]
@@ -28,7 +29,7 @@ module OrderLabelHelper
     destination = h["destination"]
     parts = [ "Move to ", province_label(destination["province"]) ]
     parts << ", #{COASTS.fetch(destination["coast"])}" if destination["coast"]
-    parts << ", needs a convoy" if unit.type == :army && !RulesEngine.army_adjacent?(h["at"], destination["province"])
+    parts << ", needs a convoy" if unit&.type == :army && !RulesEngine.army_adjacent?(h["at"], destination["province"])
     safe_join(parts)
   end
 end

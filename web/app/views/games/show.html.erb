@@ -3,9 +3,11 @@
 <div class="stack">
   <h1>You hold <%= power_name(@seat.power) %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
+  <%= render "results/live", game: @game %>
+  <%= render "results/section", results: @results, kind: :seat, game: @game, earlier: @earlier, banners: false, skip: true if @results %>
   <p><%= @ordered %> of <%= @units %> units ordered.</p>
   <%= render "step_ins/notices", seat: @seat, phase: @phase %>
-  <%= link_to "Enter orders", game_seat_orders_path(@game.public_id, @phase.number), class: "button" %>
+  <%= link_to "Enter orders", game_seat_orders_path(@game.public_id, @phase.number), class: "button", id: "enter-orders" %>
   <p>Keep this page. The host reveals each phase when the table is ready.</p>
   <%= render "phases/status", game: @game, phase: @phase, level: 2 %>
   <% if @host %>

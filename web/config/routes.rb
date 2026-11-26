@@ -39,6 +39,9 @@ Rails.application.routes.draw do
     put "phases/:number/orders", to: "seat_orders#update", constraints: { number: %r{[^/]+} }
     get "phases/:number/orders/:province", to: "order_pickers#show", as: :game_order_picker,
                                            constraints: { number: %r{[^/]+}, province: %r{[^/]+} } # spec 023
+    # Results of a revealed phase (spec 025). An open, later or unknown phase is the stranger response.
+    get "phases/:number/results", to: "results#show", as: :game_seat_results, constraints: { number: %r{[^/]+} }
+    get "host/phases/:number/results", to: "host_results#show", as: :game_host_results, constraints: { number: %r{[^/]+} }
     get "host/phases/:number/reveal", to: "reveals#show", as: :game_reveal, constraints: { number: %r{[^/]+} }
     post "host/phases/:number/reveal", to: "reveals#create", as: nil, constraints: { number: %r{[^/]+} }
   end
