@@ -44,6 +44,11 @@ RSpec.describe "Order secrecy", type: :request do
       expect(SecrecyRoutes.classified?("GET /rails/mailers/*path")).to be(true)
     end
 
+    it "classifies the cable mount among the app's own routes, as showing no order (spec 024 AC-4.6)" do
+      expect(SecrecyRoutes::APP["MOUNT /cable"][:shows]).to eq(:none)
+      expect(SecrecyRoutes::FRAMEWORK.none? { |pattern, _why| "MOUNT /cable".match?(pattern) }).to be(true)
+    end
+
     it "marks as showing orders only the seat page, the orders page, the picker and the endpoint (spec 023 AC-5.1)" do
       showing = SecrecyRoutes::APP.select { |_key, entry| entry[:shows] == :own }.keys
 
@@ -212,19 +217,68 @@ RSpec.describe "Order secrecy", type: :request do
       end
     end
 
-    it "answers the same whether England has submitted or not, except the host's list of who has not (AC-7.2, AC-4.1)" do
+    it "answers the same whether England has submitted or not, except the host's list of who has not and England's row of the status list (AC-7.2, AC-4.1, spec 024 AC-3.5)" do
       set_orders(:all)
       unsubmitted = snapshot
       set_orders(:all, submit: true)
       submitted = snapshot
 
       confirm = "GET /games/:public_id/host/phases/:number/reveal"
+      seat_page = "GET /games/:public_id"
+      host_page = "GET /games/:public_id/host"
       hosts = [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ]
-      expect(differences(unsubmitted, submitted, except: hosts.map { |host| [ host, confirm ] })).to be_empty
+      # The viewer and page pairs that get a status list, read from the pages themselves; the others get the stranger page, a
+      # redirect or a step-in page and stay in the strict comparison. The pairs known to get one must be among them, so a list
+      # that stopped showing cannot shrink the set unnoticed.
+      listed = unsubmitted.flat_map do |viewer, routes|
+        routes.select { |key, response| [ seat_page, host_page ].include?(key) && response[1].include?('id="seat-status"') }.keys.map { |key| [ viewer, key ] }
+      end
+      expect(listed).to include([ "another seat", seat_page ], [ hosts[0], seat_page ], [ hosts[0], host_page ], [ hosts[1], host_page ])
+      expect(listed).not_to include([ "a stranger", seat_page ], [ "a stranger", host_page ], [ "another seat", host_page ], [ hosts[1], seat_page ])
+      expect(differences(unsubmitted, submitted, except: hosts.map { |host| [ host, confirm ] } + listed)).to be_empty
+
+      # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row. Status, headers
+      # and cookies are compared exactly as for every other page (spec 024 AC-3.5).
+      outside = lambda do |body|
+        Nokogiri::HTML5(body).tap { |doc| doc.at_css("#seat-status").remove }.to_html
+      end
+      rows = lambda do |body|
+        Nokogiri::HTML5(body).css("#seat-status li").to_h { |row| [ row["data-power"], row.text.squish ] }
+      end
+      listed.each do |viewer, key|
+        before = unsubmitted[viewer][key]
+        after = submitted[viewer][key]
+
+        expect(after.values_at(0, 2, 3)).to eq(before.values_at(0, 2, 3)), "#{viewer} on #{key}"
+        expect(outside.call(after[1])).to eq(outside.call(before[1])), "#{viewer} on #{key}"
+        changed = rows.call(after[1]).reject { |power, text| rows.call(before[1])[power] == text }.keys
+        expect(changed).to eq([ "england" ]), "#{viewer} on #{key}"
+        expect(rows.call(after[1])["england"]).to eq("England Submitted")
+      end
       hosts.each do |host|
         expect(unsubmitted[host][confirm][1]).to include("England")
         expect(submitted[host][confirm][1]).not_to include("England")
       end
+    end
+
+    it "puts the signed stream name only on the pages of the viewers who may see the status (spec 024 AC-4.5)" do
+      set_orders(:none)
+      shot = snapshot
+      carrying = shot.flat_map do |viewer, routes|
+        routes.select { |_key, (_status, body)| body.include?("signed-stream-name") }.keys.map { |key| [ viewer, key ] }
+      end
+      # Nor in a header or a cookie line, on any page.
+      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.include?("seat_status") }
+      expect(in_headers).to be_empty
+
+      expect(carrying).to match_array([
+        [ "another seat", "GET /games/:public_id" ],
+        [ "the host, with a seat of its own", "GET /games/:public_id" ],
+        [ "the host, with a seat of its own", "GET /games/:public_id/host" ],
+        [ "the host, with no seat", "GET /games/:public_id/host" ],
+        [ "the host, with France's seat cookie", "GET /games/:public_id/host" ],
+        [ "the host, stepped into France", "GET /games/:public_id/host" ]
+      ])
     end
 
     it "never carries England's orders, its labels or its count in a reply to anyone else, a refusal included (AC-7.3)" do

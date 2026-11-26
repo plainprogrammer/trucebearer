@@ -45,6 +45,21 @@ class Game < ApplicationRecord
   # The phases already revealed, oldest first.
   def history = phases.where.not(revealed_at: nil)
 
+  # Tells every open seat page and host page which seats have submitted. One snapshot of the seven states, rendered from
+  # Phase#seat_statuses and nothing else, on a stream of its own that only the seat and host pages subscribe to (spec 024
+  # D1, D2, D4). It is the only place the app talks to the cable; spec/models/status_broadcast_scan_spec.rb enforces that. The
+  # render is outside the rescue so a broken template raises everywhere; the cable call is inside it so a stored save is
+  # never answered with an error (D7).
+  def broadcast_seat_status
+    html = ApplicationController.render(partial: "shared/seat_status", locals: { statuses: current_phase.seat_statuses })
+    begin
+      Turbo::StreamsChannel.broadcast_update_to(:seat_status, public_id, target: "seat-status", content: html,
+                                                attributes: { method: :morph })
+    rescue StandardError => error
+      Rails.logger.warn("seat status broadcast failed: #{error.class}")
+    end
+  end
+
   # The host's own seat: the lowest id. Game.start! makes it in the game's own transaction and no path deletes a seat (spec 026 D5).
   def host_seat = seats.min_by(&:id)
 
@@ -81,11 +96,12 @@ class Game < ApplicationRecord
   # first, as in a save, so a save from the old phone can't slip in between. Returns the new token.
   def reissue_seat!(seat)
     token = Token.generate
-    transaction do
+    withdrew = transaction do
       phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
       seat.update!(token_digest: Token.digest(token))
       seat.clear_orders!(phase)
     end
+    broadcast_seat_status if withdrew # the seat had submitted and no longer has (spec 024 D3)
     token
   end
 end

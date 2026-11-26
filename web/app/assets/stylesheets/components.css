@@ -70,7 +70,8 @@
   }
 
   /* ---- List: <ul class="list"> of <li><a|button|div class="list__row"> ---- */
-  .list {
+  .list,
+  .seat-status {
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -80,8 +81,23 @@
     border-radius: var(--radius);
   }
 
-  .list > li + li {
+  .list > li + li,
+  .seat-status > li + li {
     border-top: var(--border-width) solid var(--color-border);
+  }
+
+  /* ---- Seat status: <ul class="seat-status"> of <li class="seat-status__row"> (spec 024). Shares the list's box above. ---- */
+  .seat-status__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-surface);
+  }
+
+  .seat-status__state {
+    font-weight: var(--weight-strong);
   }
 
   .list__row {

@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/cable_origins"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -26,6 +27,10 @@ Rails.application.configure do
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
+
+  # Origins besides the app's own that may open the live-update socket. Unset keeps Rails' default: only the app's own
+  # address (spec 024 D5, README "Live updates").
+  config.action_cable.allowed_request_origins = CableOrigins.parse(ENV["TRUCEBEARER_CABLE_ORIGINS"])
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = true

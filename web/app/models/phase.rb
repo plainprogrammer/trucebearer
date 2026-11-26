@@ -8,6 +8,7 @@ class Phase < ApplicationRecord
   attribute :adjudication, RulesObjectType.adjudication
 
   Pending = Data.define(:power, :seated)
+  Status = Data.define(:power, :submitted) # one power's row in the status list (spec 024 FR-1)
 
   class Revealed < StandardError; end # the phase is no longer open
   class Conflict < StandardError; end # the reveal's conditional write changed no row (spec 022 D8, a backstop)
@@ -39,11 +40,23 @@ class Phase < ApplicationRecord
       :revealed
     end
     reload
+    game.broadcast_seat_status if status == :revealed # the new phase has no submissions (spec 024 D3)
     Reveal.new(status: status)
   end
 
   # "Spring 1901 · Movement". Capitals are drawn by the stylesheet.
   def title = "#{position.season.to_s.capitalize} #{position.year} · #{position.phase.to_s.capitalize}"
+
+  # The seven powers in the gem's order, each with whether its seat has submitted. It reads seats and submissions only
+  # (spec 024 D2): the one input of the status partial, and so of every message the status stream carries.
+  def seat_statuses
+    seats = game.seats.index_by(&:power)
+    done = submissions.pluck(:seat_id).to_set
+    RulesEngine.powers.map do |power|
+      seat = seats[power.id.to_s]
+      Status.new(power: power.id.to_s, submitted: !seat.nil? && done.include?(seat.id))
+    end
+  end
 
   # Every power that has not submitted, each with whether anyone holds its seat (spec AC-4.1, AC-4.13).
   def pending

@@ -50,7 +50,9 @@ RSpec.describe "Step-in notices and history", type: :request do
     [ "/games/#{id}", "/games/#{id}/phases/1/orders" ].each do |path|
       england.get path
       expect(notice(england)).to be_empty, path
-      expect(england.response.body).not_to match(/France|stepped/), path
+      # France is named in the status list of the seven powers (spec 024), and only there.
+      outside_status = Nokogiri::HTML5(england.response.body).tap { |doc| doc.at_css("#seat-status")&.remove }.to_html
+      expect(outside_status).not_to match(/France|stepped/), path
     end
     host.get "/games/#{id}"
     expect(notice(host)).to be_empty
