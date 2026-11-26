@@ -4,6 +4,8 @@ module Trucebearer
   module Adjudicator
     # A unit pushed out of its province, waiting to retreat. Carries no format.
     DislodgedUnit = Data.define(:unit, :attacker_from, :by_convoy) do
+      include Shape::Marshalable
+
       def initialize(unit:, attacker_from:, by_convoy:)
         Shape.instance_of!(unit, Unit, "unit")
         Shape.symbol_of(attacker_from, Shape::PROVINCES, "attacker_from", "province")

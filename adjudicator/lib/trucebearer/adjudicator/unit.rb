@@ -4,6 +4,8 @@ module Trucebearer
   module Adjudicator
     # An army or a fleet on the board. Carries no format (it only appears nested).
     Unit = Data.define(:power, :type, :location) do
+      include Shape::Marshalable
+
       def initialize(power:, type:, location:)
         Shape.symbol_of(power, Shape::POWERS, "power", "power")
         Shape.symbol_of(type, Shape::UNIT_TYPES, "type", "unit type")
