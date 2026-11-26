@@ -1,15 +1,31 @@
 require "rails_helper"
 require_relative "../support/rules_helpers"
 
-# Spec 024 Story 3: a broadcast carries the seven submitted states and nothing else, whatever the orders are.
-RSpec.describe "The status payload" do
+# Spec 024 Story 3: a broadcast carries the seven submitted states and nothing else, whatever the orders are. Since 1.3.0 (D10,
+# AC-9.3) the same proof covers what SeatStatusChannel transmits to a subscriber as it arrives, after each step.
+RSpec.describe "The status payload", type: :channel do
   include RulesHelpers
 
-  before { @game_ids = [] }
+  tests SeatStatusChannel
+
+  before do
+    @game_ids = []
+    stub_connection
+  end
 
   def hold(province) = json_of(rules_order(:hold, :england, province.to_sym))
 
-  # Drives the same five flips in a game whatever the orders are, and returns the decoded payloads of its stream. The
+  # Subscribes the way a woken phone does, and returns the one message it was sent.
+  def catch_up(game)
+    before = transmissions.size
+    subscribe(signed_stream_name: Turbo::StreamsChannel.signed_stream_name([ :seat_status, game.public_id ]))
+    expect(subscription).to be_confirmed
+    expect(transmissions.size).to eq(before + 1) # one subscribe, one message
+    transmissions.last.to_str.tap { unsubscribe }
+  end
+
+  # Drives the same five flips in a game whatever the orders are, and returns the decoded payloads of its stream (broadcasts) and,
+  # after each of the six steps, what a subscriber is sent (catch_ups, each with the latest broadcast at that moment). The
   # step marked "no flip" changes England's orders while it stays submitted, in the second game, and changes nothing in the first.
   def run_flips(england_first:, england_edit:, england_resubmit:, france_orders:)
     game = Game.start!(power: "england").game
@@ -17,25 +33,39 @@ RSpec.describe "The status payload" do
     england = game.seats.find_by(power: "england")
     france = game.take_seat!("france").first
     phase = game.current_phase
+    stream = "seat_status:#{game.public_id}"
+    broadcasts = -> { ActionCable.server.pubsub.broadcasts(stream).map { |raw| JSON.parse(raw) } }
+    catch_ups = []
+    caught = -> { catch_ups << [ catch_up(game), broadcasts.call.last ] }
     england.save_orders!(phase, england_first) unless england_first.empty?
     england.save_orders!(phase, {}, submit: true)                    # flip 1
+    caught.call
     england.save_orders!(phase, england_edit)                        # flip 2: an edit clears the submission
+    caught.call
     england.save_orders!(phase, {}, submit: true)                    # flip 3
+    caught.call
     france.save_orders!(phase, france_orders, submit: true)          # flip 4
+    caught.call
     england.save_orders!(phase, england_resubmit, submit: true)      # no flip: still submitted, orders changed or not
+    caught.call
     game.reissue_seat!(england)                                      # flip 5
-    ActionCable.server.pubsub.broadcasts("seat_status:#{game.public_id}").map { |raw| JSON.parse(raw) }
+    caught.call
+    { broadcasts: broadcasts.call, catch_ups: catch_ups }
   end
 
-  let(:quiet) do
+  let(:quiet_run) do
     run_flips(england_first: {}, england_edit: { "lon" => hold("lon") }, england_resubmit: { "lon" => hold("lon") }, france_orders: {})
   end
-  let(:busy) do
+  let(:busy_run) do
     run_flips(england_first: { "edi" => hold("edi"), "lvp" => hold("lvp"), "lon" => hold("lon") },
               england_edit: { "lon" => json_of(move(:england, :lon, :nth)), "edi" => "", "lvp" => "" },
               england_resubmit: { "lon" => json_of(move(:england, :lon, :eng)), "edi" => hold("edi") },
               france_orders: { "par" => json_of(move(:france, :par, :bur)) })
   end
+
+  let(:quiet) { quiet_run[:broadcasts] }
+  let(:busy) { busy_run[:broadcasts] }
+  let(:catch_ups) { (quiet_run[:catch_ups] + busy_run[:catch_ups]).map(&:first) }
 
   def power_ids = %w[austria england france germany italy russia turkey]
 
@@ -80,7 +110,21 @@ RSpec.describe "The status payload" do
   end
 
   it "matches an exact allowlist of elements, attributes and text (AC-3.1)" do
-    (quiet + busy).each { |payload| expect(violations(payload)).to be_empty }
+    (quiet + busy + catch_ups).each { |payload| expect(violations(payload)).to be_empty }
+  end
+
+  it "sends a subscriber, byte for byte, the latest broadcast for the same state, and the same in both games (AC-9.3)" do
+    expect(quiet_run[:catch_ups].size).to eq(6)
+    (quiet_run[:catch_ups] + busy_run[:catch_ups]).each { |sent, latest| expect(sent).to eq(latest) }
+    expect(busy_run[:catch_ups].map(&:first)).to eq(quiet_run[:catch_ups].map(&:first))
+  end
+
+  it "broadcasts nothing when a subscriber arrives (AC-9.3)" do
+    game = Game.start!(power: "england").game
+    stream = "seat_status:#{game.public_id}"
+    expect(ActionCable.server).not_to receive(:broadcast)
+
+    expect { catch_up(game) }.not_to(change { ActionCable.server.pubsub.broadcasts(stream).size })
   end
 
   it "has no province, order word, count, phase title or game id in its text, and no digit anywhere (AC-3.4)" do
@@ -88,7 +132,7 @@ RSpec.describe "The status payload" do
     provinces = named + named.map { |id| RulesEngine.province_name(id) }
     words = [ "Move", "Hold", "Support", "Convoy", "by convoy", "ordered", "units", "Spring", "Fall", "Movement" ]
 
-    (quiet + busy).each do |payload|
+    (quiet + busy + catch_ups).each do |payload|
       @game_ids.each { |id| expect(payload).not_to include(id) } # an all-letter public id has no digit to give it away
       text = Nokogiri::HTML5.fragment(payload).at_css("template").text.gsub(/\s+/, " ")
       (provinces + words).each { |word| expect(text).not_to match(/\b#{Regexp.escape(word)}\b/i), word }

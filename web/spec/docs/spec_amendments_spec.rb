@@ -27,6 +27,22 @@ RSpec.describe "Spec amendments" do
     expect(row).to include("AC-2.13").and include("spec 025")
   end
 
+  it "records the catch-up (#105) in spec 024's 1.3.0 row and spec 025's 1.2.0 row, and in the README (spec 024 AC-9.8)" do
+    docs = Pathname.new(File.expand_path("../../docs/specs", __dir__))
+    text = ->(dir) { File.read(docs.join(dir, "spec.md")) }
+    row = ->(dir, version) { text.call(dir).lines.find { |line| line.start_with?("| #{version} |") } }
+    version = ->(dir) { Gem::Version.new(text.call(dir)[/\*\*Version:\*\* (\d+\.\d+\.\d+)/, 1]) }
+    mine = row.call("024-live-status", "1.3.0")
+    theirs = row.call("025-reveal-results", "1.2.0")
+
+    expect(version.call("024-live-status")).to be >= Gem::Version.new("1.3.0") # the version lines have reached the rows (later amendments may move them on)
+    expect(version.call("025-reveal-results")).to be >= Gem::Version.new("1.2.0")
+
+    expect(mine).to include("SeatStatusChannel").and include("ResultsChannel").and include("#105")
+    expect(theirs).to include("spec 024").and include("ResultsChannel").and include("AC-9.4")
+    expect(File.read(File.expand_path("../../README.md", __dir__))).to include("caught up").and include("ResultsChannel")
+  end
+
   it "records spec 025's changes to spec 024 in a 1.1.0 changelog row (spec 025 AC-9.1)" do
     spec = File.read(File.expand_path("../../docs/specs/024-live-status/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| 1.1.0 |") }
@@ -36,7 +52,7 @@ RSpec.describe "Spec amendments" do
     expect(row).to include("AC-2.7").and include("AC-4.1").and include("AC-4.5").and include("half stale").and include("spec 025")
   end
 
-  # The row that mentions spec 029, and its version, which must also be the spec's version line (the row is found by text, not by number).
+  # The row that mentions spec 029, and its version, which the spec's version line must have reached (the row is found by text, not by number).
   def amendment_row(path)
     spec = File.read(File.expand_path("../../docs/specs/#{path}/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| ") && line.include?("spec 029") }
@@ -66,13 +82,13 @@ RSpec.describe "Spec amendments" do
     expect(row).to include("D6").and include("AC-7.1").and include("AC-7.3").and include("AC-8.1").and include("AC-8.4").and include("stand_in?")
   end
 
-  # The row that mentions spec 027, and its version, which must also be the spec's version line.
+  # The row that mentions spec 027, and its version, which the spec's version line must have reached (a later amendment may move it on).
   def position_editor_row(path)
     spec = File.read(File.expand_path("../../docs/specs/#{path}/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| ") && line.include?("spec 027") }
     expect(row).not_to be_nil
     version = row[/\A\| (\d+\.\d+\.\d+) \|/, 1]
-    expect(spec).to include("**Version:** #{version}")
+    expect(Gem::Version.new(spec[/\*\*Version:\*\* (\d+\.\d+\.\d+)/, 1])).to be >= Gem::Version.new(version)
     [ spec, row ]
   end
 

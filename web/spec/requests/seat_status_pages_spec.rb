@@ -67,6 +67,7 @@ RSpec.describe "The status list on the pages", type: :request do
       verified = sources.map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
       expect(sources.size).to eq(2)
       expect(verified.grep(/\Aseat_status:/).size).to eq(1)
+      expect(sources.find { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]).start_with?("seat_status:") }["channel"]).to eq("SeatStatusChannel")
       verified.grep(/\Aseat_status:/).first
     end
     other = create_game(power: "france")
@@ -92,7 +93,7 @@ RSpec.describe "The status list on the pages", type: :request do
     created.session.put path, params: { submit: "1" }
     expected = [ created.session.response.status, created.session.response.location, created.session.flash.to_h ]
 
-    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(IOError, "down")
+    allow(Turbo::StreamsChannel).to receive(:broadcast_stream_to).and_raise(IOError, "down")
     phone = open_session
     phone.get "/games/#{id}/seat-link", params: { token: england.last }
     phone.put path, params: { submit: "1" }

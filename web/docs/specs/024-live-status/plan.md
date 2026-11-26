@@ -1041,9 +1041,400 @@ One commit: "Amend spec 022 for the live status".
 - **The test adapter in system specs:** it extends the async adapter, so a second browser session receives broadcasts in the same process. If it does not, the system spec fails in Phase 10 and the plan stops there to ask.
 - **`Game#broadcast_seat_status` in a request inside the test transaction:** the call runs after the (savepoint) transaction in the same thread and the shared test connection, so the render sees the new rows.
 
+## Version 1.3.0 addendum: catch up as a phone resubscribes (Issue #105)
+
+Phases 12 to 18 are added for spec version 1.3.0. Phases 1 to 11 stand. Test first in every phase; one commit per phase; every phase leaves the whole suite green (the scan spec and the amendment spec move with the code they police, not after it).
+
+**Goal.** A subscriber is sent the current state as it subscribes or resubscribes: `SeatStatusChannel` the seven rows, `ResultsChannel` a refresh when the phase its page was drawn for has since been revealed. No JavaScript, gem, route or migration. Anything new that sends is covered by the same allowlist and byte-equality proof, and the scan lists it as the only other sender.
+
+**Gates (checked).** Simplicity: two channel classes (one per stream; a new `app/channels/` directory, no `ApplicationCable` needed, Action Cable falls back to its base connection) and four `Game` methods, nothing else new. Anti-abstraction: the channels subclass Turbo's channel and call `Game`; no shared base class (the two name patterns differ). Integration-first: Phase 12 starts with the channel spec the maintainer named.
+
+**Names used throughout (defined once, here).**
+
+```ruby
+# app/models/game.rb
+PUBLIC_ID_PATTERN = /[A-Za-z0-9]{12}/        # what Game.start! generates with SecureRandom.alphanumeric(12), which stays as it is
+def seat_status_message   ... end            # String: the one <turbo-stream action=update method=morph> message
+def results_refresh_message ... end          # String: <turbo-stream action="refresh"></turbo-stream>
+def broadcast_seat_status ... end            # unchanged contract; now sends seat_status_message
+def broadcast_results_refresh ... end        # unchanged contract; now sends results_refresh_message
+```
+All four are written as block `def ... end` (the scan cuts method bodies with `/def X.*?\n  end\n/m`, which a one-line `def x = ...` would break).
+
+### Phase 12 (added v1.3.0): `SeatStatusChannel`, the first test
+
+**Implements** D10, FR-7 (status half). **Satisfies** AC-9.1, AC-9.2 (status half), AC-4.3, AC-9.3(d) (status half). **Files:** `spec/channels/seat_status_subscription_spec.rb`, `app/channels/seat_status_channel.rb` (new), `app/models/game.rb`, `spec/models/seat_status_broadcast_spec.rb`, `spec/requests/seat_status_pages_spec.rb`, `spec/models/status_broadcast_scan_spec.rb`, `spec/docs/spec_amendments_spec.rb`.
+
+1. **Red, the named test.** The subscription spec's group becomes `RSpec.describe SeatStatusChannel, type: :channel` and gains:
+
+```ruby
+  def rows(message) = Nokogiri::HTML5.fragment(message).css("li.seat-status__row").to_h { |li| [ li["data-power"], li.at_css(".seat-status__state").text ] }
+
+  it "transmits one snapshot on subscribing, and England's row reads Submitted when England has submitted (AC-9.1)" do
+    game.seats.find_by(power: "england").save_orders!(game.current_phase, {}, submit: true)
+    subscribe(signed_stream_name: signed(:seat_status, game.public_id))
+
+    expect(subscription).to be_confirmed
+    expect(subscription).to have_stream_from("seat_status:#{game.public_id}")
+    expect(transmissions.size).to eq(1)
+    expect(rows(transmissions.first).size).to eq(7)
+    expect(rows(transmissions.first)).to include("england" => "Submitted", "france" => "Not submitted")
+  end
+
+  it "transmits one more when a client resubscribes, and all seven read Not submitted when nobody has submitted (AC-9.1)" do
+    subscribe(signed_stream_name: signed(:seat_status, game.public_id))
+    subscribe(signed_stream_name: signed(:seat_status, game.public_id))
+
+    expect(transmissions.size).to eq(2)
+    expect(rows(transmissions.last).values.uniq).to eq([ "Not submitted" ])
+  end
+```
+   Run `bundle exec rspec spec/channels/seat_status_subscription_spec.rb`: fails (`uninitialized constant SeatStatusChannel`). The three existing examples stay (confirms, rejects, hears nothing) and now describe the new class.
+2. **Builders** in `Game` (both blocks, the second replacing the current body):
+
+```ruby
+  def seat_status_message
+    html = ApplicationController.render(partial: "shared/seat_status", locals: { statuses: current_phase.seat_statuses })
+    Turbo::StreamsChannel.turbo_stream_action_tag(:update, target: "seat-status", template: html, method: :morph)
+  end
+
+  def broadcast_seat_status
+    message = seat_status_message # outside the rescue: a broken template raises everywhere (D7)
+    begin
+      Turbo::StreamsChannel.broadcast_stream_to(:seat_status, public_id, content: message)
+    rescue StandardError => error
+      Rails.logger.warn("seat status broadcast failed: #{error.class}")
+    end
+  end
+```
+   Written first, red, in `seat_status_broadcast_spec.rb`: after one flip `game.seat_status_message` equals `payloads.last` (JSON-decoded), and `Game.start!(power: "england").game.public_id` matches `/\A#{Game::PUBLIC_ID_PATTERN}\z/` (so the generator and the parser cannot drift). Add `PUBLIC_ID_PATTERN` to `Game`. The stub at `seat_status_broadcast_spec.rb:62` and the one at `seat_status_pages_spec.rb:95` change from `broadcast_update_to` to `broadcast_stream_to`.
+3. **Channel, in two steps so the rejections are red.** First a loose version that behaves like Turbo's own channel (it confirms any verified name and transmits only if a game is found):
+
+```ruby
+  def subscribed
+    return reject unless (name = verified_stream_name_from_params)
+    stream_from name.to_s
+    game = Game.find_by(public_id: name.to_s.delete_prefix("seat_status:"))
+    transmit game.seat_status_message if game
+  end
+```
+   Then the rejection examples below, every one of which fails against it on `be_rejected`; then the strict one:
+
+```ruby
+# app/channels/seat_status_channel.rb
+class SeatStatusChannel < Turbo::StreamsChannel
+  NAME = /\Aseat_status:(?<id>#{Game::PUBLIC_ID_PATTERN})\z/
+
+  def subscribed
+    name = verified_stream_name_from_params
+    match = name.is_a?(String) && NAME.match(name)
+    game = match && Game.find_by(public_id: match[:id])
+    return reject unless game
+
+    stream_from name
+    transmit game.seat_status_message
+  end
+end
+```
+   Rejection examples (AC-9.2, status half), each `be_rejected` and `transmissions` empty: unsigned, forged key, no name, `signed(game)` (the general stream), `signed(:results, id, 1)`, `signed(:seat_status, "AAAAAAAAAAAA")` (no such game), `signed(:seat_status, "#{id}:x")`, a name with a trailing newline (`Turbo.signed_stream_verifier.generate("seat_status:#{id}\n")`), and non-strings signed honestly with the app's own verifier (its serializer is JSON): `Turbo.signed_stream_verifier.generate(["seat_status:#{id}"])` and `generate({ "a" => 1 })`.
+4. **The scan and the amendment spec move now** (so the suite is green at this commit). In `status_broadcast_scan_spec.rb`: the "names the cable" example's allowed file list becomes `app/models/game.rb` plus `app/channels/seat_status_channel.rb` (compared with `match_array`: the glob sorts `app/channels` first), the `game.rb` "outside" removal also strips `seat_status_message`, and a new example says `transmit` is named (code only) once in `app/channels/seat_status_channel.rb` and nowhere else in `app/` and `lib/`; the channel file, with its `< Turbo::StreamsChannel` removed, matches neither the `cable` pattern nor `/\brender\b|\bbroadcast\w*|Submission|\bsubmissions\b|SavedOrder|saved_orders?|orders_for/`. In `spec/docs/spec_amendments_spec.rb`, line 33's assertion of spec 024's exact version is dropped (its own comment at line 9 says the version line moves on and the row stays); the 1.4.0 row assertions stay.
+
+**Verify:** `bundle exec rspec spec/channels spec/models spec/docs spec/requests/seat_status_pages_spec.rb` passes. Commit: "Catch a status subscriber up with the current seven rows" (the body says it also repairs `spec_amendments_spec.rb:33`, which is red at the start of this work because spec 024 is already at 1.3.0).
+
+### Phase 13 (added v1.3.0): the payload proof covers the catch-up
+
+**Satisfies** AC-9.3 (a), (b), (c), AC-3.1, 3.2, 3.4 extensions. **Files:** `spec/models/status_payload_secrecy_spec.rb` (becomes a channel spec).
+
+1. Red first. The group becomes `RSpec.describe "The status payload", type: :channel do` with `tests SeatStatusChannel` and `before { stub_connection }` (rspec-rails takes the channel class from `tests` when the describe is a string). `run_flips` returns `{ broadcasts:, catch_ups: }` and every existing use of its result (the `quiet` and `busy` lets and what reads them) becomes `quiet[:broadcasts]` and so on. The no-flip step does not broadcast, so there are six catch-ups and five broadcasts; (a) pairs each catch-up with the latest broadcast so far (for the first catch-up, which follows the first flip, that is the first broadcast; for the no-flip step, the one before it):
+
+```ruby
+  def catch_up(game)
+    before = transmissions.size
+    subscribe(signed_stream_name: Turbo::StreamsChannel.signed_stream_name([ :seat_status, game.public_id ]))
+    expect(subscription).to be_confirmed
+    expect(transmissions.size).to eq(before + 1) # one subscribe, one message
+    transmissions.last.to_str.tap { unsubscribe }
+  end
+```
+   `catch_up(game)` is called after each flip in `run_flips`. New examples: (a) each catch-up equals the JSON-decoded last broadcast for the same state (for a no-flip step, the previous one); (b) each passes the AC-3.1 allowlist (the existing matcher applied to the string) and the AC-3.4 word and digit rules; (c) a catch-up broadcasts nothing: `ActionCable.server.pubsub.broadcasts("seat_status:#{id}").size` is the same before and after `catch_up` (the channel test stub never touches the pubsub, so a `not_to receive` would prove nothing), and `expect(ActionCable.server).not_to receive(:broadcast)` around it; (d) the two games' `catch_ups` lists are byte-equal.
+2. **Proving the examples are not vacuous.** Two temporary mutations of the channel, each reverted, recorded in the commit message. (i) `transmit game.seat_status_message.sub("<li ", '<li data-orders="1" ')`: the allowlist and (a) examples fail while the broadcast examples stay green. (ii) `transmit game.seat_status_message.sub("<li ", %(<li data-n="#{SavedOrder.where(phase: game.current_phase).count}" ))`: this depends on the orders, so the cross-game byte-equality example (d) fails (a mutation that changes both games alike cannot).
+
+**Verify:** `bundle exec rspec spec/models/status_payload_secrecy_spec.rb spec/models/seat_status_broadcast_spec.rb`. Commit: "Prove the catch-up carries what the broadcast carries".
+
+### Phase 14 (added v1.3.0): `ResultsChannel`
+
+**Implements** D10 (results half), FR-7. **Satisfies** AC-9.2 (results half), AC-9.4, AC-9.3(d). **Files:** `spec/channels/results_subscription_spec.rb` (new), `app/channels/results_channel.rb` (new), `app/models/game.rb`, `spec/models/results_broadcast_spec.rb`, `spec/requests/reveal_post_spec.rb`, `spec/models/status_broadcast_scan_spec.rb`.
+
+1. **Red.**
+
+```ruby
+RSpec.describe ResultsChannel, type: :channel do
+  let(:game) { Game.start!(power: "england").game }
+  def signed(*streamables) = Turbo::StreamsChannel.signed_stream_name(streamables)
+  before { stub_connection }
+
+  it "streams from the game's results stream and transmits nothing for an open phase (AC-9.4)" do
+    subscribe(signed_stream_name: signed(:results, game.public_id, 1))
+
+    expect(subscription).to be_confirmed
+    expect(subscription).to have_stream_from("results:#{game.public_id}")
+    expect(transmissions).to be_empty
+  end
+
+  it "transmits the reveal's own refresh to a page drawn for a phase that has been revealed since, and nothing for the open phase (AC-9.4)" do
+    game.current_phase.reveal!
+    broadcast = JSON.parse(ActionCable.server.pubsub.broadcasts("results:#{game.public_id}").last)
+    subscribe(signed_stream_name: signed(:results, game.public_id, 1))
+
+    expect(transmissions.map(&:to_str)).to eq([ broadcast ])
+    expect(broadcast).to eq(%(<turbo-stream action="refresh"></turbo-stream>))
+    subscribe(signed_stream_name: signed(:results, game.public_id, 2))
+    expect(transmissions.size).to eq(1)
+  end
+
+  [ [ "the status name", ->(g) { [ :seat_status, g.public_id ] } ], [ "the general stream", ->(g) { [ g ] } ],
+    [ "no phase number", ->(g) { [ :results, g.public_id ] } ], [ "a leading zero", ->(g) { [ :results, g.public_id, "01" ] } ],
+    [ "zero", ->(g) { [ :results, g.public_id, 0 ] } ], [ "a suffix", ->(g) { [ :results, g.public_id, "1x" ] } ],
+    [ "two numbers", ->(g) { [ :results, g.public_id, 1, 2 ] } ], [ "a phase that does not exist", ->(g) { [ :results, g.public_id, 9 ] } ],
+    [ "a number beyond the integer range", ->(g) { [ :results, g.public_id, "99999999999999999999" ] } ],
+    [ "a game that does not exist", ->(_g) { [ :results, "AAAAAAAAAAAA", 1 ] } ] ].each do |label, name|
+    it "rejects #{label} and transmits nothing (AC-9.2)" do
+      subscribe(signed_stream_name: signed(*name.call(game)))
+      expect(subscription).to be_rejected
+      expect(transmissions).to be_empty
+    end
+  end
+  # plus, each rejected with nothing transmitted: unsigned, forged key, no name, a trailing newline, and non-strings signed with
+  # Turbo.signed_stream_verifier.generate(["results:<id>:1"]) and generate({ "a" => 1 })
+end
+```
+   Run: fails (`uninitialized constant ResultsChannel`). Build the channel first loosely (stream any verified name, parse the number with `to_i`), watch the shape examples fail, then make it strict.
+2. **Builders and channel.**
+
+```ruby
+# Game
+  def results_refresh_message
+    Turbo::StreamsChannel.turbo_stream_refresh_tag(request_id: nil)
+  end
+
+  def broadcast_results_refresh
+    Turbo::StreamsChannel.broadcast_stream_to(:results, public_id, content: results_refresh_message)
+  rescue StandardError => error
+    Rails.logger.warn("results broadcast failed: #{error.class}")
+  end
+```
+```ruby
+# app/channels/results_channel.rb
+class ResultsChannel < Turbo::StreamsChannel
+  NAME = /\Aresults:(?<id>#{Game::PUBLIC_ID_PATTERN}):(?<number>[1-9]\d*)\z/
+
+  def subscribed
+    name = verified_stream_name_from_params
+    match = name.is_a?(String) && NAME.match(name)
+    game = match && Game.find_by(public_id: match[:id])
+    phase = game && game.phases.find_by(number: match[:number].to_i)
+    return reject unless phase
+
+    stream_from "results:#{game.public_id}"
+    transmit game.results_refresh_message if phase.revealed_at
+  end
+end
+```
+3. **Existing specs that move with it:** `results_broadcast_spec.rb:58` and `reveal_post_spec.rb:146` stub `broadcast_stream_to` instead of `broadcast_refresh_to` (the expectations name the warning line they want: the status broadcast in a reveal is also stubbed and logs its own); the AC-4.1/4.2/4.4 examples of `results_broadcast_spec.rb` run unchanged and are the proof that 025's payload is untouched. **The scan** (`status_broadcast_scan_spec.rb`): the allowed files gain `app/channels/results_channel.rb`, the `game.rb` removal also strips `results_refresh_message`, `transmit` is named once in each of the two channel files, and `results_refresh_message` and `seat_status_message` are defined only in `app/models/game.rb`.
+
+**Verify:** `bundle exec rspec spec/channels spec/models spec/requests/reveal_post_spec.rb`. Commit: "Refresh a phone that slept through a reveal when it resubscribes".
+
+### Phase 15 (added v1.3.0): the pages name the channels
+
+**Satisfies** AC-4.1, AC-9.5, AC-4.5 (names verified). **Files:** `app/views/phases/_status.html.erb`, `app/views/results/_live.html.erb`, `app/views/games/show.html.erb`, `app/views/hosts/show.html.erb`, `app/views/seat_orders/show.html.erb`, `app/views/order_pickers/show.html.erb`, `spec/requests/results_stream_spec.rb`, `spec/requests/seat_status_pages_spec.rb`, `spec/requests/order_secrecy_spec.rb`, `spec/system/reveal_results_spec.rb`.
+
+1. **Red** (specs first):
+   - `results_stream_spec.rb`: the expected names at lines 25, 34 and 42 become `results:#{id}:1` (and `results:#{other.game.public_id}:1`); a new example reads each source's `channel` attribute on the four pages (`SeatStatusChannel`, `ResultsChannel`).
+   - `seat_status_pages_spec.rb`: AC-4.1's example also expects `channel="SeatStatusChannel"` on the status source.
+   - `order_secrecy_spec.rb`: lines 312 and 313 (`results:#{id}` becomes `results:#{id}:1`) and line 525 (`"results:#{id}"` becomes `"results:#{id}:2"`; that sweep already visits every viewer and every route, revealed routes included, with phase 2 open, so it is the AC-9.5 proof that no page carries a revealed phase's number) gain a check of each source's `channel` attribute; the helpers at lines 303 and 428 are unchanged.
+   - `reveal_results_spec.rb:96-106` ("still measures the refusal page"): it visits the order screen and reveals at once, so after this phase a late subscription would be sent a catch-up refresh and the page would leave. The example waits `connected(1)` before the reveal and its comment says the page has subscribed before it.
+2. **Green.**
+
+```erb
+<%# phases/_status.html.erb %>
+<%= turbo_stream_from :seat_status, game.public_id, channel: SeatStatusChannel %>
+```
+```erb
+<%# results/_live.html.erb, locals: game, phase %>
+<% turbo_refreshes_with method: :morph, scroll: :preserve %>
+<%= turbo_stream_from :results, game.public_id, phase.number, channel: ResultsChannel %>
+```
+   The four callers pass `phase: @phase` (all four hold the open phase in `@phase`; the order screen and picker redirect before rendering a revealed one).
+
+**Verify:** `bundle exec rspec spec/requests spec/system/live_status_spec.rb spec/system/reveal_results_spec.rb` passes. Commit: "Name the catch-up channels on the pages that subscribe".
+
+### Phase 16 (added v1.3.0): the scan, finished
+
+**Satisfies** AC-9.7, AC-2.7(c), AC-3.7. **Files:** `spec/models/status_broadcast_scan_spec.rb`.
+
+The allowances arrived with the code in Phases 12 and 14. This phase adds what is left: the control lines (`transmit x` and `ActionCable.server.broadcast` outside the two channel files are caught by the patterns; a `class X < Turbo::StreamsChannel` in a third file is caught by the file list), the rule that `shared/seat_status` is rendered only by `app/helpers/seat_status_helper.rb` and `app/models/game.rb`, and AC-3.7: the "keeps the status code away from saved orders" list gains the whole `seat_status_message` and `results_refresh_message` bodies and both channel files. Red by adding a throwaway `transmit "x"` to `app/models/seat.rb` and a `render "shared/seat_status"` to a view, seeing the scan fail, and removing both.
+
+**Verify:** `bundle exec rspec spec/models/status_broadcast_scan_spec.rb`. Commit: "Finish the scan that names the channels as the only other senders".
+
+### Phase 17 (added v1.3.0): a disconnected phone catches up (system spec)
+
+**Satisfies** AC-9.6. **Files:** `spec/system/catch_up_spec.rb` (new).
+
+AC-9.6's "two sessions" are read as England's browser (the page under test) and the server side that changes the state while it is cut off: France's submit goes through the same `Seat#save_orders!` whose broadcast the page would have received, and the reveal goes through a second Capybara session on the host's own confirmation page, as `reveal_results_spec#host_reveals` does.
+
+1. **Red first.** Write the examples below. Because Phases 12 to 15 already exist, the red is made by a temporary revert, described after the code.
+
+```ruby
+require "rails_helper"
+require_relative "../support/results_fixtures"
+
+RSpec.describe "Catching up after a disconnect", type: :system do
+  include ResultsFixtures
+
+  let(:started) { Game.start!(power: "germany") }
+  let(:game) { started.game }
+  let(:id) { game.public_id }
+  let!(:england) { game.take_seat!("england") }          # [seat, token]
+  let!(:france) { game.take_seat!("france").first }
+
+  before { england.first.save_orders!(game.current_phase, { "lon" => json_of(move(:england, :lon, :nth)) }, submit: true) }
+
+  def state_of(power) = find("#seat-status [data-power='#{power}'] .seat-status__state").text
+
+  # Closes or reopens the page's Action Cable consumer from the test alone: no hook is added to app/javascript.
+  def socket(action)
+    page.evaluate_async_script(<<~JS, action)
+      const [action, done] = [arguments[0], arguments[arguments.length - 1]]
+      import("@hotwired/turbo-rails").then(({ cable }) => cable.getConsumer()).then((consumer) => { consumer[action](); done(true) })
+    JS
+  end
+
+  # Counts the stream messages this page has rendered, so "nothing arrived" and "a snapshot arrived and changed nothing" differ.
+  # (it wraps the render, so the count goes up after the message has been applied, not before)
+  def count_renders
+    execute_script(<<~JS)
+      window.renders = 0
+      document.addEventListener("turbo:before-stream-render", (event) => {
+        const render = event.detail.render
+        event.detail.render = async (element) => { await render(element); window.renders++ }
+      })
+    JS
+  end
+  def renders = evaluate_script("window.renders")
+
+  def open_seat_page
+    visit "/games/#{id}/seat-link?token=#{england.last}"
+    expect(page).to have_css("turbo-cable-stream-source[connected]", count: 2, visible: :all, wait: 5)
+    count_renders
+  end
+
+  def disconnect
+    socket("disconnect")
+    expect(page).to have_no_css("turbo-cable-stream-source[connected]", visible: :all)
+  end
+
+  def host_reveals
+    Capybara.using_session(:revealer) do
+      with_viewport(360) do
+        visit "/games/#{id}/host-link?token=#{started.host_token}"
+        click_on "Reveal orders"
+        click_button "Reveal orders"
+        expect(page).to have_css(".banner--info", text: "was revealed")
+      end
+    end
+  end
+
+  it "shows a seat page what changed while its socket was closed, without a reload (AC-9.6)" do
+    with_viewport(360) do
+      open_seat_page
+      disconnect
+      france.save_orders!(game.current_phase, {}, submit: true) # broadcast now: this page is not listening
+
+      expect(state_of("france")).to eq("Not submitted")
+      expect(renders).to eq(0)
+      socket("connect")
+      expect(page).to have_css("#seat-status [data-power='france'] .seat-status__state", text: "Submitted", wait: 5)
+      expect(renders).to be >= 1
+    end
+  end
+
+  it "sends a snapshot on reconnecting that changes nothing when nothing was missed (AC-9.6)" do
+    france.save_orders!(game.current_phase, {}, submit: true)
+    with_viewport(360) do
+      open_seat_page
+      before = evaluate_script("document.getElementById('seat-status').outerHTML")
+      disconnect
+      socket("connect")
+
+      page.document.synchronize(10) { raise Capybara::ExpectationNotMet, "no snapshot rendered" unless renders >= 1 } # the counter is the proof it arrived
+      expect(evaluate_script("document.getElementById('seat-status').outerHTML")).to eq(before)
+      expect(state_of("france")).to eq("Submitted")
+    end
+  end
+
+  it "redraws a page for the next phase, with the results, when the reveal happened while its socket was closed (AC-9.6, spec 025)" do
+    with_viewport(360) do
+      open_seat_page
+      first_title = find(".phase-header__title").text
+      disconnect
+      host_reveals
+
+      expect(find(".phase-header__title").text).to eq(first_title) # still the old page: it was not listening
+      socket("connect")
+      expect(page).to have_css(".phase-header__title", text: /fall 1901/i, wait: 10)
+      expect(page).to have_css("section[data-results] .result-row", text: "Move to North Sea (NTH)")
+    end
+  end
+end
+```
+   The results section's exact selector and the next phase's title text are read from `app/views/results/_section.html.erb` and `Phase#title` when the file is written, and the examples use whatever those render (the header is upper-cased by CSS, so the comparison is case-insensitive).
+   **The red:** temporarily revert `channel:` to the default in the two views (not committed), run the three examples: the first and third fail (the page is not caught up) and the second fails (`renders` stays 0 and the wait raises); restore the views.
+2. **Green** with the Phase 15 pages in place. If `import("@hotwired/turbo-rails")` does not work through WebDriver's script call, inject a module script from the test, `<script type="module">import { cable } from "@hotwired/turbo-rails"; window.__cable = cable</script>`, and wait for `window.__cable`: the same module instance, test-only, no change to `app/javascript`, so the AC stands. I do not fall back to removing the elements.
+
+**Verify:** `bundle exec rspec spec/system/catch_up_spec.rb spec/system/live_status_spec.rb spec/system/reveal_results_spec.rb`, run three times to look for flakes. Commit: "Show a disconnected phone catching up".
+
+### Phase 18 (added v1.3.0): documents and the close
+
+**Satisfies** AC-9.8. **Files:** `README.md`, `docs/specs/024-live-status/plan.md` (this addendum), `spec/docs/spec_amendments_spec.rb`.
+
+1. README "Live updates": the sentence "A phone that was asleep or offline shows the old page until it is touched or reloaded." (and the sibling sentence about the status list, if it says the same) becomes: a phone that wakes or reconnects is sent the current list, and a refresh if a reveal happened, as it resubscribes; and the three limits (pages with no stream source, a refresh Turbo drops mid-navigation, the millisecond window between the snapshot's read and the stream going live).
+2. `spec/docs/spec_amendments_spec.rb` gains, red first (the rows exist but the README line does not): spec 025's `| 1.1.0 |` row includes "spec 024", "ResultsChannel" and "AC-9.4"; spec 024's `| 1.3.0 |` row includes "SeatStatusChannel", "ResultsChannel" and "#105"; the README names the catch-up. The route table is unchanged: AC-9.8's "no route added" is proved by the existing classification examples (`order_secrecy_spec.rb:32` and `:48`), which stay green.
+3. Copy this addendum into `plan.md` before the "Done-when map", extend the map and the coverage table with the rows below, and add the Plan changelog row 1.3.0.
+4. Full proof, from `web/`: `bundle exec rspec`, `bin/rubocop`, `bin/brakeman`, `wc -c app/assets/stylesheets/*.css` (unchanged), `git diff --name-only main...HEAD` (only `web/`).
+
+Commit: "Record the catch-up in the README and the plan".
+
+**Done-when map (Issue #105)**
+
+| Issue item | Where it is proved |
+|---|---|
+| A subscriber gets the current snapshot as it subscribes or resubscribes | Phase 12 (channel spec, AC-9.1), Phase 14 (results), Phase 17 (system) |
+| The snapshot carries exactly what #24's broadcasts carry, covered by #24's payload proof | Phase 12 (one builder), Phase 13 (allowlist, byte equality, words), Phases 12, 14, 16 (scan) |
+| A system spec shows a disconnected session catching up | Phase 17 |
+
+**Spec coverage (1.3.0):** D10 and FR-7: 12, 14, 15. AC-9.1: 12. AC-9.2: 12, 14. AC-9.3: 12, 13. AC-9.4: 14. AC-9.5: 15. AC-9.6: 17. AC-9.7: 12, 14, 16. AC-9.8: 12 to 16, 18. AC-2.7, 3.1, 3.2, 3.4, 3.7: 13, 16. AC-4.1, 4.3: 12, 15.
+
+**Risks (1.3.0).**
+- *The system spec's socket control* (`import("@hotwired/turbo-rails")`, `cable.getConsumer()`, `consumer.disconnect()/connect()`) was traced by the plan review against turbo.min.js and Action Cable's `Consumer`; Phase 17's first run is the proof. After the catch-up refresh Turbo's morph removes the `connected` attribute from the status source (the server HTML does not carry it) and the status source, whose name did not change, does not resubscribe; the results source's name changes (`:1` to `:2`) so it resubscribes, and a later reconnect does not replay the old phase's refresh. The reveal example waits for the new page, not for `connected`.
+- *`turbo_stream_action_tag` and `turbo_stream_refresh_tag`* are public on `Turbo::StreamsChannel` (read in turbo-rails 2.0.23 and in the plan review); Phase 12's builder-equals-broadcast example fails loudly if the bytes ever differ from what `broadcast_update_to` sent.
+- *Channel code reads the database in a system spec for the first time* (`Game.find_by` on an Action Cable worker thread, against the one shared SQLite connection the system specs pin). It should work (the pool shares the connection under a lock); Phase 17's three repeated runs are the proof, and a hang or a locked database stops the work and goes to `ask`.
+- *Stubs of `broadcast_stream_to`* also reach the status broadcast in a reveal; the expectations name the warning line they want.
+- *A late subscription after a reveal now sends a refresh* (the race the catch-up closes): any system spec that reveals right after a visit without waiting for the stream could see it; Phase 15 fixes the one that does (`reveal_results_spec.rb:96-106`), and the other system specs run in Phase 15's verify.
+- *Merges with #27 and #29:* #29 edits `results/_section`, removes the practice note and also adds a spec 025 1.1.0 changelog row (whichever merges second takes the next version); #27 touches the host page. Phase 15 edits one line of `hosts/show.html.erb` and Phase 17 reads `results/_section`'s selector. When `main` moves, merge it keeping both sides.
+- *Added cost:* each subscribe renders seven rows and runs two queries.
+
+**As built (deviations from the plan above, none changing a requirement).**
+- Spec 024's amendment is **1.3.0**, not 1.2.0 (#27 merged first and took 1.2.0), and its row reads "Amended for Issue #105"; spec 025's row for this work is **1.2.0**, not 1.1.0: #29 (spec 029) merged first and took 1.1.0. The merge kept both rows; the plan and spec 024 say 1.2.0 where they name it.
+- `spec/docs/spec_amendments_spec.rb`'s `amendment_row` helper (spec 029's) required a spec's version line to equal its spec-029 row's version; it now requires the version line to have reached it, which its own comment already intended.
+- The cross-game byte-equality assertion (D) shares one example with the broadcast pairing, so the second mutation of Phase 13 is caught by both assertions of that example at once; the first is caught by the allowlist, the word rules and the pairing.
+- The scan spec's list of channel files is a local variable of the describe block (not a constant), and the "renders the partial" and "defines the two messages" rules are two small examples of their own.
+- Phase 18's red was shown by restoring the old README for one run of the amendment spec, since the spec and the README line were written together.
+
+
 ## Changelog
 
 | Version | Change |
 |---------|--------|
+| 1.3.0 | Phases 12 to 18 added for spec 024 1.3.0 (Issue #105): the catch-up channels, with the Opus plan review's two rounds taken and the as-built deviations listed after Phase 18 |
 | 1.1.0 | After the Opus review. Blocking: the Phase 5 scan now reads code only and a narrower pattern, so comments may use the word "broadcast"; the Phase 6 sweep rewrite lists only the four viewer and page pairs that get a status list. Non-blocking, all taken: heading checks that really compare text; the status block placed after "Keep this page" on the seat page; a fresh `ActionCable::Server::Configuration` in the origin spec; the production line names the variable literally; waits for `turbo-cable-stream-source[connected]` and `have_css` with a wait in the system specs; a stale-seat copy and `clear_messages(stream)` in the AC-2.6 example; the AC-3.4 check of the game ids; the AC-2.7(a), AC-4.5, AC-4.6, AC-5.4 and AC-1.1 examples added; `var(--weight-strong)`; a space between a row's two spans (spec 1.0.1); README checks tied to the new section; the already-true #105 test dropped |
 | 1.0.0 | First draft |

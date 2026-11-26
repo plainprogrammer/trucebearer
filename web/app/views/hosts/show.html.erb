@@ -3,7 +3,7 @@
 <div class="stack">
   <h1>Your game</h1>
   <%= render "phases/header", phase: @phase %>
-  <%= render "results/live", game: @game %>
+  <%= render "results/live", game: @game, phase: @phase %>
   <%= render "results/section", results: @results, kind: :host, game: @game, earlier: @earlier, banners: true, skip: false if @results %>
 
   <% if @host_token %>
