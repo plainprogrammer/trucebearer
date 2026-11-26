@@ -67,6 +67,7 @@ RSpec.describe "The status list on the pages", type: :request do
       verified = sources.map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
       expect(sources.size).to eq(2)
       expect(verified.grep(/\Aseat_status:/).size).to eq(1)
+      expect(sources.find { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]).start_with?("seat_status:") }["channel"]).to eq("SeatStatusChannel")
       verified.grep(/\Aseat_status:/).first
     end
     other = create_game(power: "france")

@@ -309,8 +309,8 @@ RSpec.describe "Order secrecy", type: :request do
       in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.match?(/seat_status|results:/) }
       expect(in_headers).to be_empty
 
-      both = [ "results:#{id}", "seat_status:#{id}" ]
-      results_only = [ "results:#{id}" ]
+      both = [ "results:#{id}:1", "seat_status:#{id}" ]
+      results_only = [ "results:#{id}:1" ]
       # The seat page holds both names, a seat's own order screen and picker the results name only, the host page both. The host (Germany) has
       # no unit in LON or PAR, so both of its pickers are its stranger page; France's PAR picker is the one picker that carries a name.
       # A stepped-in screen carries none, and a stranger's page none.
@@ -325,6 +325,10 @@ RSpec.describe "Order secrecy", type: :request do
         [ "the host, with France's seat cookie", "GET /games/:public_id/host", both ],
         [ "the host, stepped into France", "GET /games/:public_id/host", both ]
       ])
+      # Each name is carried by its own channel class (spec 024 D10, AC-9.5).
+      sources = shot.values.flat_map(&:values).flat_map { |_status, body| Nokogiri::HTML5(body).css("turbo-cable-stream-source").to_a }
+      expect(sources.map { |source| [ Turbo.signed_stream_verifier.verified(source["signed-stream-name"]).split(":").first, source["channel"] ] }.uniq)
+        .to contain_exactly([ "results", "ResultsChannel" ], [ "seat_status", "SeatStatusChannel" ])
     end
 
     it "never carries England's orders, its labels or its count in a reply to anyone else, a refusal included (AC-7.3)" do
@@ -522,7 +526,7 @@ RSpec.describe "Order secrecy", type: :request do
         expect(stranger_pages.grep(/result-row|outcome-tag/)).to be_empty
         expect(carrying.map(&:last).uniq - allowed).to be_empty
         expect(carrying.select { |viewer, _| viewer == "a stranger" }).to be_empty
-        expect(shot.values.flat_map(&:values).flat_map { |_status, body| stream_names(body) }.uniq).to contain_exactly("seat_status:#{id}", "results:#{id}")
+        expect(shot.values.flat_map(&:values).flat_map { |_status, body| stream_names(body) }.uniq).to contain_exactly("seat_status:#{id}", "results:#{id}:2") # phase 2 is open: no page carries a revealed phase's number (spec 024 AC-9.5)
       end
     end
 
