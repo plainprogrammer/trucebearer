@@ -68,4 +68,9 @@ RSpec.describe "Forgery protection", type: :request do
     hold = JSON.generate({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" })
     post_without_token "/games/#{id}/phases/1/orders", verb: :put, orders: { lon: hold }, submit: "1"
   end
+
+  it "refuses a reveal without a token, and the phase stays open (spec 022 NFR security)" do
+    post_without_token "/games/#{id}/host/phases/1/reveal"
+    expect(game.current_phase.number).to eq(1)
+  end
 end

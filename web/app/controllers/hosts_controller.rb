@@ -6,6 +6,7 @@ class HostsController < ApplicationController
     @seats = @game.seats.index_by(&:power)
     @phase = @game.current_phase
     @history = @game.history.to_a
+    @dislodged = @history.last&.adjudication&.position&.dislodged_units || []
     no_store if @host_token # the one page that shows the host link, once (spec D6)
   end
 end

@@ -29,6 +29,7 @@ Rails.application.routes.draw do
     get "phases/:number/orders", to: "seat_orders#show", as: :game_seat_orders, constraints: { number: %r{[^/]+} }
     put "phases/:number/orders", to: "seat_orders#update", constraints: { number: %r{[^/]+} }
     get "host/phases/:number/reveal", to: "reveals#show", as: :game_reveal, constraints: { number: %r{[^/]+} }
+    post "host/phases/:number/reveal", to: "reveals#create", as: nil, constraints: { number: %r{[^/]+} }
   end
 
   get "join", to: "joins#index", as: :join

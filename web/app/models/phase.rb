@@ -17,6 +17,31 @@ class Phase < ApplicationRecord
 
   def open? = revealed_at.nil?
 
+  Reveal = Data.define(:status) # :revealed, or :already when an earlier request did it
+
+  # The reveal (spec 022 FR-7, D8). The transaction's first statement is the lock; whoever gets it second finds the phase
+  # revealed and changes nothing. In one step: adjudicate the stored orders of every seat through RulesEngine, store the
+  # outcomes with the revealed time, and open the next phase. Any error rolls all of it back. Callers rescue
+  # RulesEngine::InvalidInput.
+  def reveal!
+    status = transaction do
+      lock!
+      next :already unless open?
+
+      orders = SavedOrder.joins(:seat).where(phase_id: id).order("seats.power", :province).map(&:content)
+      result = RulesEngine.adjudicate(position, orders)
+      upcoming = RulesEngine.next_movement_position(result.position)
+      # A backstop: with the lock held this changes exactly one row. If it ever does not, the lock failed, so it is loud.
+      changed = Phase.where(id: id, revealed_at: nil).update_all(adjudication: result, revealed_at: Time.current)
+      raise Conflict unless changed == 1
+
+      game.phases.create!(number: number + 1, position: upcoming)
+      :revealed
+    end
+    reload
+    Reveal.new(status: status)
+  end
+
   # "Spring 1901 · Movement". Capitals are drawn by the stylesheet.
   def title = "#{position.season.to_s.capitalize} #{position.year} · #{position.phase.to_s.capitalize}"
 

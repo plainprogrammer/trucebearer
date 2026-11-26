@@ -27,6 +27,21 @@ module RulesEngine
 
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
 
+    # The playtest's own rule for the phase that follows a reveal (spec 022 D3). It is not part of the stand-in: it stays
+    # after #29 until 1.0 uses what gem 0.3.0 works out. Dislodged units leave the board, standoffs are cleared, and
+    # ownership is kept. Spring becomes fall of the same year, and fall becomes spring of the next. The position must be the
+    # retreat position an adjudication returns. The message names no order.
+    def next_movement_position(position)
+      unless position.is_a?(TA::Position) && position.phase == :retreat
+        phase = position.respond_to?(:phase) ? position.phase.inspect : "none"
+        raise InvalidInput, "the next phase is built from a retreat position, got #{position.class} with phase #{phase}"
+      end
+
+      season, year = position.season == :spring ? [ :fall, position.year ] : [ :spring, position.year + 1 ]
+      TA::Position.new(map: position.map, season: season, year: year, phase: :movement, units: position.units,
+                       ownership: position.ownership, dislodged_units: [], standoffs: [])
+    end
+
     def legal_orders(position, unit) = TA.legal_orders(position, unit)
 
     # Each loader takes an object of its kind (returned as it is), a string-keyed hash (rebuilt with
