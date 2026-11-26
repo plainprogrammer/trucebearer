@@ -1,7 +1,7 @@
 # Feature 012: List the legal orders for a unit
 
 **Status:** Draft
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #12
@@ -15,6 +15,7 @@
 |---------|------|--------|
 | 1.0.0 | 2026-11-25 | Initial draft |
 | 1.1.0 | 2026-11-25 | Folded in the Gate A review (round 1, changes required, three blocking):<br>• AC-5.3 needs two split-coast positions, since a position can't hold two units in one province.<br>• The performance bound no longer claims to catch a fall back to filtering; a same-example relative guard (B at least 10 times faster than A) does, next to coarse ceilings. A mid-game target is added, and the stress position is named.<br>• "No rule written twice" is reworded: the generator may only drop candidates by the four listed narrowings, and every kept order is decided by `Check.reason_for`.<br>• Fixed-seed random boards join the agreement spec; AC-3.7, AC-4.2, AC-3.8, AC-1.3 and AC-7.5 are made literal |
+| 1.1.1 | 2026-11-25 | Gate A round 2 (approve, nothing blocking): AC-6.3 compares sets; AC-7.5 holds the literal lists; the mid-game board is named and AC-5.2 requires a 34-unit board with sea fleets; the running-time estimate is no longer promised |
 
 ## Problem Statement
 
@@ -77,7 +78,7 @@ Both A and B gave the same lists as each other on both positions (238 and 5,160 
 | Position | Target for all its units | Measured |
 |---|---|---|
 | The starting position, 22 units (no fleet at sea, so no convoy work) | under 100 ms | 18 ms |
-| A mid-game board of 34 units with several fleets at sea | under 250 ms | 44 to 136 ms on random boards (2 to 13 fleets at sea; the 13-fleet boards were the slower ones) |
+| The mid-game board: the 34-unit random board of AC-5.2 with several fleets at sea | under 250 ms | 44 to 136 ms on random boards (2 to 13 fleets at sea; the 13-fleet boards were the slower ones) |
 | The stress position, 39 units | under 1 s | 644 ms |
 
 **The stress position:** a fleet in each of the 19 sea provinces and an army in each of the first 20 coastal provinces by identifier, with the seven powers dealt in turn in identifier order. It is the worst case the rules allow for convoy work and is not a board a game reaches.
@@ -167,7 +168,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-5.1** Given each sampled position, and each unit in it When it is listed Then every order in the list passes `TA.check` (`legal: true`)
-- [ ] **AC-5.2** Given each sampled position and each unit in it When every order of the unit's whole candidate space (see Definitions: not only the narrowed candidates) is checked Then every order that passes `TA.check` is in the list. Together with AC-5.1 the list equals the set of passing orders. Besides the positions of AC-5.3, this runs on six random boards built from fixed seeds (5 to 34 units, with fleets in seas and on coasts, split coasts included), so a narrowing that is too tight can't hide in positions picked by hand
+- [ ] **AC-5.2** Given each sampled position and each unit in it When every order of the unit's whole candidate space (see Definitions: not only the narrowed candidates) is checked Then every order that passes `TA.check` is in the list. Together with AC-5.1 the list equals the set of passing orders. Besides the positions of AC-5.3, this runs on six random boards built from fixed seeds (5 to 34 units, with fleets in seas and on coasts, split coasts included), so a narrowing that is too tight can't hide in positions picked by hand. At least one board has 34 units with several fleets at sea, so the chain parts of N1 and N4 are exercised beyond the stress position; the plan names the seeds and the builder, and that board is the mid-game board of "Performance target"
 - [ ] **AC-5.3** Given the sampled positions Then they include at least:
   - the starting position (22 units);
   - two positions that between them put a fleet on each of the six split coasts, each with neighboring units (a position holds at most one unit per province): fleets on `bul/ec`, `spa/nc` and `stp/nc` in one, and on `bul/sc`, `spa/sc` and `stp/sc` in the other;
@@ -175,7 +176,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
   - the stress position defined under "Performance target";
   - a retreat-phase position and an adjustment-phase position, where both sides of the agreement are empty (`TA.check` gives `:wrong_phase` for every order)
 - [ ] **AC-5.4** Given a unit that is not on the board Then its list is `[]` (AC-2.2). The agreement promise is for a unit that is on the board: `TA.check` judges an order by the unit the position holds in the province, so it may accept orders for a unit that differs from the argument, and Story 5 therefore samples only units the position holds
-- [ ] **AC-5.5** (review) Given the agreement spec's running time Then it is stated in the pull request. If the spec takes more than about 10 seconds it is tagged `:slow` and CI runs it, as `rspec` with no filter does; none of the specs is excluded from CI. The candidate space costs about 1 s per 22 units, so the sampled positions and the six random boards are expected to take under 10 s together and no tag is expected
+- [ ] **AC-5.5** (review) Given the agreement spec's running time Then it is stated in the pull request. If the spec takes more than about 10 seconds it is tagged `:slow` and CI runs it, as `rspec` with no filter does; none of the specs is excluded from CI. The candidate space costs about 1 s per 22 units, so the sampled positions and the six random boards may take about 10 s together; the plan measures it and tags the spec `:slow` if it is clearly over
 
 ### Story 6: Fast enough for every page
 
@@ -187,7 +188,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-6.1** Given the starting position When `TA.legal_orders` is called for each of its 22 units Then the total time is under 1,000 ms (target: under 100 ms), measured with `Process.clock_gettime(Process::CLOCK_MONOTONIC)`, after one warm-up call that is not timed
 - [ ] **AC-6.2** Given the stress position (39 units) When every unit is listed Then the total time is under 5,000 ms
-- [ ] **AC-6.3** Given the starting position When, in the same example, the 22 units are listed by approach A (every candidate of the whole candidate space through `TA.check`) and by `TA.legal_orders` Then A takes at least 10 times as long, and both give the same lists
+- [ ] **AC-6.3** Given the starting position When, in the same example, the 22 units are listed by approach A (every candidate of the whole candidate space through `TA.check`) and by `TA.legal_orders` Then A takes at least 10 times as long, and both give the same set of orders (A's result sorted into list order first)
 - [ ] **AC-6.4** (review) Given the generator Then it reuses `Reach` for adjacency and chains and asks `Check.reason_for` about every order it lists; the only conditions it applies itself are N1 to N4, and it drops a candidate by no other test. If a helper of #11 needs a small change to be reusable it is made in this pull request and #11's specs pass unchanged. The implementation review reads the diff for any other test
 - [ ] **AC-6.5** (review) Given the pull request description Then it records the measured times of every row of the table in "Performance target" and of approach A, from the machine the author used, and says which numbers are targets and which are bounds
 
@@ -203,7 +204,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-7.2** (review) Given `interface_examples_spec.rb` Then its header comment no longer lists `TA.legal_orders` as excluded, and says where the examples run now
 - [ ] **AC-7.3** (review) Given `adjudicator/CHANGELOG.md` Then "Unreleased → Added" has an entry for `TA.legal_orders`, citing #12, and the #11 entry's remark that the helpers are for #12 stays true
 - [ ] **AC-7.4** (review) Given the pull request Then `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is unchanged
-- [ ] **AC-7.5** Given the gem is loaded Then `TA::LegalOrders` raises `NameError` (the generator is `private_constant`), and `TA.singleton_methods(false)` and `TA.constants` equal these exact lists, which are the lists at the start of this feature plus `:legal_orders` (the plan reads the current lists and writes them into the spec)
+- [ ] **AC-7.5** Given the gem is loaded Then `TA::LegalOrders` raises `NameError` (the generator is `private_constant`), and `TA.singleton_methods(false)` and `TA.constants` equal these exact lists, compared without regard to order: `singleton_methods(false)` is `[:check, :legal_orders]` and `constants` is `[:CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map, :Order, :Position, :Unit, :VERSION]` (these are the lists today, plus `:legal_orders`)
 
 ## Functional Requirements
 
@@ -274,5 +275,5 @@ None blocking. These are decisions made in this spec, put to the maintainer at G
 
 1. **Malformed arguments raise.** The contract says the list is empty for a non-movement position or a unit not on the board, but does not say what a non-`Position` or non-`Unit` argument does. This spec has it raise `TA::InvalidInput`, as `TA.check` does for its own arguments and as `## Errors` says ("raised for … a bad hash … an impossible value object"). No contract line is contradicted.
 2. **Approach B over A and C** (see "How the list is generated"). If the maintainer prefers A's simplicity and accepts about a second per page, it is a small change to the generator, and every other criterion stays except AC-6.3 and the targets.
-3. **Agreement spec untagged.** About 1 s per 22 units over the whole candidate space, expected under 10 s for all samples and the six random boards, so it runs with the ordinary suite and in CI (which runs `bundle exec rspec` with no filter). It is tagged `:slow` only if it grows past about 10 s, and the tag excludes nothing from CI.
+3. **Agreement spec untagged.** About 1 s per 22 units over the whole candidate space, roughly 10 s for all samples and the six random boards, so it runs with the ordinary suite and in CI (which runs `bundle exec rspec` with no filter). It is tagged `:slow` only if it grows past about 10 s, and the tag excludes nothing from CI.
 4. **No contradiction found** between the list-order rules, the "When each order type is legal" section and `check`. The contract's `ln` example (`yor` the only destination reachable both by land and by convoy) agrees with `check`, and prototype runs of both approaches gave identical lists on the starting and stress positions and, in the review, on 40 random boards.
