@@ -18,6 +18,14 @@ class GamesController < ApplicationController
     redirect_to game_host_path(started.game.public_id)
   end
 
+  def show
+    @game = find_game
+    @seat = @game && seat_of(@game)
+    return stranger!(@game) unless @seat
+
+    @host = host?(@game)
+  end
+
   private
 
   def require_passphrase_set
