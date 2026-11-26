@@ -25,6 +25,14 @@ module RulesEngine
     # Whether an identifier names a province of the map. The one place a province list is read for the app (spec 022 AC-2.5).
     def province?(id) = province_ids.include?(id.to_s)
 
+    # The full name of a province ("Liverpool"), for labels (spec 023 FR-3).
+    def province_name(id) = TA::Map.classic.province(id.to_sym).name
+
+    # Whether an army could walk between two provinces. It says a plain move of an army "needs a convoy" (spec 023 D3).
+    def army_adjacent?(from, to)
+      TA::Map.classic.adjacent?(:army, TA::Location.new(province: from.to_sym), TA::Location.new(province: to.to_sym))
+    end
+
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
 
     # The playtest's own rule for the phase that follows a reveal (spec 022 D3). It is not part of the stand-in: it stays
