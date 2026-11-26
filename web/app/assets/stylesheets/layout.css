@@ -19,8 +19,8 @@
 
   .app-header {
     padding-top: env(safe-area-inset-top, 0px);
-    background: var(--color-surface);
-    border-bottom: var(--border-width) solid var(--color-border);
+    background: var(--color-ice);
+    border-bottom: var(--border-width) solid var(--color-steel);
   }
 
   .app-header__name {

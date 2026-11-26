@@ -54,6 +54,8 @@ A mobile-first base stylesheet (tokens, layout, buttons, lists, form controls, p
 
 ### The palette (derived once, recorded here)
 
+> **Superseded by spec 2.0.0.** These colors were derived by a method in version 1.2.1. They are replaced by fixed values; see "The palette, final" in the version 2.0 phases below.
+
 No edition of the game was consulted. Hue start 17 degrees, step 51.43 degrees, saturation 60 percent. Lightness is the highest whole percent, at most 50, at which white text reaches at least 4.7 on the fill. Contrast is computed with the WCAG 2.2 formula and shown rounded down.
 
 | Power | Nominal hue | Lightness | Hex | Hue of the hex | White on it | On `page` | On `surface` |

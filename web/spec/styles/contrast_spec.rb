@@ -6,11 +6,26 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
 
   documented_pairs = Contrast::DOCUMENTED_PAIRS
 
+  # Each pair is held once, at its higher minimum: a power color on surface is both the tag's
+  # initial (4.5) and a unit's or badge's edge (3).
   power_pairs = powers.flat_map do |id|
-    [ [ "on-power", "power-#{id}", 4.5 ], [ "power-#{id}", "page", 3.0 ], [ "power-#{id}", "surface", 3.0 ] ]
+    [ [ "on-power", "power-#{id}", 4.5 ], [ "power-#{id}", "surface", 4.5 ],
+      [ "power-#{id}", "page", 3.0 ], [ "power-#{id}", "ice-pale", 3.0 ] ]
   end
 
   pairs = documented_pairs + power_pairs
+
+  # The Cold War palette (decisions 41 and 42). Held exactly: nobody tunes a value by eye (AC-2.10).
+  palette = {
+    "page" => "#eef3f6", "surface" => "#ffffff", "ice" => "#a7c4d4", "ice-pale" => "#dde8ee", "steel" => "#4f7a93",
+    "text" => "#22262b", "text-muted" => "#4a5560", "border" => "#65727e",
+    "link" => "#2c5873", "link-visited" => "#5b3a7a",
+    "primary" => "#3d6178", "primary-pressed" => "#2b4657", "on-primary" => "#ffffff",
+    "danger" => "#9e2a22", "danger-pressed" => "#7a1f19", "on-danger" => "#ffffff",
+    "focus" => "#a8480a", "disabled-text" => "#56606a", "disabled-fill" => "#d3dce2", "on-power" => "#ffffff",
+    "power-austria" => "#586f2a", "power-england" => "#822635", "power-france" => "#744983",
+    "power-germany" => "#196666", "power-italy" => "#866713", "power-russia" => "#994324", "power-turkey" => "#324e8f"
+  }.transform_keys { |name| "--color-#{name}" }.freeze
 
   let(:colors) { Stylesheets.color_tokens }
 
@@ -31,6 +46,26 @@ RSpec.describe "Palette contrast (WCAG 2.2)" do
 
   it "meets the minimum ratio for every documented pair (AC-2.1, AC-2.2)" do
     expect(Contrast.failures(colors, pairs)).to be_empty
+  end
+
+  it "holds every palette and power value exactly as the spec writes it (AC-2.10)" do
+    expect(colors).to eq(palette)
+  end
+
+  it "keeps on-power white, the white the artwork's marks are drawn in (AC-2.10)" do
+    expect(colors["--color-on-power"]).to eq("#ffffff")
+  end
+
+  it "reads --color-ice only as a background (AC-2.9)" do
+    Stylesheets.files.each do |file|
+      misuse = Stylesheets.ice_uses(Stylesheets.read(file)).reject { |prop, _| %w[background background-color].include?(prop) }
+      expect(misuse).to be_empty, "#{File.basename(file)} reads --color-ice in #{misuse.map(&:join).join(', ')}"
+    end
+  end
+
+  it "finds a misuse of --color-ice when there is one (the check itself)" do
+    expect(Stylesheets.ice_uses("a { color: var(--color-ice); }")).to eq([ [ "color", 1 ] ])
+    expect(Stylesheets.ice_uses("a { background: var(--color-ice-pale); }")).to be_empty
   end
 
   it "has exactly one power color for each power (AC-4.1)" do

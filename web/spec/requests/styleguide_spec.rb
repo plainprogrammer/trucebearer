@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text]
-  # The documented pairs other than the power pairs (spec FR-3): 25 of them.
+  # The documented pairs other than the power pairs (spec FR-3): 31 of them.
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
   def flag = Rails.configuration.x.styleguide

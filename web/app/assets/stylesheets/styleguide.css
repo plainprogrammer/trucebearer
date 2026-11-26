@@ -38,6 +38,9 @@
 
   .sg-bg-page { background: var(--color-page); }
   .sg-bg-surface { background: var(--color-surface); }
+  .sg-bg-ice { background: var(--color-ice); }
+  .sg-bg-ice-pale { background: var(--color-ice-pale); }
+  .sg-bg-steel { background: var(--color-steel); }
   .sg-bg-text { background: var(--color-text); }
   .sg-bg-text-muted { background: var(--color-text-muted); }
   .sg-bg-border { background: var(--color-border); }

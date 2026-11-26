@@ -5,47 +5,54 @@
  * Every color has a documented pair in spec/styles/contrast_spec.rb, which
  * computes each ratio from this file on every run.
  *
- * Power colors: an even spread of seven hues around the HSL wheel from 17
- * degrees, assigned in alphabetical order, at 60 percent saturation. See
- * web/docs/specs/020-base-stylesheet/plan.md for the derivation.
+ * The palette is the Cold War palette of the logo, and the seven power colors
+ * are fixed values the maintainer chose (decisions 41 and 42). The contrast
+ * spec holds them exactly; do not adjust one by eye. See
+ * web/docs/design-system.md.
  */
 :root {
-  /* Neutrals: warm paper page, cool ink text */
-  --color-page: #f6f3ec;
+  /* Ground: pale blue paper, white surfaces, the Ice tints and the decorative Steel */
+  --color-page: #eef3f6;
   --color-surface: #ffffff;
-  --color-text: #1b2230;
-  --color-text-muted: #4b5567;
-  --color-border: #6a7385;
+  --color-ice: #a7c4d4;
+  --color-ice-pale: #dde8ee;
+  --color-steel: #4f7a93;
+
+  /* Text and edges: cool Iron ink */
+  --color-text: #22262b;
+  --color-text-muted: #4a5560;
+  --color-border: #65727e;
 
   /* Links */
-  --color-link: #1d4f9c;
-  --color-link-visited: #5b3a8c;
+  --color-link: #2c5873;
+  --color-link-visited: #5b3a7a;
 
   /* Actions */
-  --color-primary: #1f4e8c;
-  --color-primary-pressed: #163a69;
+  --color-primary: #3d6178;
+  --color-primary-pressed: #2b4657;
   --color-on-primary: #ffffff;
-  --color-danger: #a3262a;
-  --color-danger-pressed: #7e1b1e;
+  --color-danger: #9e2a22;
+  --color-danger-pressed: #7a1f19;
   --color-on-danger: #ffffff;
 
   /* Focus and disabled */
-  --color-focus: #b3470a;
-  --color-disabled-text: #5c6270;
-  --color-disabled-fill: #dcd8cf;
+  --color-focus: #a8480a;
+  --color-disabled-text: #56606a;
+  --color-disabled-fill: #d3dce2;
 
-  /* Powers: shown only as a badge that carries the power's name */
+  /* Powers: shown only with the power name or initial */
   --color-on-power: #ffffff;
-  --color-power-austria: #b8552e;
-  --color-power-england: #6e7a1f;
-  --color-power-france: #218321;
-  --color-power-germany: #207e71;
-  --color-power-italy: #335fcc;
-  --color-power-russia: #8a33cc;
-  --color-power-turkey: #cc338b;
+  --color-power-austria: #586f2a;
+  --color-power-england: #822635;
+  --color-power-france: #744983;
+  --color-power-germany: #196666;
+  --color-power-italy: #866713;
+  --color-power-russia: #994324;
+  --color-power-turkey: #324e8f;
 
-  /* Type: system fonts only */
+  /* Type: system sans for text, one self-hosted monospace for codes and tags */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.25rem;

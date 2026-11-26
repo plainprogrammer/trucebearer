@@ -59,13 +59,18 @@ module Stylesheets
     css.scan(/([^{}]+)\{([^{}]*)\}/m).map { |sel, body| [ sel.split(";").last.to_s.strip, body ] }
   end
 
-  # { "--color-page" => "#f6f3ec", ... } from the token file.
+  # { "--color-page" => "#eef3f6", ... } from the token file.
   def tokens(path = TOKENS)
     declarations(read(path)).select { |p, _, _| p.start_with?("--") }.to_h { |p, v, _| [ p, v ] }
   end
 
   def color_tokens(path = TOKENS)
     tokens(path).select { |name, _| name.start_with?("--color-") }
+  end
+
+  # [[property, line], ...] for each declaration that reads --color-ice (not --color-ice-pale).
+  def ice_uses(css)
+    declarations(css).select { |_, value, _| value.match?(/var\(\s*--color-ice\s*[,)]/) }.map { |prop, _, line| [ prop, line ] }
   end
 
   # Problems with a stylesheet. Each is "file:line: what". In the token file, a
@@ -110,21 +115,22 @@ module Contrast
   # The documented pairs (spec FR-3), other than the power pairs.
   # [foreground, background, minimum ratio]. Each pair appears once, with its
   # higher minimum where the spec lists two uses.
-  DOCUMENTED_PAIRS = [
-    [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ],
-    [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ],
-    [ "link", "page", 4.5 ], [ "link", "surface", 4.5 ],
-    [ "link-visited", "page", 4.5 ], [ "link-visited", "surface", 4.5 ],
-    [ "on-primary", "primary", 4.5 ], [ "on-primary", "primary-pressed", 4.5 ],
-    [ "primary", "page", 3.0 ], [ "primary", "surface", 3.0 ],
-    [ "primary-pressed", "page", 3.0 ], [ "primary-pressed", "surface", 3.0 ],
-    [ "border", "page", 3.0 ], [ "border", "surface", 3.0 ],
-    [ "danger", "page", 4.5 ], [ "danger", "surface", 4.5 ],
-    [ "on-danger", "danger", 4.5 ], [ "on-danger", "danger-pressed", 4.5 ],
-    [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
-    [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ],
-    [ "disabled-text", "disabled-fill", 3.0 ]
-  ].freeze
+DOCUMENTED_PAIRS = [
+  [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ], [ "text", "ice", 4.5 ], [ "text", "ice-pale", 4.5 ],
+  [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ], [ "text-muted", "ice-pale", 4.5 ],
+  [ "link", "page", 4.5 ], [ "link", "surface", 4.5 ],
+  [ "link-visited", "page", 4.5 ], [ "link-visited", "surface", 4.5 ],
+  [ "on-primary", "primary", 4.5 ], [ "on-primary", "primary-pressed", 4.5 ],
+  [ "primary", "page", 3.0 ], [ "primary", "surface", 3.0 ],
+  [ "primary-pressed", "page", 3.0 ], [ "primary-pressed", "surface", 3.0 ],
+  [ "border", "page", 3.0 ], [ "border", "surface", 3.0 ],
+  [ "danger", "page", 4.5 ], [ "danger", "surface", 4.5 ],
+  [ "on-danger", "danger", 4.5 ], [ "on-danger", "danger-pressed", 4.5 ],
+  [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
+  [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ], [ "focus", "ice", 3.0 ],
+  [ "steel", "page", 3.0 ], [ "steel", "surface", 3.0 ],
+  [ "disabled-text", "disabled-fill", 3.0 ]
+].freeze
 
   module_function
 

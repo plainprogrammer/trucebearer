@@ -24,14 +24,27 @@ RSpec.describe "Stylesheet rules" do
     expect(names).to all(start_with("--"))
   end
 
+  it "sets the header on ice with a steel rule, and no component reads steel (FR-2)" do
+    layout = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "layout.css")))
+    header = layout.find { |selector, _| selector == ".app-header" }&.last.to_s
+    expect(header).to include("background: var(--color-ice)")
+    expect(header).to match(/border-bottom:[^;]*var\(--color-steel\)/)
+    steel_readers = Stylesheets.files.flat_map do |f|
+      Stylesheets.rules(Stylesheets.read(f)).select { |_, body| body.include?("var(--color-steel)") }.map(&:first)
+    end
+    # Only the header rule, and the style guide's own swatch class, read it. It is decorative.
+    expect(steel_readers.reject { |selector| selector.start_with?(".sg-") }).to eq([ ".app-header" ])
+  end
+
   it "defines the token groups of FR-2" do
     t = Stylesheets.tokens
-    %w[--font-sans --text-sm --text-base --text-lg --text-xl --text-2xl --leading-tight --leading-normal
+    %w[--font-sans --font-mono --text-sm --text-base --text-lg --text-xl --text-2xl --leading-tight --leading-normal
        --weight-regular --weight-strong --gutter --tap-min --content-max --radius --border-width
        --focus-width --focus-offset --scroll-pad].each { |n| expect(t).to have_key(n) }
     (1..8).each { |i| expect(t).to have_key("--space-#{i}") }
     expect(t["--text-base"]).to eq("1rem")
     expect(t["--font-sans"]).to start_with("system-ui").and end_with("sans-serif")
+    expect(t["--font-mono"]).to eq('"Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace')
     expect(t["--space-1"]).to eq("0.25rem")
     expect(t["--tap-min"]).to eq("max(44px, 2.75rem)")
     expect(t["--content-max"]).to eq("40rem")
