@@ -20,7 +20,7 @@ Build the step-in in six phases, each ending with a green suite. Every phase sta
 - **P1. The migration is `20261126140500_create_step_ins.rb`.** Its timestamp is later than spec 022's, and distinct from whatever #24 picks; `db/schema.rb` conflicts on merge are resolved by keeping both tables and the later version (D1).
 - **P2. `Game#host_seat` is `seats.min_by(&:id)`** (the loaded association, no new query when seats are already loaded) (D5).
 - **P3. `@step_in` and `@stepped_in_page` are the two request flags.** `@step_in` is the active row, set by `require_host`, `require_seat` and `games#show` for a verified host (D7). `@stepped_in_page` is true only when the page is a seat-scoped stepped-in URL (D4). Both are nil on any stranger page, because `stranger!` clears them (AC-3.8).
-- **P4. The signed cookie's value is the row's integer id.** A cookie of another game, name or purpose fails Rails's signature check, because a signed cookie's verification is bound to its cookie name, so "a row of another game" is also covered by the explicit game check below (AC-5.3).
+- **P4. The signed cookie's value is the row's integer id.** A cookie carried over from another cookie name fails Rails's signature check, because a signed cookie's verification is bound to its name. A correctly signed cookie that names a row of another game is caught by the explicit game check in `active_step_in`; AC-5.3 tests the two separately.
 
 ## Phase 1: The first test, the table, the model and the confirmation page
 
@@ -221,7 +221,7 @@ A game where the host holds Germany; England and France hold seats; France has s
 - AC-4.6: the stepped-in screen's `h1` is "France's orders", the submit bar's link reads "Your own seat", the picker links and forms are all under `/host/seats/france/`; the own screen's `h1` is "Your orders".
 - AC-5.1: after `game.current_phase.reveal!`, France's URL is a stranger and no page has the bar.
 - AC-5.2: `travel 29.minutes` works, `travel 31.minutes` is a stranger and has no bar.
-- AC-5.3: a garbage cookie value; the cookie of another game's step-in copied to this game's cookie name (it fails the signature, because signed cookies are bound to their name); a row of France's step-in used on England's URL; `StepIn.delete_all` after confirming; and a step-in cookie sent by a session that has lost its host cookie: each is a stranger on a stepped-in URL. The explicit game check (`row.phase.game_id == game.id`) is exercised separately, with a correctly signed cookie for this game whose value is a row of another game: the example stubs the signed jar for the request, `allow_any_instance_of(ActionDispatch::Cookies::CookieJar).to receive(:signed).and_return("host_#{id}" => created.host_token, "step_in_#{id}" => other_game_row.id)`, and expects the stranger response.
+- AC-5.3: a garbage cookie value; the cookie of another game's step-in copied to this game's cookie name (it fails the signature, because signed cookies are bound to their name); a row of France's step-in used on England's URL; `StepIn.delete_all` after confirming; and a step-in cookie sent by a session that has lost its host cookie: each is a stranger on a stepped-in URL. The explicit game check (`row.phase.game_id == game.id`) is exercised separately, with a correctly signed cookie for this game whose value is a row of another game: the example runs on a host-only session (the host link opened alone) so that `stranger!` has no real seat cookie to delete, and stubs the signed jar for the request, `allow_any_instance_of(ActionDispatch::Cookies::CookieJar).to receive(:signed).and_return("host_#{id}" => created.host_token, "step_in_#{id}" => other_game_row.id)`, and expects the stranger response.
 - AC-3.7: the host's own seat page shows no host controls (no "Reveal orders"), the "Host controls" link sits in a `.host-section`, and after Leave the host lands on `/games/:id`.
 - AC-8.6 (headers): the stepped-in screen and a picker step carry `Cache-Control` containing `no-store`, `Referrer-Policy: no-referrer` and the `turbo-cache-control` meta.
 - AC-3.8 (the 409): the step-in is made in phase 2 (reveal phase 1 first, then confirm for phase 2); `GET /games/:id/host/seats/france/phases/1/orders` is then the 409 page, has no bar, and its "Go to the current phase" link goes to phase 2 of the stepped-in screen.
@@ -387,7 +387,7 @@ Views, exact replacements:
 ## Phase 3: The reissue gap and the host page's entry list
 
 **Implements:** FR-3, D5, D8. **Satisfies:** AC-1.6, AC-3.9, AC-7.1 to AC-7.7.
-**Files:** create `spec/requests/step_in_reissue_spec.rb`, `app/views/step_ins/_entry.html.erb`; change `spec/requests/reissue_spec.rb`, `spec/requests/host_spec.rb` (selectors only), `app/controllers/seat_links_controller.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/hosts/show.html.erb`, `app/views/reissues/show.html.erb`.
+**Files:** create `spec/requests/step_in_reissue_spec.rb`, `app/views/step_ins/_entry.html.erb`; change `spec/requests/reissue_spec.rb`, `spec/requests/host_spec.rb` and `spec/requests/phase_pages_spec.rb` (selectors only), `app/controllers/seat_links_controller.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/hosts/show.html.erb`, `app/views/reissues/show.html.erb`.
 
 ### 3a. Tests first (red): `spec/requests/step_in_reissue_spec.rb`
 
@@ -480,7 +480,7 @@ with `performed?`-safe flow: after `send_to_step_in` redirects, the before-actio
 
 `app/views/hosts/show.html.erb`: one line at the end of the `.host-section`, after the Seats `</ul>`: `<%= render "step_ins/entry", game: @game, seats: @seats, phase: @phase %>`. `app/views/reissues/show.html.erb`: add `<p>If you open the new link on your own phone, that counts as stepping into this seat: you will be asked to confirm, and it is recorded.</p>`.
 
-**Existing specs that read the host page's lists.** `spec/requests/reissue_spec.rb` (lines 29 to 38) counts `.host-section ul.list > li` and the reissue links, and the entry list is a second `ul.list` in that section. The entry list carries `data-step-in-entry`, and those selectors become `.host-section ul.list:not([data-step-in-entry])` (the test changes, not #24's markup). `host_spec.rb:219` is checked for the same pattern.
+**Existing specs that read the host page's lists.** `spec/requests/reissue_spec.rb` (lines 29 to 38) counts `.host-section ul.list > li` and the reissue links, and the entry list is a second `ul.list` in that section. The entry list carries `data-step-in-entry`, and those selectors become `.host-section ul.list:not([data-step-in-entry])` (the test changes, not #24's markup). `phase_pages_spec.rb:75` counts the same list (7 rows) and gets the same selector; `host_spec.rb:219` is checked for the same pattern.
 
 **Verify:** the new spec, `spec/requests/reissue*_spec.rb`, `host_spec.rb`, `player_spec.rb`, `order_screen_spec.rb`, `games_spec.rb` stay green.
 
@@ -555,7 +555,7 @@ Render lines: `hosts/show` after the history `</section>`: `<%= render "step_ins
 **Implements:** FR-5, D3, D4, D5. **Satisfies:** AC-8.1 to AC-8.8.
 **Files:** change `spec/support/secrecy_routes.rb`, `spec/support/responses.rb`, `spec/requests/order_secrecy_spec.rb`, `spec/requests/forgery_spec.rb`; create `spec/models/step_in_boundary_spec.rb`; keep `spec/models/seat_write_scan_spec.rb` and `spec/models/saved_order_boundary_spec.rb` unchanged.
 
-### 5a. The classification, in code (red first by running the route-table spec: the six new routes fail it until classified)
+### 5a. The classification, in code (the rows were added in Phases 1 and 2 so the suite stayed green; Phase 5 completes them: the `:stepped_in` assertion, the seat-link entry's `why`, the sweep viewers and the examples)
 
 `spec/support/secrecy_routes.rb`, `APP` entries (the paths are for England, France is added by the Hash form):
 
