@@ -129,4 +129,72 @@ RSpec.describe "docs/interface.md examples" do
       expect { TA::Position.from_h(start.to_h.merge("year" => "1901")) }.to raise_error(TA::InvalidInput, /"1901"/)
     end
   end
+
+  describe "the Impossible objects list names the two stricter rules (AC-8.7)" do
+    let(:interface) { File.read(File.expand_path("../../../docs/interface.md", __dir__)) }
+    let(:impossible) { interface[/^### Impossible objects\n(.*?)^## Checking an order/m, 1] }
+
+    it "lists the same standoff province twice, and two dislodged units in one province" do
+      expect(impossible).to include("standoffs: [:bur, :bur]")
+      expect(impossible).to include("Two dislodged units in one province")
+    end
+
+    it "raises for both examples" do
+      army = Board.army
+      fleet = Board.fleet
+      spring = Board.spring
+      expect { TA::Position.new(**spring.merge(phase: :retreat, standoffs: [:bur, :bur]), units: [army], ownership: {}) }.to raise_error(TA::InvalidInput)
+      expect do
+        TA::Position.new(**spring.merge(phase: :retreat, dislodged_units: [fleet, fleet].map { TA::DislodgedUnit.new(unit: _1, attacker_from: :fin, by_convoy: false) }),
+                         units: [army], ownership: {})
+      end.to raise_error(TA::InvalidInput)
+    end
+  end
+
+  describe "constructions in the excluded sections that need only these objects (AC-7.5)" do
+    # Every unit and order those sections build, so that #11 and #14 can use the examples as they stand.
+    unit = ->(power, type, province, coast = nil) { TA::Unit.new(power: power, type: type, location: L.new(province: province, coast: coast)) }
+    move = ->(power, at, to, coast = nil) { O::Move.new(power: power, at: at, destination: L.new(province: to, coast: coast)) }
+    base = { map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {}, dislodged_units: [], standoffs: [] }
+
+    it "builds the positions" do
+      start = TA::Map.classic.starting_position
+      expect(TA::Position.from_h(start.to_h.merge("phase" => "retreat")).phase).to eq(:retreat) # retreat
+      at_sea = TA::Position.new(**base, units: [unit.call(:france, :fleet, :mao), unit.call(:france, :fleet, :gol)])
+      ln = TA::Position.new(**base, units: [unit.call(:england, :army, :lon), unit.call(:england, :fleet, :nth)])
+      pos = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement,
+                             units: [unit.call(:england, :fleet, :lon)], ownership: { lon: :england }, dislodged_units: [], standoffs: [])
+      vienna = TA::Position.new(**base, units: [unit.call(:austria, :army, :vie), unit.call(:germany, :army, :boh), unit.call(:germany, :army, :tyr)])
+      paradox_pos = TA::Position.new(**base, units: [unit.call(:england, :fleet, :lon), unit.call(:england, :fleet, :wal),
+                                                     unit.call(:france, :army, :bre), unit.call(:france, :fleet, :eng)])
+      expect([at_sea, ln, pos, vienna, paradox_pos].map { _1.units.size }).to eq([2, 2, 1, 3, 4])
+    end
+
+    it "builds the units used with legal orders" do
+      [unit.call(:england, :fleet, :lon), unit.call(:france, :fleet, :lon), unit.call(:austria, :army, :vie),
+       unit.call(:france, :fleet, :mao), unit.call(:england, :army, :lon)].each { |built| expect(built).to be_frozen }
+      expect(TA::DislodgedUnit.new(unit: unit.call(:austria, :army, :vie), attacker_from: :boh, by_convoy: false)).to be_frozen
+    end
+
+    it "builds the orders used with checking, legal orders and adjudication" do
+      orders = [
+        O::Hold.new(power: :england, at: :lon), O::Hold.new(power: :france, at: :lon), O::Hold.new(power: :england, at: :wal),
+        O::Hold.new(power: :austria, at: :vie),
+        move.call(:england, :lon, :bel), move.call(:russia, :sev, :rum), move.call(:france, :mar, :spa, :nc),
+        move.call(:france, :mao, :spa), move.call(:france, :gol, :spa, :nc), move.call(:england, :lon, :eng),
+        move.call(:england, :lon, :nth), move.call(:germany, :kie, :hol), move.call(:russia, :war, :gal),
+        move.call(:austria, :vie, :gal), move.call(:england, :lon, :yor), move.call(:england, :wal, :eng),
+        move.call(:france, :bre, :lon), move.call(:germany, :boh, :vie),
+        O::MoveViaConvoy.new(power: :england, at: :lvp, to: :wal),
+        O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal),
+        O::SupportMove.new(power: :england, at: :lon, from: :wal, to: :eng),
+        O::SupportMove.new(power: :germany, at: :tyr, from: :boh, to: :vie),
+        O::SupportHold.new(power: :germany, at: :mun, target: :ber), O::SupportHold.new(power: :germany, at: :mun, target: :sil),
+        O::Convoy.new(power: :england, at: :lon, from: :lvp, to: :bel), O::Convoy.new(power: :england, at: :nth, from: :lon, to: :yor),
+        O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon)
+      ]
+      expect(orders.size).to eq(27)
+      orders.each { |order| expect(O.from_h(JSON.parse(JSON.generate(order.to_h)))).to eq(order) }
+    end
+  end
 end
