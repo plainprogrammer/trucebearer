@@ -106,6 +106,18 @@ RSpec.describe "TA::Reach (internal)" do
       expect(reach.on_minimal_chain?(two, :mao, :lon, :por)).to be(true)
     end
 
+    it "is false for a fleet whose two neighbors in the chain already border each other (a shortcut)" do
+      shortcut = Board.position(army.("alb"), fleet.("ion"), fleet.("eas"), fleet.("aeg"))
+      expect(reach.on_minimal_chain?(shortcut, :ion, :alb, :bul)).to be(true)
+      expect(reach.on_minimal_chain?(shortcut, :eas, :alb, :bul)).to be(false)
+      expect(reach.on_minimal_chain?(shortcut, :aeg, :alb, :bul)).to be(true)
+    end
+
+    it "judges each fleet by a chain of its own, not by the shortest chain overall" do
+      longer = Board.position(army.("tus"), fleet.("tys"), fleet.("gol"), fleet.("wes"))
+      %i[tys gol wes].each { |sea| expect(reach.on_minimal_chain?(longer, sea, :tus, :tun)).to be(true) }
+    end
+
     it "is false for a coastal fleet, an empty sea, equal ends, or an end that is not coastal" do
       expect(reach.on_minimal_chain?(c, :wal, :lon, :nwy)).to be(false)
       expect(reach.on_minimal_chain?(c, :bal, :lon, :nwy)).to be(false)

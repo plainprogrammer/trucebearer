@@ -50,6 +50,18 @@ RSpec.describe "TA.check: convoys" do
     expect(verdict(shape, convoy(:england, :iri, :lon, :bel))).to eq([:not_on_chain])
   end
 
+  it "refuses a fleet whose neighbors in the chain already border each other (AC-6.4)" do
+    shortcut = Board.position(u(:turkey, :army, "alb"), u(:turkey, :fleet, "ion"), u(:turkey, :fleet, "eas"), u(:turkey, :fleet, "aeg"))
+    expect(verdict(shortcut, convoy(:turkey, :ion, :alb, :bul))).to eq([])
+    expect(verdict(shortcut, convoy(:turkey, :eas, :alb, :bul))).to eq([:not_on_chain])
+    expect(verdict(shortcut, convoy(:turkey, :aeg, :alb, :bul))).to eq([])
+  end
+
+  it "judges each fleet by a chain of its own, even when a shorter chain exists elsewhere (AC-6.4)" do
+    longer = Board.position(u(:italy, :army, "tus"), u(:italy, :fleet, "tys"), u(:italy, :fleet, "gol"), u(:italy, :fleet, "wes"))
+    %i[tys gol wes].each { |sea| expect(verdict(longer, convoy(:italy, sea, :tus, :tun))).to eq([]) }
+  end
+
   it "makes both fleets of a chain of two legal (AC-6.4)" do
     two = Board.position(u(:england, :army, "lon"), u(:england, :fleet, "eng"), u(:france, :fleet, "mao"))
     expect(verdict(two, convoy(:england, :eng, :lon, :por))).to eq([])

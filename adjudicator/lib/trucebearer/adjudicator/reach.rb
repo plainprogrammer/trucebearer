@@ -85,8 +85,9 @@ module Trucebearer
       end
 
       # True when the fleet standing in `fleet_province` is part of at least one minimal
-      # convoy chain from one coastal province to another: a chain with no shortcut, so
-      # that no smaller set of the position's fleets is also a chain between the same two.
+      # convoy chain from one coastal province to another: a chain with no shortcut, so that
+      # none of its own fleets can be left out and still leave a chain between the same two.
+      # A shorter chain elsewhere in the position does not matter.
       def on_minimal_chain?(position, fleet_province, from, to)
         return false if from == to || !COASTAL.include?(from) || !COASTAL.include?(to)
 

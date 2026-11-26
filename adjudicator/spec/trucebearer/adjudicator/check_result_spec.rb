@@ -111,7 +111,8 @@ RSpec.describe TA::CheckResult do
       refused('"legal"') { described_class.from_h(good.reject { |key, _| key == "legal" }) }
       refused('"reasons"') { described_class.from_h(good.reject { |key, _| key == "reasons" }) }
       refused('"extra"') { described_class.from_h(good.merge("extra" => 1)) }
-      expect { described_class.from_h(good.transform_keys(&:to_sym)) }.to raise_error(TA::InvalidInput)
+      # Symbol keys are refused by the first key the check misses, so the message names that string key.
+      refused('"format"') { described_class.from_h(good.transform_keys(&:to_sym)) }
       refused("nil") { described_class.from_h(nil) }
       refused("[]") { described_class.from_h([]) }
     end

@@ -40,7 +40,9 @@ module Datc
     fail!(name, "expected a mapping, got #{data.inspect}") unless data.is_a?(Hash)
     keys!(data, TOP_KEYS, TOP_REQUIRED, name, "the top level")
     fail!(name, "\"case\" is #{data["case"].inspect}, which doesn't match the file name") unless data["case"] == name
-    Case.new(id: name, departure: data["departure"] == true,
+    departure = data.fetch("departure", false)
+    fail!(name, "\"departure\" must be true or false, got #{departure.inspect}") unless [true, false].include?(departure)
+    Case.new(id: name, departure: departure,
              position: build_position(data["position"], name),
              entries: Array(data["orders"]).map { |entry| build_entry(entry, name) })
   end

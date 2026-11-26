@@ -52,6 +52,7 @@ RSpec.describe Datc do
       "an unknown reason" => good.merge("orders" => [{ "order" => good["orders"][0]["order"], "check" => { "legal" => false, "reason" => "bogus" } }]),
       "a reason on a legal check" => good.merge("orders" => [{ "order" => good["orders"][0]["order"], "check" => { "legal" => true, "reason" => "own_province" } }]),
       "an illegal check with no reason" => good.merge("orders" => [{ "order" => good["orders"][0]["order"], "check" => { "legal" => false } }]),
+      "a departure that isn't true or false" => good.merge("departure" => "yes"),
       "a missing summary" => good.reject { |key, _| key == "summary" },
       "a case id that doesn't match the file" => good.merge("case" => "6.X.2"),
       "an order that can't be built" => good.merge("orders" => [{ "order" => { "type" => "hold", "power" => "england" } }]),
