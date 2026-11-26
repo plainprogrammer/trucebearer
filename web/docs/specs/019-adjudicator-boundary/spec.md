@@ -59,7 +59,7 @@ These were chosen for this spec, with the alternatives that were left out.
 | **B. An app-side value object that matches the readers of `TA::Adjudication` and `TA::Outcome`** (`outcomes`, `paradox`, `position`; `order`, `result`, `submitted`, `dislodged`) and has `to_h` and `from_h` producing the documented hash form | A few dozen lines. Callers read the same names before and after 0.2.0, and stored rows stay valid. **Chosen.** |
 | C. Leave adjudication out until 0.2.0 | Breaks the Issue's "Done when", and blocks #21's end-to-end flow. |
 
-Option B lives inside `app/models/rules_engine.rb`, as the nested classes `RulesEngine::StandInAdjudication` and `RulesEngine::StandInOutcome`, both built with `Data.define` so equality, `to_h` and pattern matching behave as the gem's do. The 0.2.0 upgrade deletes them. Their `position` is a real gem position, and their orders are real gem orders. `adjudication_from_h` for them validates as the gem documents for value objects: exactly the documented keys, `format` 1, `result` one of the nine symbols, booleans where booleans belong.
+Option B lives inside `app/models/rules_engine.rb`, as the nested classes `RulesEngine::StandInAdjudication` and `RulesEngine::StandInOutcome`, both built with `Data.define` so equality, `to_h` and pattern matching behave as the gem's do. The 0.2.0 upgrade deletes them. Their `position` is a real gem position, and their orders are real gem orders. `load_adjudication` for a hash validates as the gem documents for value objects: exactly the documented keys, `format` 1, `result` one of the nine symbols, booleans where booleans belong.
 
 **D3. How storage is proved.** A table that exists only while the specs run, built in `spec/support/` and never in `db/`. The alternative, one minimal real table, would put a table in the production schema that #21 and #22 then have to migrate away. The attribute types are real app code (`app/models/`) and are the part #21 and #22 reuse.
 
@@ -159,7 +159,7 @@ Option B lives inside `app/models/rules_engine.rb`, as the nested classes `Rules
 **Acceptance criteria:**
 
 - [ ] **AC-5.1** Given the app's code When it is scanned for `StandInAdjudication` and `StandInOutcome` Then they appear only in `app/models/rules_engine.rb`
-- [ ] **AC-5.2** Given `RulesEngine.adjudicate`, `adjudication_from_h` and the adjudication attribute type When read Then they hand back objects with the readers `outcomes`, `paradox` and `position` (and `order`, `result`, `submitted`, `dislodged` on each outcome), so callers that use only those readers need no change when the gem's own classes take over. (The stand-in only ever produces five of the nine result symbols, so a caller that matches on results must handle all nine)
+- [ ] **AC-5.2** Given `RulesEngine.adjudicate`, `load_adjudication` and the adjudication attribute type When read Then they hand back objects with the readers `outcomes`, `paradox` and `position` (and `order`, `result`, `submitted`, `dislodged` on each outcome), so callers that use only those readers need no change when the gem's own classes take over. (The stand-in only ever produces five of the nine result symbols, so a caller that matches on results must handle all nine)
 - [ ] **AC-5.3** Given `web/AGENTS.md` When read Then it says that every gem call goes through `RulesEngine`
 
 ## Functional Requirements
