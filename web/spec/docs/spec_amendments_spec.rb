@@ -117,4 +117,36 @@ RSpec.describe "Spec amendments" do
     expect(row).to include("position edit").and include("Seat history")
     expect(spec).to include("spec 027")
   end
+
+  # The row that mentions spec 028, its version, and the spec's version line, which a later amendment may have moved on.
+  def resume_row(path)
+    spec = File.read(File.expand_path("../../docs/specs/#{path}/spec.md", __dir__))
+    row = spec.lines.find { |line| line.start_with?("| ") && line.include?("spec 028") }
+    expect(row).not_to be_nil
+    version = row[/\A\| (\d+\.\d+\.\d+) \|/, 1]
+    expect(Gem::Version.new(spec[/\*\*Version:\*\* (\d+\.\d+\.\d+)/, 1])).to be >= Gem::Version.new(version)
+    [ spec, row ]
+  end
+
+  it "records spec 028's changes to spec 021 in its changelog (spec 028 AC-8.5)" do
+    spec, row = resume_row("021-create-game-join-qr")
+
+    expect(row).to include("AC-2.1").and include("home page").and include("stranger page")
+    expect(spec).to include("and the lost-seat line of spec 028")
+  end
+
+  it "records spec 028's change to spec 022's route table in its changelog (spec 028 AC-8.6)" do
+    spec, row = resume_row("022-phase-lifecycle")
+
+    expect(row).to include("FR-9").and include("GET /")
+    expect(spec).to include("No order. Lists the games the request's cookies verify for")
+    expect(spec).not_to include("`GET /up`, `GET /`, `GET /styleguide` | No. Static, no game data")
+  end
+
+  it "has a README section for coming back to a game (spec 028 AC-8.4)" do
+    readme = File.read(File.expand_path("../../README.md", __dir__))
+    section = readme[/## Coming back to a game.*?(?=\n## |\z)/m].to_s
+
+    expect(section).to include("signed").and include("reissu").and include("TRUCEBEARER_TIME_ZONE")
+  end
 end

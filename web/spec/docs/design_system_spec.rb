@@ -70,6 +70,13 @@ RSpec.describe "The design-system document (AC-9.1, 9.2)" do
     expect(doc).to include("results/_outcome_tag").and include("results/_row").and include("results/_group").and include("results/_section")
   end
 
+  it "lists the game card of Issue 28 as built, with its class, partial and words (spec 028 AC-8.2)" do
+    line = doc.lines.find { |l| l.include?("`.game-card`") && l.include?("#28") && l.match?(/built/i) }
+
+    expect(line).not_to be_nil, "no catalog line names .game-card with #28 and built"
+    expect(line).to include("home/_game_card").and include("game_started").and include("Start date, phase header, your power")
+  end
+
   it "lists the segmented toggle of Issue 27 as built, with its class and partial (spec 027 AC-10.6)" do
     line = doc.lines.find { |l| l.include?("`.segmented`") && l.include?("#27") && l.match?(/built/i) }
 

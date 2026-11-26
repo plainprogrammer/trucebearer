@@ -1,0 +1,6 @@
+<%# The game card (spec 028 D3, D9): one link to a game. locals: entry (game, phase, power, host, href) %>
+<%= link_to entry.href, class: "game-card" do %>
+  <p class="game-card__title">Started <%= game_started(entry.game) %></p>
+  <%= render "phases/header", phase: entry.phase, power: entry.power %>
+  <% if entry.host %><p class="game-card__note">You host this game</p><% end %>
+<% end %>

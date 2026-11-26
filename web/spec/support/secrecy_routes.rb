@@ -12,7 +12,7 @@ module SecrecyRoutes
 
   APP = {
     "GET /up" => { shows: :none, revealed: :none, sweep: ->(_c) { "/up" }, why: "health check" },
-    "GET /" => { shows: :none, revealed: :none, sweep: ->(_c) { "/" }, why: "home page" },
+    "GET /" => { shows: :none, revealed: :none, sweep: ->(_c) { "/" }, why: "home page; lists the games the request's own verified cookies belong to, each as the game's start date, its open phase's title and the viewer's power, never an order, a count or a submitted state (spec 028)" },
     "GET /styleguide" => { shows: :none, revealed: :none, sweep: ->(_c) { "/styleguide" }, why: "static samples" },
     "GET /games/new" => { shows: :none, revealed: :none, sweep: ->(_c) { "/games/new" }, why: "a form" },
     "POST /games" => { shows: :none, revealed: :none, why: "creates a game, redirects to the host page" },

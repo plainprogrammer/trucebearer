@@ -18,6 +18,10 @@ Host and seat links carry a secret token in the query string. Proxy and tunnel l
 
 The host fixes the board by hand: the host page has an "Edit the board" link next to "Reveal orders". It adds, moves and removes units, sets who owns a supply center, and sets the season and year of the open phase, one change at a time, each on its own page. The rules engine checks every change against the map and refuses an impossible board in plain words. An edit that moves units (add, move, remove) clears every seat's saved orders and submissions for the open phase, and each seat sees a notice with the time; an ownership or date edit keeps them. The host sees no order there, and never a count. Every edit is written to the game's history, in the host page's History list, which also holds the reveals, step-ins and reissues, oldest first.
 
+## Coming back to a game
+
+Open the home page on the phone that played before. It lists the games that phone belongs to as cards (the date the game started, the open phase, and your power), and each card opens that game's current phase. The page looks at every `host_` and `seat_` cookie the phone sends, lists only the games whose signed cookie verifies, and sets or removes no cookie. A host who opens the host link on a phone that holds the host's own seat lands on that seat; on a phone with no seat, or with a seat that is not the host's own, the link lands on the host page, and the host takes the host's own seat back by reissuing it, which clears that seat's saved orders for the open phase. A player whose cookie is gone asks the host for a new QR code. The card's date is shown in the zone `TRUCEBEARER_TIME_ZONE` names (UTC when unset).
+
 ## Live updates
 
 The seat page and the host's controls show which powers have submitted, and update on every phone without a reload. The updates travel over Action Cable (Turbo Streams over Solid Cable). A message holds only the seven submitted states and nothing else; Solid Cable keeps each message for a day, so that is all it keeps.
