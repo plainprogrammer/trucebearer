@@ -2983,3 +2983,25 @@ end
 | Error scenarios (bad args, font missing, copy drift) | 10 (args, drift), 9 (font fallback by `swap`; nothing to test) |
 
 Gaps: none. Placeholder scan: none. Type check: `IconHelper#unit_icon`, `#supply_center_icon`, `Stylesheets.violations(..., font_face:)`, `Stylesheets.ice_uses`, `StyleguideHelper::UNIT_SIZES` and `UNIT_TYPES` are each defined where first used and spelled the same everywhere.
+
+## Plan Changelog
+
+| Version | Phase | Change |
+|---|---|---|
+| 2.0.0 | Phase 7 | Added: the required first test, the helper contract (AC-7.1, 7.3) |
+| 2.0.0 | Phase 8 | Added: the palette, tokens and header; the old derivation under "The palette" is superseded (FR-2, FR-3, FR-9) |
+| 2.0.0 | Phase 9 | Added: the font, `.mono` and the notices (FR-11) |
+| 2.0.0 | Phase 10 | Added: the icon helpers and the artwork copies (FR-10) |
+| 2.0.0 | Phase 11 | Added: the style guide sections and the browser checks (FR-7) |
+| 2.0.0 | Phase 12 | Added: the design-system document (FR-12) |
+| 2.0.0 | Phase 13 | Added: integration verification and the record |
+
+## Changes made during implementation (version 2.0)
+
+| Change | Why |
+|---|---|
+| The rules spec's steel check allows the style guide's own `.sg-bg-steel` swatch class besides `.app-header` | The swatch and the sample ground for the documented `steel` pairs have to read the token. The rule is that no component reads it |
+| `spec/support/stylesheets.rb` gained `FONT_FACE` and the `font_face:` option on `violations`, as Phase 9 planned, plus `Stylesheets.ice_uses` | As planned |
+| The in-browser font checks (the face loads, every request is to this origin) live in `spec/system/font_spec.rb` in Phase 9, not in Phase 11 | The plan review: they depend on the font and the stylesheet, not on the new style guide sections, so they fail first in Phase 9 |
+| Phase 10 ran straight after Phase 7, then 8, 9, 11, 12, 13 | The plan review: Phase 7's spec stays red until the helper exists, and a red file stops a whole run |
+| Screenshot `styleguide-360-top.png` was added beside the three planned ones | It shows the header, which is the maintainer's design call |
