@@ -32,7 +32,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["game_id", "number"], name: "index_phases_on_game_id_and_number", unique: true
-    t.index ["game_id"], name: "index_phases_on_game_id"
     t.index ["game_id"], name: "index_phases_on_game_id_while_open", unique: true, where: "revealed_at IS NULL"
     t.check_constraint "(revealed_at IS NULL) = (adjudication IS NULL)", name: "phases_reveal_is_all_or_nothing"
   end
@@ -45,7 +44,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["phase_id", "seat_id", "province"], name: "index_saved_orders_on_phase_id_and_seat_id_and_province", unique: true
-    t.index ["phase_id"], name: "index_saved_orders_on_phase_id"
     t.index ["seat_id"], name: "index_saved_orders_on_seat_id"
   end
 
@@ -64,7 +62,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.integer "seat_id", null: false
     t.datetime "created_at", null: false
     t.index ["phase_id", "seat_id"], name: "index_submissions_on_phase_id_and_seat_id", unique: true
-    t.index ["phase_id"], name: "index_submissions_on_phase_id"
     t.index ["seat_id"], name: "index_submissions_on_seat_id"
   end
 

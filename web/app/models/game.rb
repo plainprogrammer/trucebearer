@@ -75,8 +75,7 @@ class Game < ApplicationRecord
   def reissue_seat!(seat)
     token = Token.generate
     transaction do
-      phase = current_phase
-      phase.lock!
+      phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
       seat.update!(token_digest: Token.digest(token))
       seat.clear_orders!(phase)
     end

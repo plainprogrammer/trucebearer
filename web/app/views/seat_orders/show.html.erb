@@ -17,7 +17,7 @@
         </label>
         <select class="control" id="order-<%= province %>" name="orders[<%= province %>]">
           <option value="">No order (holds)</option>
-          <% RulesEngine.legal_orders(@phase.position, unit).each do |order| %>
+          <% @choices.fetch(province).each do |order| %>
             <%= tag.option order_label(order), value: JSON.generate(order.to_h), selected: @stored[province] == order %>
           <% end %>
         </select>

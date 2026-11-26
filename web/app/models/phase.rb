@@ -13,7 +13,7 @@ class Phase < ApplicationRecord
   class Conflict < StandardError; end # the reveal's conditional write changed no row (spec 022 D8, a backstop)
 
   # True while no reveal has been committed, read from the database and not from this object (spec 022 AC-6.5).
-  def self.open?(id) = where(id: id, revealed_at: nil).exists?
+  def self.open?(id) = uncached { where(id: id, revealed_at: nil).exists? }
 
   def open? = revealed_at.nil?
 
@@ -32,7 +32,7 @@ class Phase < ApplicationRecord
       result = RulesEngine.adjudicate(position, orders)
       upcoming = RulesEngine.next_movement_position(result.position)
       # A backstop: with the lock held this changes exactly one row. If it ever does not, the lock failed, so it is loud.
-      changed = Phase.where(id: id, revealed_at: nil).update_all(adjudication: result, revealed_at: Time.current)
+      changed = Phase.where(id: id, revealed_at: nil).update_all(adjudication: result, revealed_at: Time.current, updated_at: Time.current)
       raise Conflict unless changed == 1
 
       game.phases.create!(number: number + 1, position: upcoming)

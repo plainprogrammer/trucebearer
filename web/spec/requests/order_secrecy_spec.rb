@@ -32,6 +32,18 @@ RSpec.describe "Order secrecy", type: :request do
       expect(SecrecyRoutes.classified?("MOUNT /cable")).to be(true)
     end
 
+    it "gives every GET it classifies a path to sweep, so a new page cannot be classified and then never requested" do
+      unswept = SecrecyRoutes::APP.select { |key, entry| key.start_with?("GET ") && entry[:sweep].nil? }.keys
+
+      expect(unswept).to be_empty, "give these a sweep path in spec/support/secrecy_routes.rb: #{unswept.join(', ')}"
+    end
+
+    it "does not let a framework prefix swallow a game route" do
+      expect(SecrecyRoutes.classified?("GET /rails/games/:public_id/results")).to be(false)
+      expect(SecrecyRoutes.classified?("GET /rails/active_storage/blobs/:signed_id/*filename")).to be(true)
+      expect(SecrecyRoutes.classified?("GET /rails/mailers/*path")).to be(true)
+    end
+
     it "marks as showing orders only the seat page, and the orders page and its endpoint" do
       showing = SecrecyRoutes::APP.select { |_key, entry| entry[:shows] == :own }.keys
 
@@ -113,6 +125,17 @@ RSpec.describe "Order secrecy", type: :request do
       set_orders(:none)
       baseline = snapshot
       expect(baseline.values.flat_map(&:keys).uniq.size).to eq(SecrecyRoutes.readable.size)
+      # The sweep must be comparing real pages, not four copies of the stranger page: the viewers that have a right to a page got it.
+      status = ->(viewer, key) { baseline.fetch(viewer).fetch(key).first }
+      orders = "GET /games/:public_id/phases/:number/orders"
+      expect(status.call("another seat", orders)).to eq(200)
+      expect(status.call("another seat", "GET /games/:public_id")).to eq(200)
+      expect(status.call("the host, with a seat of its own", "GET /games/:public_id")).to eq(200)
+      expect(status.call("a stranger", orders)).to eq(404)
+      [ "the host, with a seat of its own", "the host, with no seat" ].each do |host|
+        expect(status.call(host, "GET /games/:public_id/host")).to eq(200)
+        expect(status.call(host, "GET /games/:public_id/host/phases/:number/reveal")).to eq(200)
+      end
 
       %i[one all other none].each do |name|
         set_orders(name)

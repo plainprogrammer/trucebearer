@@ -26,7 +26,7 @@ class GamesController < ApplicationController
     @host = host?(@game)
     @phase = @game.current_phase
     @units = @phase.position.units.count { |unit| unit.power.to_s == @seat.power }
-    @ordered = @seat.orders_for(@phase).size
+    @ordered = @seat.ordered_count(@phase)
   end
 
   private

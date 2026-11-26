@@ -4,4 +4,5 @@ class Submission < ApplicationRecord
   belongs_to :seat
 
   validate { errors.add(:phase, "is no longer open") unless Phase.open?(phase_id) }
+  before_destroy { throw :abort unless Phase.open?(phase_id) }
 end

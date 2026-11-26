@@ -19,8 +19,8 @@ RSpec.describe "The phase components", type: :request do
   end
 
   it "is written by one partial only: no other view writes a banner element (AC-8.2)" do
-    views = Dir.glob(Rails.root.join("app/views/**/*.erb")).reject { |path| path.end_with?("shared/_banner.html.erb") }
-    offenders = views.select { |path| File.read(path).match?(/class="[^"]*\bbanner\b/) || File.read(path).include?("banner--") }
+    views = Dir.glob(Rails.root.join("app/{views,helpers,controllers}/**/*.{erb,rb}")).reject { |path| path.end_with?("shared/_banner.html.erb") }
+    offenders = views.select { |path| File.read(path).match?(/class(?:=|:\s*)["'\[][^"'\]]*\bbanner\b/) || File.read(path).include?("banner--") }
     expect(offenders).to be_empty, "banner written outside the partial: #{offenders.join(', ')}"
   end
 

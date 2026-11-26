@@ -85,6 +85,24 @@ RSpec.describe "Reissuing a seat", type: :request do
     expect(SavedOrder.count).to eq(0)
   end
 
+  it "gives a phone the stranger page and deletes its dead cookie when it was reissued while its save was running" do
+    phone = open_session
+    phone.get "/games/#{id}/seat-link", params: { token: game.take_seat!("italy").last }
+    italy = game.seats.find_by(power: "italy")
+    # The reissue lands after the request was authenticated and before its save took the lock.
+    allow_any_instance_of(Seat).to receive(:save_orders!) do |seat, *|
+      Seat.where(id: seat.id).update_all(token_digest: Token.digest(Token.generate))
+      raise Seat::Stale
+    end
+
+    phone.put "/games/#{id}/phases/1/orders", params: { orders: { "nap" => json_of(rules_order(:hold, :italy, :nap)) } }
+
+    expect(phone.response).to have_http_status(:not_found)
+    expect(phone.response.body).to include("We can't find that page.")
+    expect(cookie_line(phone.response, "seat_#{id}")).to match(/seat_#{id}=;|max-age=0|expires=Thu, 01 Jan 1970/i)
+    expect(SavedOrder.where(seat_id: italy.id)).to be_empty
+  end
+
   it "says on the confirmation page that the seat's saved orders are deleted with it (AC-7.11)" do
     england
 

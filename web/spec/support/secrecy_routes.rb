@@ -33,7 +33,7 @@ module SecrecyRoutes
 
   # Routes the framework engines add. They hold no game data and no model attaches to a game.
   FRAMEWORK = [
-    [ %r{\A(?:GET|POST|PUT|PATCH|DELETE) /rails/}, "Action Mailbox, Active Storage, mailer previews and info pages: no game data" ],
+    [ %r{\A(?:GET|POST|PUT|PATCH|DELETE) /rails/(?:action_mailbox|active_storage|conductor|info|mailers)(?:/|\z)}, "Action Mailbox, Active Storage, mailer previews and info pages: no game data" ],
     [ %r{\AGET /(?:recede|resume|refresh)_historical_location\z}, "Turbo's historical-location routes: empty pages" ],
     [ /\AMOUNT \/cable\z/, "no channel exists yet; #24 adds the first stream and must classify it" ]
   ].freeze

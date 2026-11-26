@@ -30,6 +30,9 @@ class Seat < ApplicationRecord
 
   def submitted?(phase) = submissions.exists?(phase_id: phase.id)
 
+  # How many units this seat has an order for, without reading or parsing the orders.
+  def ordered_count(phase) = saved_orders.where(phase_id: phase.id).count
+
   # Saves a set of orders and, if asked, marks the seat submitted. entries is { province => the order's JSON text, or a
   # blank to clear that unit's order }; provinces not named keep what they have. All of one call is one transaction,
   # and either every change is stored or none is (spec 022 FR-2, D4, D8).
@@ -39,7 +42,10 @@ class Seat < ApplicationRecord
       raise Phase::Revealed unless phase.open?
       raise Stale unless Seat.exists?(id: id, token_digest: token_digest)
 
-      parsed = entries.to_h { |province, text| [ province.to_s, clearing?(text) ? nil : read_order(phase, province.to_s, text.to_s) ] }
+      parsed = entries.to_h do |province, text|
+        unit = own_unit_at(phase, province.to_s) # every key is checked, a blank value included
+        [ province.to_s, clearing?(text) ? nil : read_order(phase, province.to_s, text.to_s, unit) ]
+      end
       stored = orders_for(phase)
       changed = false
       parsed.each do |province, order|
@@ -60,8 +66,8 @@ class Seat < ApplicationRecord
 
   # Deletes this seat's saved orders and its submission for the phase (a reissue, spec 022 D9). The caller holds the phase lock.
   def clear_orders!(phase)
-    saved_orders.where(phase_id: phase.id).destroy_all
-    submissions.where(phase_id: phase.id).destroy_all
+    removed = saved_orders.where(phase_id: phase.id).destroy_all + submissions.where(phase_id: phase.id).destroy_all
+    raise Phase::Revealed unless removed.all?(&:destroyed?) # a guard refused: the phase was revealed under us
   end
 
   # Uniqueness is the database's job: the index on [game_id, power] is the only arbiter of "taken".
@@ -71,14 +77,21 @@ class Seat < ApplicationRecord
 
   def clearing?(text) = text.to_s.strip.empty?
 
-  # The refusals in the order of FR-2: the unit, then readable, then `at`, then power, then the check. A message never
-  # carries what was sent, only the province key once it has been checked to be a province.
-  def read_order(phase, province, text)
+  # The seat's own unit in a province, or a refusal: a key that is not a province is unreadable, and a province where the
+  # seat has no unit gets the same sentence whether it is empty or held by another power. The message echoes only a key
+  # already known to be a province.
+  def own_unit_at(phase, province)
     raise Refusal, UNREADABLE unless province.match?(/\A[a-z]{3}\z/) && RulesEngine.province?(province)
 
     unit = phase.position.units.find { |candidate| candidate.location.province.to_s == province && candidate.power.to_s == power }
     raise Refusal, "You have no unit in #{province.upcase}." unless unit
 
+    unit
+  end
+
+  # The refusals in the order of FR-2: the key and unit (own_unit_at), then readable, then `at`, then power, then the check. A message never
+  # carries what was sent, only the province key once it has been checked to be a province.
+  def read_order(phase, province, text, unit)
     order = begin
       RulesEngine.load_order(JSON.parse(text))
     rescue JSON::ParserError, RulesEngine::InvalidInput

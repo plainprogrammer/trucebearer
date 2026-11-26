@@ -22,13 +22,32 @@ RSpec.describe Phase, "under concurrent requests" do
     end
   end
 
-  # Holds the first call of RulesEngine.adjudicate until gate gets a value. Reports when it was reached on `entered`.
+  # Holds each call of RulesEngine.adjudicate until `gate` gets a value, and reports on `entered` when one is reached. In these
+  # examples only the first reveal gets that far: the second must be refused by the lock before it adjudicates.
   def hold_adjudication(entered:, gate:, calls:)
     allow(RulesEngine).to receive(:adjudicate).and_wrap_original do |original, *args|
       calls << 1
       entered << true
       gate.pop(timeout: 10)
       original.call(*args)
+    end
+  end
+
+  # Like in_thread, and reports on `waited` the first time this thread's connection has to wait for the database lock. That is
+  # what proves the second request was blocked by the first, rather than only slow to start.
+  def in_waiting_thread(waited)
+    in_thread do
+      Game.connection.raw_connection.busy_handler do |count|
+        waited << true if count.zero?
+        sleep 0.001
+        true
+      end
+      begin
+        yield
+      ensure
+        current = Game.connection.raw_connection
+        current.busy_handler_timeout = 5000 unless current.closed? # back to the handler Rails installs
+      end
     end
   end
 
@@ -71,15 +90,17 @@ RSpec.describe Phase, "under concurrent requests" do
   it "adjudicates once when two reveals of the same phase arrive together (AC-4.9)" do
     entered = Queue.new
     gate = Queue.new
+    waited = Queue.new
     calls = []
     hold_adjudication(entered: entered, gate: gate, calls: calls)
     id = phase_id
+    first = second = nil
 
     first = in_thread { Phase.find(id).reveal! }
     expect(entered.pop(timeout: 10)).to be(true) # the first reveal is inside the adjudication, holding the lock
-    second = in_thread { Phase.find(id).reveal! }
-    sleep 0.3
-    expect(second).to be_alive # it is waiting for the lock, not running
+    second = in_waiting_thread(waited) { Phase.find(id).reveal! }
+    expect(waited.pop(timeout: 10)).to be(true) # the second had to wait for the lock
+    expect(second).to be_alive
 
     gate << true
     results = [ first.value, second.value ]
@@ -90,21 +111,23 @@ RSpec.describe Phase, "under concurrent requests" do
       .to eq([ [ 1, false ], [ 2, true ] ])
   ensure
     gate << true
+    [ first, second ].compact.each { |thread| thread.join(10) } # nothing may still be writing when the clean-up runs
   end
 
   it "refuses a save that was waiting for the lock when the reveal committed, and stores nothing (AC-6.4)" do
     entered = Queue.new
     gate = Queue.new
+    waited = Queue.new
     calls = []
     hold_adjudication(entered: entered, gate: gate, calls: calls)
     id = phase_id
     seat = england
+    reveal = save = nil
 
     reveal = in_thread { Phase.find(id).reveal! }
     expect(entered.pop(timeout: 10)).to be(true)
-    save = in_thread { seat.save_orders!(Phase.find(id), { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: true) }
-    sleep 0.3
-    expect(save).to be_alive
+    save = in_waiting_thread(waited) { seat.save_orders!(Phase.find(id), { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: true) }
+    expect(waited.pop(timeout: 10)).to be(true) # the save had to wait for the reveal
 
     gate << true
 
@@ -114,6 +137,7 @@ RSpec.describe Phase, "under concurrent requests" do
     expect(Submission.count).to eq(0)
   ensure
     gate << true
+    [ reveal, save ].compact.each { |thread| thread.join(10) }
   end
 
   it "includes a save that finished before the reveal: the stored orders equal the orders adjudicated (AC-6.4)" do

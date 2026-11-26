@@ -1,7 +1,7 @@
 class CreatePhasesSavedOrdersAndSubmissions < ActiveRecord::Migration[8.1]
   def change
     create_table :phases do |t|
-      t.references :game, null: false, foreign_key: true
+      t.references :game, null: false, foreign_key: true, index: false # the unique indexes below lead with it
       t.integer :number, null: false
       t.text :position, null: false
       t.text :adjudication
@@ -13,7 +13,7 @@ class CreatePhasesSavedOrdersAndSubmissions < ActiveRecord::Migration[8.1]
     end
 
     create_table :saved_orders do |t|
-      t.references :phase, null: false, foreign_key: true
+      t.references :phase, null: false, foreign_key: true, index: false # the unique index below leads with it
       t.references :seat, null: false, foreign_key: true
       t.string :province, null: false
       t.text :content, null: false
@@ -22,7 +22,7 @@ class CreatePhasesSavedOrdersAndSubmissions < ActiveRecord::Migration[8.1]
     end
 
     create_table :submissions do |t|
-      t.references :phase, null: false, foreign_key: true
+      t.references :phase, null: false, foreign_key: true, index: false # the unique index below leads with it
       t.references :seat, null: false, foreign_key: true
       t.datetime :created_at, null: false
       t.index %i[phase_id seat_id], unique: true

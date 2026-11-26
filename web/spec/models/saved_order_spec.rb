@@ -44,6 +44,14 @@ RSpec.describe SavedOrder do
       expect { Submission.create!(phase: phase, seat: seat) }.to raise_error(ActiveRecord::RecordInvalid)
     end
 
+    it "refuses to destroy a submission made before the reveal" do
+      submission = Submission.create!(phase: phase, seat: seat)
+      reveal_directly(phase)
+
+      expect { submission.reload.destroy! }.to raise_error(ActiveRecord::RecordNotDestroyed)
+      expect(Submission.count).to eq(1)
+    end
+
     it "refuses to destroy or change an order saved before the reveal" do
       order = SavedOrder.create!(phase: phase, seat: seat, province: "lon", content: hold)
       reveal_directly(phase)

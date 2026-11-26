@@ -92,8 +92,8 @@ RSpec.describe "Revealing a phase", type: :request do
     it "answers 422 without the error's message, logs the class and no message, and changes nothing" do
       allow(RulesEngine).to receive(:adjudicate).and_raise(RulesEngine::InvalidInput, "secret order text")
       log = StringIO.new
-      original = Rails.logger
-      Rails.logger = ActiveSupport::Logger.new(log)
+      captured = ActiveSupport::Logger.new(log)
+      Rails.logger.broadcast_to(captured) # reaches the controller's and Active Record's loggers too
 
       host.post reveal_path
 
@@ -105,7 +105,19 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(game.reload.phases.count).to eq(1)
       expect(game.current_phase.adjudication).to be_nil
     ensure
-      Rails.logger = original
+      Rails.logger.stop_broadcasting_to(captured)
+    end
+
+    it "answers 422 the same way when the next position cannot be built (AC-5.6)" do
+      allow(RulesEngine).to receive(:next_movement_position).and_raise(RulesEngine::InvalidInput, "secret position text")
+
+      host.post reveal_path
+
+      expect(host.response).to have_http_status(:unprocessable_content)
+      expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: Nothing was changed. The phase is still open." ])
+      expect(host.response.body).not_to include("secret position text")
+      expect(game.reload.phases.count).to eq(1)
+      expect(game.current_phase.adjudication).to be_nil
     end
 
     it "lets the host try again once the cause is gone" do
@@ -169,6 +181,17 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in SER was dislodged. Settle it by hand." ])
       expect(game.current_phase.position.dislodged_units).to be_empty
       expect(game.history.first.adjudication.position.dislodged_units.size).to eq(1)
+    end
+
+    it "shows only the latest revealed phase's dislodged units" do
+      stub_result_with_dislodged_unit
+      host.post reveal_path
+      allow(RulesEngine).to receive(:adjudicate).and_call_original
+      host.post "/games/#{id}/host/phases/2/reveal"
+      host.get "/games/#{id}/host"
+
+      expect(page.css(".banner--warning")).to be_empty
+      expect(game.history.map(&:number)).to eq([ 1, 2 ])
     end
 
     it "shows none when nothing was dislodged" do

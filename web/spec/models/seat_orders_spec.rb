@@ -197,6 +197,35 @@ RSpec.describe Seat, "saving orders" do
     end
   end
 
+  describe "#clear_orders! on a phase that is no longer open" do
+    it "raises and removes nothing, so a reveal that slipped in cannot be undone by a reissue" do
+      save({ "lon" => json_of(hold_lon) }, submit: true)
+      phase.update_columns(adjudication: RulesEngine.adjudicate(RulesEngine.starting_position, []), revealed_at: Time.current)
+
+      expect { seat.clear_orders!(Phase.find(phase.id)) }.to raise_error(Phase::Revealed)
+      expect(SavedOrder.count).to eq(1)
+      expect(Submission.count).to eq(1)
+    end
+  end
+
+  describe "a blank value (finding: the key is still checked)" do
+    it "refuses a key that is not a province, or a province where the seat has no unit, even when the value is blank" do
+      expect(refusal_of({ "zzz" => "" })).to eq("That order couldn't be read.")
+      expect(refusal_of({ "par" => "" })).to eq("You have no unit in PAR.")
+      expect(refusal_of({ "lon" => "", "par" => "" })).to eq("You have no unit in PAR.")
+      expect(SavedOrder.count).to eq(0)
+    end
+  end
+
+  describe "#ordered_count" do
+    it "counts the seat's saved orders for the phase without reading them" do
+      save({ "lon" => json_of(hold_lon), "lvp" => json_of(yor_from_lvp) })
+
+      expect(seat.ordered_count(phase)).to eq(2)
+      expect(game.take_seat!("france").first.ordered_count(phase)).to eq(0)
+    end
+  end
+
   describe "#clear_orders!" do
     it "deletes the seat's orders and its submission for the phase, and no one else's" do
       other, = game.take_seat!("france")

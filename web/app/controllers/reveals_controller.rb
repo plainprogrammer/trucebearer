@@ -9,7 +9,13 @@ class RevealsController < ApplicationController
   end
 
   def create
-    result = @phase.reveal!
+    result = begin
+      @phase.reveal!
+    rescue RulesEngine::InvalidInput => error
+      # The message can hold an order, so it is neither shown nor logged (spec 022 AC-4.10).
+      Rails.logger.warn("reveal failed: #{error.class}")
+      return render(:failed, status: :unprocessable_content)
+    end
     text = if result.status == :revealed
       "#{@phase.title} was revealed. It is now #{@game.current_phase.title}."
     else
@@ -17,10 +23,6 @@ class RevealsController < ApplicationController
     end
     flash[:banner] = { "kind" => "info", "text" => text }
     redirect_to game_host_path(@game.public_id), status: :see_other
-  rescue RulesEngine::InvalidInput => error
-    # The message can hold an order, so it is neither shown nor logged (spec 022 AC-4.10).
-    Rails.logger.warn("reveal failed: #{error.class}")
-    render :failed, status: :unprocessable_content
   end
 
   private

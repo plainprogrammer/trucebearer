@@ -61,7 +61,7 @@ RSpec.describe "Screens of the phase lifecycle", type: :system do
         expect(sticky["bottom"]).to be <= sticky["height"] + tolerance
         expect(sticky["buttons"]).to eq([ "Save orders", "Save and submit" ])
 
-        select "Move to NTH", from: "orders[lon]" if page.has_select?("orders[lon]", with_options: [ "Move to NTH" ])
+        select "Move to NTH", from: "orders[lon]"
         click_button "Save and submit"
         expect(page).to have_css(".banner--info", text: "Submitted.")
         expect(page).to have_text("1 of 3 units ordered")

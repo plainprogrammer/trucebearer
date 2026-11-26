@@ -27,6 +27,13 @@ RSpec.describe "The saved-orders boundary" do
     end
   end
 
+  it "reads a seat's orders only through the seat, in the orders controller (AC-7.8)" do
+    callers = files.flat_map { |path| text_of.call(path).lines.grep(/orders_for/).map { |line| [ path.delete_prefix("#{root}/"), line.strip ] } }
+    outside = callers.reject { |path, line| path == "app/models/seat.rb" || line.include?("@seat.orders_for") }
+
+    expect(outside).to be_empty, "reads orders outside the seat and its own controller: #{outside.map(&:first).join(', ')}"
+  end
+
   it "reads a whole phase's orders in one place, Phase's reveal (AC-7.8)" do
     phase = File.read(File.join(root, "app/models/phase.rb"))
     reveal = phase[/def reveal!.*?\n  end\n/m]

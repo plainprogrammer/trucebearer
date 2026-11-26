@@ -27,6 +27,7 @@ class SeatOrdersController < ApplicationController
   rescue Phase::Revealed
     render_revealed
   rescue Seat::Stale
+    @game.seats.reset # the seat list cached for this request still has the old digest; the dead cookie must fail against the new one
     stranger!(@game)
   end
 
@@ -51,6 +52,7 @@ class SeatOrdersController < ApplicationController
   def load_page
     @units = @phase.position.units.select { |unit| unit.power.to_s == @seat.power }.sort_by { |unit| unit.location.province.to_s }
     @stored = @seat.orders_for(@phase)
+    @choices = @units.to_h { |unit| [ unit.location.province.to_s, RulesEngine.legal_orders(@phase.position, unit) ] }
   end
 
   def refuse(sentence)
