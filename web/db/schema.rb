@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_140500) do
   create_table "games", force: :cascade do |t|
     t.string "public_id", null: false
     t.string "host_token_digest", null: false
@@ -57,6 +57,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.index ["token_digest"], name: "index_seats_on_token_digest", unique: true
   end
 
+  create_table "step_ins", force: :cascade do |t|
+    t.integer "phase_id", null: false
+    t.integer "seat_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["phase_id"], name: "index_step_ins_on_phase_id"
+    t.index ["seat_id"], name: "index_step_ins_on_seat_id"
+  end
+
   create_table "submissions", force: :cascade do |t|
     t.integer "phase_id", null: false
     t.integer "seat_id", null: false
@@ -69,6 +77,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   add_foreign_key "saved_orders", "phases"
   add_foreign_key "saved_orders", "seats"
   add_foreign_key "seats", "games"
+  add_foreign_key "step_ins", "phases"
+  add_foreign_key "step_ins", "seats"
   add_foreign_key "submissions", "phases"
   add_foreign_key "submissions", "seats"
 end

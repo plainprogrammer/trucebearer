@@ -25,6 +25,9 @@ module SecrecyRoutes
     "GET /games/:public_id/host/seats/:power/reissue" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/reissue" }, why: "a confirmation page; the reissue itself deletes the seat's saved orders (D9)" },
     "POST /games/:public_id/host/seats/:power/reissue" => { shows: :none, why: "replaces the token and deletes the seat's saved orders for the open phase" },
     "GET /games/:public_id/host/seats/:power/qr" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/qr" }, why: "a one-time code; without the flash it redirects" },
+    "GET /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/phases/1/step-in" }, why: "a confirmation page; it shows no order and writes nothing (spec 026)" },
+    "POST /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, why: "records the step-in, sets a cookie that names the row, redirects" },
+    "DELETE /games/:public_id/host/seats/:power/step-in" => { shows: :none, why: "deletes the cookie and redirects" },
     "GET /games/:public_id/phases/:number/orders" => { shows: :own, sweep: ->(c) { "/games/#{c.id}/phases/1/orders" }, why: "the seat's own orders" },
     "GET /games/:public_id/phases/:number/orders/:province" => {
       shows: :own,

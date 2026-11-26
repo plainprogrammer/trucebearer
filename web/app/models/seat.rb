@@ -3,6 +3,7 @@ class Seat < ApplicationRecord
   belongs_to :game
   has_many :saved_orders, dependent: :destroy
   has_many :submissions, dependent: :destroy
+  has_many :step_ins # the host's entries into this seat (spec 026); the rows hold no order
 
   class Refusal < StandardError; end # the message is the sentence the player sees
   class Stale < StandardError; end # the seat's token digest changed while a save was running (spec 022 D9)
@@ -29,6 +30,9 @@ class Seat < ApplicationRecord
   def orders_for(phase) = saved_orders.where(phase_id: phase.id).to_h { |row| [ row.province, row.content ] }
 
   def submitted?(phase) = submissions.exists?(phase_id: phase.id)
+
+  # When the host entered this seat in the phase, oldest first (spec 026 D6). Times only: no order, no count of orders.
+  def step_in_times(phase) = step_ins.where(phase_id: phase.id).order(:id).pluck(:created_at)
 
   # How many units this seat has an order for, without reading or parsing the orders.
   def ordered_count(phase) = saved_orders.where(phase_id: phase.id).count

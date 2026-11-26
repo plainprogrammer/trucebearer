@@ -145,4 +145,24 @@ RSpec.describe Game do
       expect(started.game.host_token?(nil)).to be(false)
     end
   end
+
+  describe "the host's seat and the step-in history (spec 026)" do
+    it "names the seat made with the game as the host's own, whoever joins later (D5)" do
+      game = described_class.start!(power: "germany").game
+      game.take_seat!("england")
+      game.take_seat!("france")
+
+      expect(game.host_seat.power).to eq("germany")
+    end
+
+    it "lists this game's step-ins oldest first and no other game's (D1)" do
+      game = described_class.start!(power: "germany").game
+      other = described_class.start!(power: "germany").game
+      first = StepIn.record!(phase: game.current_phase, seat: game.take_seat!("england").first)
+      StepIn.record!(phase: other.current_phase, seat: other.take_seat!("england").first)
+      second = StepIn.record!(phase: game.current_phase, seat: game.seats.find_by(power: "england"))
+
+      expect(game.step_in_history.to_a).to eq([ first, second ])
+    end
+  end
 end

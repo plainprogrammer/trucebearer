@@ -25,6 +25,11 @@ Rails.application.routes.draw do
     post "host/seats/:power/reissue", to: "reissues#create"
     get "host/seats/:power/qr", to: "reissues#qr", as: :game_seat_qr
 
+    # Stepping into another seat (spec 026). The confirmation and the record carry the phase number, as the reveal does (D9).
+    get "host/seats/:power/phases/:number/step-in", to: "step_ins#show", as: :game_step_in, constraints: { number: %r{[^/]+} }
+    post "host/seats/:power/phases/:number/step-in", to: "step_ins#create", as: nil, constraints: { number: %r{[^/]+} }
+    delete "host/seats/:power/step-in", to: "step_ins#destroy", as: :game_leave_step_in
+
     # Phases (spec 022). A phase number is matched strictly in the controller, so a dot in it is a stranger, not a 404 page.
     get "phases/:number/orders", to: "seat_orders#show", as: :game_seat_orders, constraints: { number: %r{[^/]+} }
     put "phases/:number/orders", to: "seat_orders#update", constraints: { number: %r{[^/]+} }

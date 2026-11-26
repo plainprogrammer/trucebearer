@@ -140,7 +140,9 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(phase_routes).to match_array([
         [ "GET", "/games/:public_id/phases/:number/orders" ], [ "PUT", "/games/:public_id/phases/:number/orders" ],
         [ "GET", "/games/:public_id/phases/:number/orders/:province" ],
-        [ "GET", "/games/:public_id/host/phases/:number/reveal" ], [ "POST", "/games/:public_id/host/phases/:number/reveal" ]
+        [ "GET", "/games/:public_id/host/phases/:number/reveal" ], [ "POST", "/games/:public_id/host/phases/:number/reveal" ],
+        # Spec 026: the step-in confirmation and its record carry the phase number, and neither touches a phase.
+        [ "GET", "/games/:public_id/host/seats/:power/phases/:number/step-in" ], [ "POST", "/games/:public_id/host/seats/:power/phases/:number/step-in" ]
       ])
       expect(routes.map(&:last).grep(/reopen|undo|unreveal/)).to be_empty
     end
