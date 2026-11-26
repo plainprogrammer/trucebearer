@@ -1,7 +1,7 @@
 # Feature 020: Mobile-first base stylesheet
 
 **Status:** Approved (2.0.x approved at Gate A on 2026-11-26; 1.2.1 was approved and shipped by #20)
-**Version:** 2.0.2
+**Version:** 2.1.0
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-26
 **Issue:** #20, amended by #81
@@ -20,6 +20,7 @@
 | 2.0.0 | 2026-11-26 | Amended by Issue #81 (the Cold War re-theme), a MAJOR change because it replaces FR-9 and reverses two shipped rules (no web fonts, no icons).<br>• **Palette (FR-2, FR-3, AC-2.x):** the #20 palette is replaced by the fixed Cold War values of decision 41; `ice`, `ice-pale` and `steel` are added, and the new pairs are documented. `ice` may only be a background (AC-2.9), and `on-power` must stay equal to the artwork's white (AC-2.10).<br>• **Power colors (FR-4, FR-9, AC-4.4, AC-4.5, AC-4.6, AC-5.4):** the even-spread method is replaced by seven fixed values (decision 42) that no one tunes by eye. AC-4.2's 25-degree rule stays. Power colors may also appear in the unit-icon and supply-center rules, including as the text and border of the power-initial tag.<br>• **Fonts and icons (Non-goals, AC-6.2, AC-6.3, FR-1, FR-6):** system fonts, plus exactly one `@font-face` whose `url()` points to a font file this app serves, and no request to a third party. The only icons are the two helpers' inline drawings.<br>• **New:** Story 7 (unit and supply-center icons, FR-10), Story 8 (the monospace, FR-11) and Story 9 (the design-system document, FR-12).<br>• **Also changed, and not in the Issue's list:**<br>– AC-1.1 exempts the initial inside a unit icon's drawing at 20 to 48 pixels, because it cannot be 14 pixels inside a 12-unit tag.<br>– The Issue's pairs (`text` on `ice`, `focus` on `ice`, `steel` on `page`) imply a header on `ice` with a `steel` rule; FR-2 says so.<br>– AC-5.1 gains three style-guide sections and FR-7 the matching content; AC-7.3 also rejects a bad `size`; the NFR on performance allows one font request and a `swap` re-set of `.mono` text; the Verification rows move the layout checks onto the system specs of #73 and add rows for the new ACs.<br>– The Out of Scope line about a monospace token for join codes is replaced by the later-Issue list, and the line about automated geometry specs is dropped, since #73 shipped them.<br>– AC-2.9 and AC-2.10 are new checks (`ice` is background only; `on-power` is the artwork's white; every palette value is held exactly), and AC-6.2 declares the font for a weight range so no bold is faked.<br>• Reviewed by a read-only Fable pass at Gate A (round 1: no blocking findings; 17 non-blocking, applied) |
 | 2.0.1 | 2026-11-26 | Approved at Gate A. The rule for a visible name beside a unit icon under 24 pixels applies to this release's lists and screens only, and does not bind the future map (1.x), which settles its own labeling. Wording only (PATCH) |
 | 2.0.2 | 2026-11-26 | Cites Issue #86 (the root change that adds `assets/icons/**` to the web workflow's paths) in the Error Scenarios. Wording only (PATCH) |
+| 2.1.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A. The total weight limit of FR-1 and the Performance section goes from 24 KB to 32 KB (32,768 bytes), and the style guide's share from 4 KB to 6 KB (6,144 bytes). Reason: the screen components the design-system catalog plans, which were not listed when 24 KB was set. `spec/styles/stylesheet_rules_spec.rb` enforces the new numbers |
 
 ## Problem Statement
 
@@ -206,7 +207,7 @@ The styles are plain modern CSS files in `app/assets/stylesheets/`, linked by th
 - Work with Propshaft alone: no preprocessor, no bundler, no Node, no new gem.
 - Keep the cascade order independent of file names and load order.
 - Use only CSS features that MDN lists as Baseline "widely available", and list in the plan each feature used. This keeps the same stylesheet working in a Hotwire Native web view.
-- Weigh at most 24 KB in total, uncompressed, with every file in the folder counted, the style guide's own rules included. Those ship to production too, so they stay under 4 KB of that total. (The font file is not a stylesheet and is not counted.)
+- Weigh at most 32 KB (32,768 bytes) in total, uncompressed, with every file in the folder counted, the style guide's own rules included. Those ship to production too, so they stay under 6 KB (6,144 bytes) of that total. (The limits were 24 KB and 4 KB until spec 022 raised them.) (The font file is not a stylesheet and is not counted.)
 - Set `lang="en"`, the viewport meta tag and `viewport-fit=cover` in the layout, so the stylesheet can use the unsafe-area insets.
 
 **Must not:**
@@ -480,7 +481,7 @@ The two helpers are the only way to draw these icons, as `power_badge` is the on
 
 ### Performance
 
-- Total stylesheet weight at most 24 KB uncompressed (FR-1).
+- Total stylesheet weight at most 32 KB uncompressed (FR-1).
 - The stylesheets cause at most one font request (the one `.woff2`, from this app) and no image or script request. The browser fetches the font only when text on the page uses `Plex Mono`.
 - No layout shift caused by the stylesheet after first paint, with one allowed exception: `font-display: swap` may re-set text in `.mono` when the font arrives. That text is short and the tag's initial is inside a fixed-size drawing, so nothing around it moves. Icons carry `width` and `height`, so they never shift the page.
 

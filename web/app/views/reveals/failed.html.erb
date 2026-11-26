@@ -1,0 +1,8 @@
+<% content_for :title, "Reveal failed" %>
+
+<div class="stack">
+  <h1>Reveal <%= @phase.title %></h1>
+  <%= render "phases/header", phase: @phase %>
+  <%= render "shared/banner", kind: "danger", text: "Nothing was changed. The phase is still open." %>
+  <%= link_to "Back", game_host_path(@game.public_id), class: "button button--secondary" %>
+</div>

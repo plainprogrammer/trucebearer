@@ -1,0 +1,17 @@
+<%# A confirmation is a full page, never a modal (spec 022 FR-10). Use it as render layout: "shared/confirm", locals: {...} do.
+    locals: title, confirm_label, confirm_path (nil draws a plain button, for the style guide), cancel_path,
+    danger (default false), cancel_label (default "Back"), heading (default "h1"; the style guide passes "h2") %>
+<% danger = local_assigns.fetch(:danger, false) %>
+<div class="confirm stack">
+  <%= content_tag local_assigns.fetch(:heading, "h1"), title %>
+  <div class="confirm__body stack"><%= yield %></div>
+  <div class="confirm__actions">
+    <% variant = danger ? "button button--danger" : "button" %>
+    <% if confirm_path %>
+      <%= button_to confirm_label, confirm_path, class: variant %>
+    <% else %>
+      <button type="button" class="<%= variant %>"><%= confirm_label %></button>
+    <% end %>
+    <%= link_to local_assigns.fetch(:cancel_label, "Back"), cancel_path, class: "button button--secondary" %>
+  </div>
+</div>

@@ -2,8 +2,11 @@
 
 <div class="stack">
   <h1>You hold <%= power_name(@seat.power) %></h1>
-  <p><%= power_badge(@seat.power) %></p>
-  <p>The host will start the game. Keep this page.</p>
+  <%= render "phases/header", phase: @phase, power: @seat.power %>
+  <p><%= @seat.submitted?(@phase) ? "Submitted" : "Not submitted" %></p>
+  <p><%= @ordered %> of <%= @units %> units ordered.</p>
+  <%= link_to "Enter orders", game_seat_orders_path(@game.public_id, @phase.number), class: "button" %>
+  <p>Keep this page. The host reveals each phase when the table is ready.</p>
   <% if @host %>
     <section class="host-section stack" aria-labelledby="host-link-heading">
       <h2 id="host-link-heading">Host</h2>

@@ -195,6 +195,35 @@
     </div>
   </section>
 
+  <section data-component="phase-header" class="stack" aria-labelledby="sg-phase-header">
+    <h2 id="sg-phase-header">Phase header</h2>
+    <p>Season, year and phase type in mono capitals. A player's page shows their power's badge at the end.</p>
+    <% sample_phase = Phase.new(position: RulesEngine.starting_position) %>
+    <%= render "phases/header", phase: sample_phase, power: "england" %>
+    <%= render "phases/header", phase: sample_phase %>
+  </section>
+
+  <section data-component="banner" class="stack" aria-labelledby="sg-banner">
+    <h2 id="sg-banner">Banner</h2>
+    <p>One sentence. Warnings and errors start with a word, so the kind never rests on colour.</p>
+    <%= render "shared/banner", kind: "info", text: "Orders saved." %>
+    <%= render "shared/banner", kind: "warning", text: "Austria's army in SER was dislodged. Settle it by hand." %>
+    <%= render "shared/banner", kind: "danger", text: "The host has already revealed this phase. Your orders were not saved." %>
+  </section>
+
+  <section data-component="confirm" class="stack" aria-labelledby="sg-confirm">
+    <h2 id="sg-confirm">Confirmation page</h2>
+    <p>A full page, never a modal: a heading, what will happen in plain words, a confirm button and a way back.</p>
+    <%= render layout: "shared/confirm", locals: { title: "Reveal the orders?", heading: "h2", confirm_label: "Reveal orders",
+          confirm_path: nil, cancel_path: "#sg-confirm" } do %>
+      <p>Orders are locked and adjudicated. This cannot be undone.</p>
+    <% end %>
+    <%= render layout: "shared/confirm", locals: { title: "Close joining", heading: "h2", confirm_label: "Close joining", danger: true,
+          confirm_path: nil, cancel_path: "#sg-confirm" } do %>
+      <p>Closing cannot be undone.</p>
+    <% end %>
+  </section>
+
   <section class="stack" aria-labelledby="sg-colors">
     <h2 id="sg-colors">Colors</h2>
     <ul class="sg-swatches">

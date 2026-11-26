@@ -1,5 +1,8 @@
 class Game < ApplicationRecord
   has_many :seats, dependent: :destroy
+  # Declared after seats. No destroy path for a game exists today, and a game with a revealed phase could not be
+  # destroyed anyway: a saved order of a revealed phase refuses to be destroyed (spec 022 AC-6.5).
+  has_many :phases, -> { order(:number) }, dependent: :destroy
 
   class SeatTaken < StandardError; end
   class NotOpen < StandardError; end
@@ -18,6 +21,7 @@ class Game < ApplicationRecord
         game = create!(public_id: SecureRandom.alphanumeric(12), host_token_digest: Token.digest(host_token),
                        join_code: JoinCode.generate)
         game.seats.create!(power: power, token_digest: Token.digest(seat_token))
+        game.phases.create!(number: 1, position: RulesEngine.starting_position)
         Started.new(game: game, host_token: host_token, seat_token: seat_token)
       end
     rescue ActiveRecord::RecordNotUnique
@@ -34,6 +38,12 @@ class Game < ApplicationRecord
   end
 
   def open? = joining_closed_at.nil?
+
+  # The one phase that has not been revealed. Every game has one from the moment it is created (spec 022 FR-1).
+  def current_phase = phases.find_by(revealed_at: nil)
+
+  # The phases already revealed, oldest first.
+  def history = phases.where.not(revealed_at: nil)
 
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
@@ -59,10 +69,16 @@ class Game < ApplicationRecord
     raise SeatTaken
   end
 
-  # Replaces the seat's digest. The old token stops working with this write. Returns the new token.
+  # Replaces the seat's digest. The old token stops working with this write. The seat's saved orders and its submission for
+  # the open phase go with it, so the host can't read them by opening the new seat link (spec 022 D9). The phase lock comes
+  # first, as in a save, so a save from the old phone can't slip in between. Returns the new token.
   def reissue_seat!(seat)
     token = Token.generate
-    seat.update!(token_digest: Token.digest(token))
+    transaction do
+      phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
+      seat.update!(token_digest: Token.digest(token))
+      seat.clear_orders!(phase)
+    end
     token
   end
 end

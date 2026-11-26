@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Approved
-**Version:** 1.2.2
+**Version:** 1.3.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.3.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A.<br>• **AC-4.10:** the player's page no longer says the host will start the game, because a phase is open from creation. It says "Keep this page. The host reveals each phase when the table is ready."<br>• **Reissue (Story 7):** reissuing a seat also deletes that seat's saved orders and submission for the open phase, in the same transaction as the new token, and the confirmation page says so (022 D9, AC-7.10, AC-7.11). Reason: otherwise the host could read a seat's orders through a reissue.<br>• **D7:** the close-joining and reissue pages now use the shared `.confirm` component (danger variant), built by #22.<br>• **FR-10:** the stylesheet caps of 24 KB and 4 KB are raised to 32 KB (32,768 bytes) and 6 KB (6,144 bytes), by 022 changelog 1.2.0 |
 | 1.2.2 | 2026-11-26 | Patch: the maintainer approved `force_ssl`, so the "pending" marks are gone from AC-11.4 and FR-12 and the fallback sentence is dropped. The cookies' `secure` flag is also set from `Rails.env.production?`, so they are `Secure` in production whichever way `force_ssl` is set |
 | 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). The `force_ssl` half of AC-11.4 and FR-12 is marked pending the maintainer. The sameness ACs leave the session cookie out of the `Set-Cookie` comparison, because Rails sets it on every page that has a form token and its value differs each time |
 | 1.2.0 | 2026-11-26 | Changed after the second independent review.<br>• A stranger response deletes a presented cookie only when it fails to verify for that id (an unknown game counts as a failure). A valid cookie survives a wrong page or a bad link, so a bystander cannot strip the host's cookies. New AC.<br>• Sameness of stranger responses is tested on status, body and a named list of headers, pairwise between an existing and a missing game.<br>• The session cookie's `Secure` is covered by the production configuration (AC-11.4), not by the cookie spec.<br>• FR-4 says what `assume_ssl` really does (plain http is not redirected). The route takes a segment constraint and no format. The 429 sentence fits every window. `.kamal/secrets` gains the passphrase.<br>• AC-1.7 and AC-4.11 state what a spec can observe. The error table lists the seat POST. |
@@ -139,7 +140,7 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-4.7** Given a power name that is not one of the seven, or none When it is posted Then no seat is created, no cookie is set, the tiles show again with the message "Pick one of the seven powers.", and the status is 422
 - [ ] **AC-4.8** Given a phone that holds a valid seat for the game When it opens `/join/<code>`, or posts an open power to `/join/<code>/seat` Then it is redirected to `/games/<id>`, no second seat is created, and the cookie is unchanged
 - [ ] **AC-4.9** Given all seven seats are taken When `/join/<code>` loads Then seven taken tiles show with a sentence saying every seat is taken
-- [ ] **AC-4.10** Given a phone with a valid seat When it opens `/games/<id>` Then the page shows its power's badge with the name, and a sentence saying the host will start the game. It shows no other seat's details
+- [ ] **AC-4.10** Given a phone with a valid seat When it opens `/games/<id>` Then the page shows its power's badge with the name, and the sentence "Keep this page. The host reveals each phase when the table is ready." (changed by spec 022; it said the host would start the game). It shows no other seat's details
 
 ### Story 5: A stranger gets nothing
 
@@ -179,7 +180,7 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 **Acceptance criteria:**
 
 - [ ] **AC-7.1** Given a game with seats When the host page loads Then it lists all seven powers, each taken power as a row that links to its reissue page and each open power as a row saying "Open"
-- [ ] **AC-7.2** Given a taken seat When the host opens `/games/<id>/host/seats/<power>/reissue` Then a page says the old phone loses the seat at once, with a danger button and a link back
+- [ ] **AC-7.2** Given a taken seat When the host opens `/games/<id>/host/seats/<power>/reissue` Then a page says the old phone loses the seat at once and that the seat's saved orders for the open phase are deleted with it (changed by spec 022, D9), with a danger button and a link back
 - [ ] **AC-7.3** Given the confirmation page When the host posts it Then the seat's stored digest is replaced by the digest of a new token, and the response redirects to `/games/<id>/host/seats/<power>/qr`
 - [ ] **AC-7.4** Given that redirect When the page loads Then it shows a QR card for the seat, with the power's badge as its caption and the link `/games/<id>/seat-link?token=<token>` as absolute text and QR code, once. The response carries `Cache-Control: no-store` and the Turbo no-cache meta tag. A reload shows no QR code and sends the host back to the host page with a sentence saying a new code can be issued
 - [ ] **AC-7.5** Given the old seat cookie of that power When its phone makes its next request to `/games/<id>` Then it gets the stranger page, and the cookie is deleted
@@ -435,7 +436,7 @@ Built to `web/docs/design-system.md`, with the names in its catalog. The compone
 **Must:**
 - Use `power_badge` for every power color. A power color is never drawn by the new CSS.
 - Put each component on `/styleguide` with a section named by `data-component`, and keep the style guide's checks (tap size at 360 and 768, no sideways scroll, the focus check) green. The tap-size check's selector list gains `.power-tile:not(.power-tile--taken)`.
-- Keep total stylesheet weight within 24 KB (24,576 bytes), and `styleguide.css` within 4 KB. The folder is 21,026 bytes now, so the four components together must take under 3,550 bytes. `styleguide.css` is 3,716 of 4,096 bytes, so the new style guide sections add no more than 380 bytes of `.sg-` rules, and preferably none. If either cannot be met, that is raised as an Issue before any limit is changed.
+- Keep total stylesheet weight within 24 KB (24,576 bytes), and `styleguide.css` within 4 KB. (Raised by spec 022 to 32,768 and 6,144 bytes; the figures below are the original budget.) The folder is 21,026 bytes now, so the four components together must take under 3,550 bytes. `styleguide.css` is 3,716 of 4,096 bytes, so the new style guide sections add no more than 380 bytes of `.sg-` rules, and preferably none. If either cannot be met, that is raised as an Issue before any limit is changed.
 - Add the `ice-pale` pairs of AC-9.5 to the document, the style guide's pair list and the contrast spec. If one fails, raise it with the numbers and do not change a color value (the document's own rule).
 
 **Must not:**

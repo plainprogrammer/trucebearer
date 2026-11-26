@@ -129,9 +129,9 @@ Class names follow the pattern of the base stylesheet: block, `__element`, `--va
 
 | Component | Class | Built by | Notes |
 |---|---|---|---|
-| Phase header | `.phase-header` | #22 | Season, year, phase type in mono capitals; the viewer's power badge on the right |
-| Banner | `.banner` (`--info`, `--warning`, `--danger`) | #22 | One sentence ("Orders are locked", "Acting as Italy", "The host entered your orders at 8:42"); rendered through one partial so #82 can add a glyph in one place |
-| Confirmation page | `.confirm` | #22 | A full page, not a modal: heading, consequences in plain words, confirm button, cancel link. #26 reuses it |
+| Phase header | `.phase-header` (partial `phases/_header`) | #22 (built) | Season, year, phase type in mono capitals; the viewer's power badge on the right |
+| Banner | `.banner` (`--info`, `--warning`, `--danger`; partial `shared/_banner`) | #22 (built) | One sentence ("Orders are locked", "Acting as Italy", "The host entered your orders at 8:42"); rendered through one partial so #82 can add a glyph in one place |
+| Confirmation page | `.confirm` (layout partial `shared/_confirm`) | #22 (built) | A full page, not a modal: heading, consequences in plain words, confirm button, cancel link. #26 reuses it |
 | Join code | `.join-code` (`join_code_text`) | #21 (built) | Six mono characters, large, in two groups of three, as one selectable line of text |
 | QR card | `.qr-card` (`__code`, `__caption`, `__link`; `qr_card`) | #21 (built) | QR code on white with a caption under it (the join code, or a power's badge for a seat) and the link as text |
 | Power tile | `.power-tile` (`--taken`; `.power-tiles`, `power_tiles`) | #21 (built) | Seven tiles in a grid; an open tile is a button, a taken tile says "Taken" and is not a control |

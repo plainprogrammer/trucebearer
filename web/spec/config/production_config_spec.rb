@@ -12,6 +12,12 @@ RSpec.describe "The production configuration" do
     expect(live_lines).to match(%r{^\s*config\.ssl_options = \{ redirect: \{ exclude: ->\(request\) \{ request\.path == "/up" \} \} \}\s*$})
   end
 
+  # Rails writes the bind values of SQL to the log at the debug level, through a filter a model's filter_attributes does not
+  # reach, so a saved order's text can appear in a debug log. The default of info keeps it out (spec 022 FR-9, known limit).
+  it "logs at info unless told otherwise, so orders stay out of the SQL log" do
+    expect(live_lines).to match(/^\s*config\.log_level = ENV\.fetch\("RAILS_LOG_LEVEL", "info"\)\s*$/)
+  end
+
   describe "with the SSL middleware that force_ssl adds" do
     around do |example|
       original = ENV["TRUCEBEARER_PASSPHRASE"]

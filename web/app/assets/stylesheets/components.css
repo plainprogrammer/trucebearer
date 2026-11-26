@@ -390,6 +390,53 @@
     border-radius: var(--radius);
   }
 
+  /* ---- Phase header (#22): season, year and phase type in mono capitals, the viewer's badge at the end ---- */
+  .phase-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  /* The title wraps inside its own box, so the badge stays at the end of the row at 360 pixels. */
+  .phase-header__title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--text-base);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .phase-header .power-badge {
+    flex: none;
+  }
+
+  /* ---- Banner (#22): one sentence on its own ground. The words carry the kind; the edge is a second cue ---- */
+  .banner {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .banner--info {
+    background: var(--color-ice-pale);
+  }
+
+  .banner--danger {
+    border-color: var(--color-danger);
+  }
+
+  /* ---- Confirmation page (#22): a full page, never a modal ---- */
+  .confirm__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
   /* ---- Reduced motion: no transition runs ---- */
   @media (prefers-reduced-motion: reduce) {
     .button {

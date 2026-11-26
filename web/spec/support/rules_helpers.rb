@@ -20,6 +20,9 @@ module RulesHelpers
     )
   end
 
+  # An order's hash form as the JSON text a player's phone sends.
+  def json_of(order) = JSON.generate(order.to_h)
+
   def move(power, at, province, coast = nil)
     rules_order(:move, power, at, destination: { "province" => province.to_s, "coast" => coast&.to_s })
   end

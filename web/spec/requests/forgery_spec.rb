@@ -16,15 +16,16 @@ RSpec.describe "Forgery protection", type: :request do
   let(:id) { game.public_id }
 
   def state
-    [ Game.count, Seat.count, game.reload.joining_closed_at, Seat.order(:id).pluck(:token_digest) ]
+    [ Game.count, Seat.count, game.reload.joining_closed_at, Seat.order(:id).pluck(:token_digest),
+      Phase.count, game.current_phase.revealed_at, SavedOrder.count, Submission.count ]
   end
 
   # Posts without a token on a phone that holds every cookie the host has, and says what became of it.
-  def post_without_token(path, params = {})
+  def post_without_token(path, verb: :post, **params)
     ActionController::Base.allow_forgery_protection = true
     before = state
     refused = begin
-      created.session.post path, params: params
+      created.session.public_send(verb, path, params: params)
       created.session.response.status == 422
     rescue ActionController::InvalidAuthenticityToken
       true
@@ -61,5 +62,15 @@ RSpec.describe "Forgery protection", type: :request do
     created.session.post "/games/#{id}/host/close", params: { authenticity_token: token }
     expect(created.session.response).to have_http_status(:redirect)
     expect(game.reload.joining_closed_at).not_to be_nil
+  end
+
+  it "refuses saving orders without a token (spec 022 NFR security)" do
+    hold = JSON.generate({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" })
+    post_without_token "/games/#{id}/phases/1/orders", verb: :put, orders: { lon: hold }, submit: "1"
+  end
+
+  it "refuses a reveal without a token, and the phase stays open (spec 022 NFR security)" do
+    post_without_token "/games/#{id}/host/phases/1/reveal"
+    expect(game.current_phase.number).to eq(1)
   end
 end

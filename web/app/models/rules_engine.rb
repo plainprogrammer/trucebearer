@@ -22,7 +22,25 @@ module RulesEngine
 
     def check(position, order) = TA.check(position, order)
 
+    # Whether an identifier names a province of the map. The one place a province list is read for the app (spec 022 AC-2.5).
+    def province?(id) = province_ids.include?(id.to_s)
+
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
+
+    # The playtest's own rule for the phase that follows a reveal (spec 022 D3). It is not part of the stand-in: it stays
+    # after #29 until 1.0 uses what gem 0.3.0 works out. Dislodged units leave the board, standoffs are cleared, and
+    # ownership is kept. Spring becomes fall of the same year, and fall becomes spring of the next. The position must be the
+    # retreat position an adjudication returns. The message names no order.
+    def next_movement_position(position)
+      unless position.is_a?(TA::Position) && position.phase == :retreat
+        phase = position.respond_to?(:phase) ? position.phase.inspect : "none"
+        raise InvalidInput, "the next phase is built from a retreat position, got #{position.class} with phase #{phase}"
+      end
+
+      season, year = position.season == :spring ? [ :fall, position.year ] : [ :spring, position.year + 1 ]
+      TA::Position.new(map: position.map, season: season, year: year, phase: :movement, units: position.units,
+                       ownership: position.ownership, dislodged_units: [], standoffs: [])
+    end
 
     def legal_orders(position, unit) = TA.legal_orders(position, unit)
 
@@ -39,6 +57,8 @@ module RulesEngine
     def load_adjudication(value) = coerce(value, "adjudication", StandInAdjudication, ->(h) { StandInAdjudication.from_h(h) })
 
     private
+
+    def province_ids = @province_ids ||= TA::Map.classic.provinces.to_set { |province| province.id.to_s }
 
     def coerce(value, name, kind, build)
       return nil if value.nil?

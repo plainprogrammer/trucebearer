@@ -24,6 +24,9 @@ class GamesController < ApplicationController
     return stranger!(@game) unless @seat
 
     @host = host?(@game)
+    @phase = @game.current_phase
+    @units = @phase.position.units.count { |unit| unit.power.to_s == @seat.power }
+    @ordered = @seat.ordered_count(@phase)
   end
 
   private
