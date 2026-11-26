@@ -21,6 +21,7 @@ module Trucebearer
       def self.define(type, *own_fields)
         klass = Data.define(:power, :at, *own_fields)
         klass.class_eval do
+          include Shape::Marshalable
           define_method(:initialize) do |**given|
             super(**given)
             Order.validate!(self)

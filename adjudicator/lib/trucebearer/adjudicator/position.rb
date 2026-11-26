@@ -4,6 +4,8 @@ module Trucebearer
   module Adjudicator
     # The state of the board at one moment. Storable: its hash form carries format.
     Position = Data.define(:map, :season, :year, :phase, :units, :ownership, :dislodged_units, :standoffs) do
+      include Shape::Marshalable
+
       def initialize(map:, season:, year:, phase:, units:, ownership:, dislodged_units:, standoffs:)
         map = Shape.map!(map)
         Shape.symbol_of(season, Shape::SEASONS, "season", "season")
