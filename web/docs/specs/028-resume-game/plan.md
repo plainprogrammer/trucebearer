@@ -436,14 +436,14 @@ RSpec.describe "What the home page shows each browser", type: :request do
   it "examines the first 40 ids in request order and no more (AC-3.6)" do
     id = a.game.public_id
     mine = header_pair("seat_#{id}", phone([ a.game, "seat", a.seat_token ]))
-    filler = ->(count) { Array.new(count) { |i| "seat_#{format('%012d', i)}=junk" } }
+    filler = ->(count, from = 0) { Array.new(count) { |i| "seat_#{format('%012d', from + i)}=junk" } } # distinct ids
     session = open_session
-    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(40) + [ mine ] + filler.call(19)).join("; ") } # 60 ids, mine the 41st
+    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(40) + [ mine ] + filler.call(19, 40)).join("; ") } # 60 ids, mine the 41st
 
     expect(session.response).to have_http_status(:ok)
     expect(hrefs(session)).to be_empty
 
-    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(39) + [ mine ] + filler.call(20)).join("; ") } # mine the 40th
+    session.get "/", headers: { "HTTP_COOKIE" => (filler.call(39) + [ mine ] + filler.call(20, 39)).join("; ") } # mine the 40th
     expect(hrefs(session)).to eq([ "/games/#{id}" ])
   end
 
