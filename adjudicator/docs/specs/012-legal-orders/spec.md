@@ -1,7 +1,7 @@
 # Feature 012: List the legal orders for a unit
 
 **Status:** Draft
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #12
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-25 | Initial draft |
+| 1.1.0 | 2026-11-25 | Folded in the Gate A review (round 1, changes required, three blocking):<br>• AC-5.3 needs two split-coast positions, since a position can't hold two units in one province.<br>• The performance bound no longer claims to catch a fall back to filtering; a same-example relative guard (B at least 10 times faster than A) does, next to coarse ceilings. A mid-game target is added, and the stress position is named.<br>• "No rule written twice" is reworded: the generator may only drop candidates by the four listed narrowings, and every kept order is decided by `Check.reason_for`.<br>• Fixed-seed random boards join the agreement spec; AC-3.7, AC-4.2, AC-3.8, AC-1.3 and AC-7.5 are made literal |
 
 ## Problem Statement
 
@@ -27,7 +28,7 @@ The contract's central promise is agreement with checking: an order is in the li
 - Agreement with `TA.check` is proved in both directions, over the full candidate space, for sampled positions that include the starting position, split coasts, a convoy chain and a non-movement phase.
 - It is fast enough to call for every unit on every page load, with a concrete target and a spec that proves it.
 - Every Ruby example under `## Legal orders` in `docs/interface.md` runs as a passing spec.
-- No rule is written twice: the decision whether an order is legal stays in `Check`, and the board questions stay in `Reach`.
+- The decision whether an order is legal is made only by `Check`, and the board questions stay in `Reach`. The generator adds nothing to the rules: it only chooses which orders are worth asking `Check` about.
 
 ## Non-Goals
 
@@ -48,7 +49,7 @@ The contract's central promise is agreement with checking: an order is in the li
 
 ## How the list is generated
 
-This is the decision the Issue leaves to Gate A. Two ways were measured on the starting position and on a stress position (19 fleets, one in every sea, and 20 armies on coastal provinces: 39 units), using `Process.clock_gettime` on a development laptop, Ruby 4.0:
+This is the decision the Issue leaves to Gate A. Two ways were measured on the starting position and on a stress position (19 fleets, one in every sea, and 20 armies on coastal provinces: 39 units), using `Process.clock_gettime` on a development laptop, Ruby 4.0 (the stress position is defined under "Performance target"):
 
 | Approach | What it does | Starting position, 22 units | Stress position, 39 units |
 |---|---|---|---|
@@ -56,24 +57,36 @@ This is the decision the Issue leaves to Gate A. Two ways were measured on the s
 | **B. Narrow, then check** | Builds only candidates that could possibly be legal, from the reach tables and from where units stand, and keeps those that `Check.reason_for` accepts | **18 ms** | 644 ms |
 | C. Generate directly | Writes each legality rule again as a generator, with no check | not measured | not measured |
 
-Both A and B gave the same lists as each other on both positions (238 and 5,160 orders in total).
+Both A and B gave the same lists as each other on both positions (238 and 5,160 orders in total). The review reproduced this and also found them identical on 40 fixed-seed random boards of 5 to 34 units.
 
 **Choice: B.** A is correct by construction and the simplest, but at 1.1 s to 2.8 s per page it fails the Issue's "fast enough to call for every unit on every page load". C is fastest but writes every rule twice, which the Issue rules out ("reuse, don't duplicate") and which can drift. B keeps the decision in one place: whether a candidate is legal is decided by `Check.reason_for`, the function `TA.check` itself uses. B only decides which candidates are worth asking about, and each narrowing is a necessary condition taken from the contract's own wording:
 
-- a move can only go to a province the unit reaches by one step, or, for an army on a coastal province, to a coastal province (a chain is then possible);
-- a move via convoy is for an army, and only to a province it reaches by land;
-- a support is only for a province that holds a unit, and a support to move only to a province the supporter reaches;
-- a convoy is only for a fleet in a sea province, from a province that holds an army, to a coastal province.
+- **N1.** A move goes only to a location the unit reaches in one step, or, for an army on a coastal province, to any coastal province (a chain is then possible). Every convoy chain joins two coastal provinces, so no other move can pass `Check`.
+- **N2.** A move via convoy is for an army, and only to a province it reaches by land.
+- **N3.** A support to hold is only for a province that holds a unit, and a support to move only from a province that holds a unit and to a province the supporter reaches in one step.
+- **N4.** A convoy is only for a fleet in a sea province, from a province that holds an army, to a coastal province.
 
-**What B risks:** a narrowing that is too tight silently drops a legal order. That is the one failure the agreement spec (Story 5) exists to catch, so it checks the "nothing legal is missing" direction over the full candidate space and not over B's own candidates. The other direction (everything listed passes `TA.check`) holds by construction, and is checked as well.
+**The rule for the generator.** It may drop a candidate only by N1 to N4. Every order it lists is decided by `Check.reason_for` and nothing is listed without that call. Each narrowing is a necessary condition that `Check` itself applies before any later condition (the review traced each in `check.rb`), so it can only skip orders `Check` would refuse. Adding or changing a narrowing is a change to this spec, and the agreement spec has to keep passing.
+
+**What B risks:** a narrowing that is too tight silently drops a legal order. That is the one failure the agreement spec (Story 5) exists to catch, so it checks the "nothing legal is missing" direction over the full candidate space and not over B's own candidates, on the sampled positions and on fixed-seed random boards. The other direction (everything listed passes `TA.check`) holds by construction, and is checked as well.
 
 ## Performance target
 
-**Target: listing all 22 units of the starting position takes under 100 ms** (measured 18 ms). A spec proves it with a bound of **1,000 ms**, which is 55 times the measurement and still below what approach A takes (1,143 ms here), so the bound can't flake on a slow CI machine and still catches a fall back to filtering every candidate.
+**Targets** (on a development laptop):
 
-**Stress target:** the 39-unit position above takes under 1 s (measured 644 ms); the spec's bound is 5,000 ms. The cost there is the convoy orders for 19 sea fleets (each asks whether the fleet is on a minimal chain for each army and coastal destination). If measuring in the plan shows more than that on a plausible board, a convoy narrowing may be added, if it is a necessary condition drawn from `Reach`, and the agreement spec guards it.
+| Position | Target for all its units | Measured |
+|---|---|---|
+| The starting position, 22 units (no fleet at sea, so no convoy work) | under 100 ms | 18 ms |
+| A mid-game board of 34 units with several fleets at sea | under 250 ms | 44 to 136 ms on random boards (2 to 13 fleets at sea; the 13-fleet boards were the slower ones) |
+| The stress position, 39 units | under 1 s | 644 ms |
 
-The measured times go in the pull request description. The spec uses `Process.clock_gettime(Process::CLOCK_MONOTONIC)` and the standard library only.
+**The stress position:** a fleet in each of the 19 sea provinces and an army in each of the first 20 coastal provinces by identifier, with the seven powers dealt in turn in identifier order. It is the worst case the rules allow for convoy work and is not a board a game reaches.
+
+**What the specs prove.** Absolute timings differ by machine, so the specs use two kinds of check:
+- **Ceilings that can't flake:** the starting position under 1,000 ms, the stress position under 5,000 ms. They are coarse. They catch a gross regression, not a fall back to approach A (A takes about 0.9 to 1.1 s for the starting position).
+- **A relative guard, timed in the same example:** listing the 22 starting units by approach A (every candidate through `TA.check`) takes at least 10 times as long as `TA.legal_orders` does (observed: about 50 times). This is what catches a fall back to filtering every candidate, and it holds on any machine.
+
+The measured times of all rows go in the pull request description. The specs use `Process.clock_gettime(Process::CLOCK_MONOTONIC)` and the standard library only.
 
 ## Definitions
 
@@ -95,7 +108,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-1.1** Given the starting position and England's fleet in London When `TA.legal_orders(start, fleet)` is called Then `first(3)` is the hold, then the move to `eng`, then the move to `nth`, each naming `england` and `lon`, with no coast. This is the first spec written, and it fails until `TA.legal_orders` exists
 - [ ] **AC-1.2** Given a French fleet in London in the starting position (no such unit) When it is listed Then the result is `[]`
-- [ ] **AC-1.3** Given any unit on the board in a movement position When it is listed Then the result is an `Array` whose first element is that unit's hold, and the array is the caller's own: changing it never changes the result of a later call
+- [ ] **AC-1.3** Given any unit on the board in a movement position When it is listed Then the result is an `Array` whose first element is that unit's hold, and the array is not frozen and is the caller's own: changing it never changes the result of a later call (the orders in it are immutable `Data` objects)
 
 ### Story 2: Empty, never an exception
 
@@ -123,8 +136,13 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-3.4** Given a fleet on a split coast (for example Saint Petersburg's south coast, and Spain's north coast in a position that holds such a fleet) When it is listed Then its moves are exactly those whose coast it can reach from where it stands, and a move to its own province is never listed (not for the other coast either)
 - [ ] **AC-3.5** Given `ln`, the contract's position with England's army in London and fleet in the North Sea When the army is listed Then its moves via convoy are exactly one, to `yor`; it has a plain move to each of Wales and Yorkshire (by land) and to each of `bel`, `den`, `edi`, `hol`, `nwy` (by convoy only); and no plain move to a sea province, an inland province or its own province
 - [ ] **AC-3.6** Given a fleet Then its list holds no move via convoy and no plain move that only a chain could make. Given an army not on a coastal province Then it holds no move through a chain
-- [ ] **AC-3.7** Given the three convoy positions #11 pinned (a sea fleet that touches a chain fleet but neither end; two fleets that form the only chain; a fleet that a one-fleet chain bypasses) When the fleets are listed Then a fleet has a convoy for an army's province and a destination exactly when it is on a minimal chain between them: both fleets of the only chain list the convoy, the bypassed fleet does not, and the fleet with no chain through it does not. (Story 5 proves the agreement with `TA.check` for the same positions.)
-- [ ] **AC-3.8** Given a position and a unit Then the list depends on the position alone: it is the same list however the position's `units` are ordered when it was built, for a position built from the same units in a different order, and `legal_orders` never changes the position or the unit
+- [ ] **AC-3.7** Given these three positions (the ones #11 pinned for convoys) When the fleets are listed Then:
+  - Spain/Marseilles: a French army in Marseilles, a French fleet in the Western Mediterranean, an Italian fleet in the Gulf of Lyon and an Italian army in Spain. The Italian fleet's list includes `Convoy(italy, at: gol, from: mar, to: spa)`; the French fleet's list does not include `Convoy(france, at: wes, from: mar, to: spa)`, because the one-fleet chain bypasses it;
+  - an English army in London, an English fleet in the English Channel and a French fleet in the Mid-Atlantic Ocean. Each fleet's list includes `Convoy(…, from: lon, to: por)` for its own power;
+  - an English army in London, English fleets in the English Channel, the Irish Sea and the North Sea. The Irish Sea fleet's list does not include `Convoy(england, at: iri, from: lon, to: bel)`, which has no chain through the Irish Sea fleet.
+
+  (Story 5 proves the agreement with `TA.check` for the same positions.)
+- [ ] **AC-3.8** Given a position and a unit Then the list depends on the position alone: it is the same list for a position built from the same units in a different order, and `legal_orders` never changes the position or the unit
 - [ ] **AC-3.9** Given a unit that is the only unit on the board Then its list holds its hold and its moves, and nothing that needs another unit: no support and no convoy
 
 ### Story 4: The order of the list
@@ -136,7 +154,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-4.1** Given any listed unit When its list is read Then it is the hold, then all moves, then all moves via convoy, then all supports to hold, then all supports to move, then all convoys, with no group interleaved with another
-- [ ] **AC-4.2** Given each group Then it is sorted as `docs/interface.md` says: moves by destination province then coast; moves via convoy by destination; supports to hold by target; supports to move by origin then destination; convoys by origin then destination, with provinces and coasts compared by identifier (a province or coast compared as its `to_s`)
+- [ ] **AC-4.2** Given each group Then it is sorted as `docs/interface.md` says: moves by destination province then coast; moves via convoy by destination; supports to hold by target; supports to move by origin then destination; convoys by origin then destination, with provinces and coasts compared by identifier (a province or coast compared as its `to_s`). Supports to hold are sorted by target, as the contract says. A move without a coast and a move with a coast never share a destination province (a province either has split coasts or doesn't), so the sort never compares a missing coast with a named one
 - [ ] **AC-4.3** Given the same position and unit When the list is made twice, and when made in a position rebuilt from `to_h` and `from_h` Then the two lists are equal, element by element
 - [ ] **AC-4.4** Given any listed unit Then the list holds no duplicate order
 
@@ -149,15 +167,15 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-5.1** Given each sampled position, and each unit in it When it is listed Then every order in the list passes `TA.check` (`legal: true`)
-- [ ] **AC-5.2** Given each sampled position and each unit in it When every order of the unit's whole candidate space (see Definitions: not only the narrowed candidates) is checked Then every order that passes `TA.check` is in the list. Together with AC-5.1 the list equals the set of passing orders
+- [ ] **AC-5.2** Given each sampled position and each unit in it When every order of the unit's whole candidate space (see Definitions: not only the narrowed candidates) is checked Then every order that passes `TA.check` is in the list. Together with AC-5.1 the list equals the set of passing orders. Besides the positions of AC-5.3, this runs on six random boards built from fixed seeds (5 to 34 units, with fleets in seas and on coasts, split coasts included), so a narrowing that is too tight can't hide in positions picked by hand
 - [ ] **AC-5.3** Given the sampled positions Then they include at least:
   - the starting position (22 units);
-  - a position with a fleet on each of the six split coasts (`bul/ec`, `bul/sc`, `spa/nc`, `spa/sc`, `stp/nc`, `stp/sc`) and neighboring units;
+  - two positions that between them put a fleet on each of the six split coasts, each with neighboring units (a position holds at most one unit per province): fleets on `bul/ec`, `spa/nc` and `stp/nc` in one, and on `bul/sc`, `spa/sc` and `stp/sc` in the other;
   - `ln`, the contract's convoy-chain position, and a position with a two-fleet chain and a fleet that a shorter chain bypasses;
-  - the stress position (19 sea fleets, 20 coastal armies);
+  - the stress position defined under "Performance target";
   - a retreat-phase position and an adjustment-phase position, where both sides of the agreement are empty (`TA.check` gives `:wrong_phase` for every order)
 - [ ] **AC-5.4** Given a unit that is not on the board Then its list is `[]` (AC-2.2). The agreement promise is for a unit that is on the board: `TA.check` judges an order by the unit the position holds in the province, so it may accept orders for a unit that differs from the argument, and Story 5 therefore samples only units the position holds
-- [ ] **AC-5.5** (review) Given the agreement spec's running time Then it is stated in the pull request. If the spec takes more than about 10 seconds it is tagged `:slow` and CI runs it, as `rspec` with no filter does; none of the specs is excluded from CI. At the measured cost (about 1 s per 22 units for the candidate space) no tag is expected
+- [ ] **AC-5.5** (review) Given the agreement spec's running time Then it is stated in the pull request. If the spec takes more than about 10 seconds it is tagged `:slow` and CI runs it, as `rspec` with no filter does; none of the specs is excluded from CI. The candidate space costs about 1 s per 22 units, so the sampled positions and the six random boards are expected to take under 10 s together and no tag is expected
 
 ### Story 6: Fast enough for every page
 
@@ -169,8 +187,9 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-6.1** Given the starting position When `TA.legal_orders` is called for each of its 22 units Then the total time is under 1,000 ms (target: under 100 ms), measured with `Process.clock_gettime(Process::CLOCK_MONOTONIC)`, after one warm-up call that is not timed
 - [ ] **AC-6.2** Given the stress position (39 units) When every unit is listed Then the total time is under 5,000 ms
-- [ ] **AC-6.3** (review) Given the pull request description Then it records the measured times of both examples and of the filter-every-candidate approach they were compared against, from the machine the author used, and says which number is the target and which is the bound
-- [ ] **AC-6.4** Given the helpers of #11 Then `Reach` is reused for adjacency and chains, `Check.reason_for` decides legality, and no legality rule appears a second time in the generator. If a helper needs a small change to be reusable it is made in this pull request, and the specs of #11 pass unchanged (review: the implementation review reads the diff for a duplicated rule)
+- [ ] **AC-6.3** Given the starting position When, in the same example, the 22 units are listed by approach A (every candidate of the whole candidate space through `TA.check`) and by `TA.legal_orders` Then A takes at least 10 times as long, and both give the same lists
+- [ ] **AC-6.4** (review) Given the generator Then it reuses `Reach` for adjacency and chains and asks `Check.reason_for` about every order it lists; the only conditions it applies itself are N1 to N4, and it drops a candidate by no other test. If a helper of #11 needs a small change to be reusable it is made in this pull request and #11's specs pass unchanged. The implementation review reads the diff for any other test
+- [ ] **AC-6.5** (review) Given the pull request description Then it records the measured times of every row of the table in "Performance target" and of approach A, from the machine the author used, and says which numbers are targets and which are bounds
 
 ### Story 7: The examples and the record
 
@@ -184,7 +203,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-7.2** (review) Given `interface_examples_spec.rb` Then its header comment no longer lists `TA.legal_orders` as excluded, and says where the examples run now
 - [ ] **AC-7.3** (review) Given `adjudicator/CHANGELOG.md` Then "Unreleased → Added" has an entry for `TA.legal_orders`, citing #12, and the #11 entry's remark that the helpers are for #12 stays true
 - [ ] **AC-7.4** (review) Given the pull request Then `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is unchanged
-- [ ] **AC-7.5** Given the generator module Then it is private to the gem: referring to `TA::LegalOrders` raises `NameError`, and `TA.legal_orders` is the only public method or constant added to `Trucebearer::Adjudicator`
+- [ ] **AC-7.5** Given the gem is loaded Then `TA::LegalOrders` raises `NameError` (the generator is `private_constant`), and `TA.singleton_methods(false)` and `TA.constants` equal these exact lists, which are the lists at the start of this feature plus `:legal_orders` (the plan reads the current lists and writes them into the spec)
 
 ## Functional Requirements
 
@@ -202,16 +221,16 @@ A module function of `Trucebearer::Adjudicator`: `TA.legal_orders(position, unit
 
 **Must not:**
 - Look at any other order, or at who owns a province's supply center.
-- Write any legality condition a second time (the one place is `Check`).
+- Decide legality itself: `Check.reason_for` decides every listed order. The generator may only drop candidates by N1 to N4.
 - Add a public class, constant or method besides `TA.legal_orders`.
 
 ### FR-2: The generator (internal)
 
-A module, private to the gem, in `lib/trucebearer/adjudicator/legal_orders.rb`, required after `check`. It builds, for a unit, a candidate list of every order that could be legal (never fewer than the legal orders), in the contract's list order, and keeps the candidates that `Check.reason_for` accepts.
+A module named `LegalOrders`, private to the gem (`private_constant`), in `lib/trucebearer/adjudicator/legal_orders.rb`, required after `check`. It builds, for a unit, a candidate list of every order that could be legal (never fewer than the legal orders), in the contract's list order, and keeps the candidates that `Check.reason_for` accepts.
 
 **Must:**
 - Take its candidates from `Reach`'s tables and from the units in the position, so the map data stays the only place adjacency is written.
-- Produce a candidate list that is a superset of the legal orders for every position, which the agreement spec proves for the sampled positions.
+- Drop candidates only by N1 to N4, so that the candidate list is a superset of the legal orders for every position; the agreement spec proves it for the sampled positions and the random boards.
 - Leave `check.rb` and `reach.rb` as they are unless a helper needs a small change to be reusable; any such change keeps #11's specs passing unchanged.
 
 ### FR-3: The record
@@ -229,7 +248,7 @@ A module, private to the gem, in `lib/trucebearer/adjudicator/legal_orders.rb`, 
 
 ### Performance
 
-See "Performance target": 22 starting units under 100 ms (spec bound 1 s); the 39-unit stress position under 1 s (spec bound 5 s). The measurements are in "How the list is generated" and will be repeated for the pull request.
+See "Performance target": 22 starting units under 100 ms, a 34-unit mid-game board under 250 ms, the 39-unit stress position under 1 s; spec bounds 1 s and 5 s, and a relative guard against filtering every candidate. The measurements will be repeated for the pull request.
 
 ### Reliability
 
@@ -254,6 +273,6 @@ See "Performance target": 22 starting units under 100 ms (spec bound 1 s); the 3
 None blocking. These are decisions made in this spec, put to the maintainer at Gate A so approval settles them.
 
 1. **Malformed arguments raise.** The contract says the list is empty for a non-movement position or a unit not on the board, but does not say what a non-`Position` or non-`Unit` argument does. This spec has it raise `TA::InvalidInput`, as `TA.check` does for its own arguments and as `## Errors` says ("raised for … a bad hash … an impossible value object"). No contract line is contradicted.
-2. **Approach B over A and C** (see "How the list is generated"). If the maintainer prefers A's simplicity and accepts about a second per page, it is a one-line change to the generator, and every other criterion stays.
-3. **Agreement spec untagged.** About 1 s per 22 units over the whole candidate space, a few seconds for all samples, so it runs with the ordinary suite and in CI. It is tagged `:slow` only if it grows past about 10 s.
-4. **No contradiction found** between the list-order rules, the "When each order type is legal" section and `check`. The contract's `ln` example (`yor` the only destination reachable both by land and by convoy) agrees with `check`, and one prototype run of both approaches on the starting and stress positions gave identical lists.
+2. **Approach B over A and C** (see "How the list is generated"). If the maintainer prefers A's simplicity and accepts about a second per page, it is a small change to the generator, and every other criterion stays except AC-6.3 and the targets.
+3. **Agreement spec untagged.** About 1 s per 22 units over the whole candidate space, expected under 10 s for all samples and the six random boards, so it runs with the ordinary suite and in CI (which runs `bundle exec rspec` with no filter). It is tagged `:slow` only if it grows past about 10 s, and the tag excludes nothing from CI.
+4. **No contradiction found** between the list-order rules, the "When each order type is legal" section and `check`. The contract's `ln` example (`yor` the only destination reachable both by land and by convoy) agrees with `check`, and prototype runs of both approaches gave identical lists on the starting and stress positions and, in the review, on 40 random boards.
