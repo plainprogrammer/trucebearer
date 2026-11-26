@@ -132,4 +132,30 @@ RSpec.describe "TA.adjudicate: the examples of docs/interface.md" do
     ])
     expect(result.paradox).to be(true)
   end
+
+  describe "the impossible outcomes and adjudications of the contract" do
+    let(:hold) { O::Hold.new(power: :england, at: :lon) }
+    let(:pos) do
+      TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement,
+                       units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon))],
+                       ownership: { lon: :england }, dislodged_units: [], standoffs: [])
+    end
+
+    def held(power, at, submitted) = TA::Outcome.new(order: O::Hold.new(power: power, at: at), result: :held, submitted: submitted, dislodged: false)
+
+    it "refuses the impossible outcomes of ### Impossible objects" do
+      expect { TA::Outcome.new(order: hold, result: :bounced, submitted: true, dislodged: false) }.to raise_error(TA::InvalidInput)
+      expect { TA::Outcome.new(order: hold, result: :void, submitted: true, dislodged: true) }.to raise_error(TA::InvalidInput)
+      expect { TA::Outcome.new(order: hold, result: :void, submitted: false, dislodged: false) }.to raise_error(TA::InvalidInput)
+    end
+
+    it "refuses the impossible adjudications of ### Impossible objects" do
+      expect { TA::Adjudication.new(outcomes: [held(:france, :bre, false), held(:england, :lon, true)], paradox: false, position: pos) }
+        .to raise_error(TA::InvalidInput)
+      expect { TA::Adjudication.new(outcomes: [held(:france, :bre, false), held(:england, :bel, false)], paradox: false, position: pos) }
+        .to raise_error(TA::InvalidInput)
+      expect { TA::Adjudication.new(outcomes: [held(:england, :lon, true), held(:england, :lon, true)], paradox: false, position: pos) }
+        .to raise_error(TA::InvalidInput)
+    end
+  end
 end
