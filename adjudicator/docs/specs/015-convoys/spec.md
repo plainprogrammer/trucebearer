@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | Initial draft |
+| 1.1.0 | 2026-11-26 | Folded in the Gate A review (round 1, changes required, two blocking):<br>• The paradox rule is now "a residue after the ranges and circular movement is a paradox", with no search: the draft's search was under-specified (a guess can leave moves undecided) and its one-solution branch looks unreachable. The independent reference (AC-8.3, AC-5.4) is the guard, and a counting step is written only if a board shows the simple rule is wrong.<br>• Counts and wording of 6.F.27 and 6.F.28 corrected; AC-3.2, AC-3.4, AC-2.3, AC-2.4 and the 6.C.7 note corrected; AC-6.1, AC-6.5, AC-8.1, AC-8.3 made exact; AC-6.7 and AC-8.6 no longer pin outcomes of a flagged board; the loader says "must have no `result:`" |
 
 ## Problem Statement
 
@@ -83,7 +84,7 @@ A circle of moves, each into the province the next one leaves, all succeed when 
 - a swap of two units in which at least one goes by convoy (a swap of two plain moves is a head-to-head battle, decided by strength, as before): DATC 6.C.6, 6.G.1, 6.G.12;
 - a circle that holds convoyed armies: DATC 6.C.4.
 
-The rule applies to a circle in which every move **has a route that is sure**. A circle with an open route in it is not circular movement; it goes to the paradox search below. A circle with a lost route has failed already: the move without a route fails, and the others fail after it (DATC 6.C.5, 6.C.7).
+The rule applies to a circle in which every move **has a route that is sure**. A circle with an open route in it is not circular movement; it stays in the residue (below), which is a paradox. (The plan checks whether that can happen at all: an army with an open route attacks a unit that stays, since the fleets it needs are attacked by moves of other units, so the guess is that it can't, and AC-8.3 is the guard.) A circle with a lost route has failed already: the move without a route fails, and the others fail after it (DATC 6.C.5). A circle whose move is stopped by a third unit fails the same way (DATC 6.C.7).
 
 ### Detecting a paradox (the flag, not the resolution)
 
@@ -92,16 +93,11 @@ The contract defines the flag: `true` exactly when the orders have no consistent
 The resolver decides moves as in #14: a move is decided when the range of its strengths settles it, and this is repeated until nothing more is decided. Then, if moves remain undecided:
 
 1. **Circular movement.** Every circle of undecided moves whose routes are all sure succeeds (above). Go back to deciding.
-2. **Search.** If undecided moves remain, they depend on each other through a route. Count the consistent ways to settle them, up to two:
-   - take the undecided move that comes first by province and try it as succeeded and as failed;
-   - after each guess, decide everything that follows (the same deciding, and circular movement);
-   - a guess is **dropped** when it makes some decided move differ from what its strengths give; a guess in which every move is decided and none is dropped is **one solution**.
-3. **One solution:** adopt it. The flag stays clear. The orders hold a dependency that the ranges could not see, but they have exactly one result, so by the contract they are no paradox.
-4. **None, or two or more:** the orders hold a convoy paradox. `paradox` is `true`, and the moves that were still undecided before the search all fail (see below).
+2. **The residue.** When neither step decides anything more and moves are still undecided, those moves are the **residue**. The orders hold a convoy paradox: `paradox` is `true`, and the residue moves all fail (see below).
 
-The search is exact against the contract's definition. It runs only on the moves left undecided, so on a position with no dependency through a route it never runs, and its cost is bounded by the undecided moves (a paradox in the DATC is a handful of them). A spec adjudicates a position of 34 units in under a second (AC-8.5).
+**Why a residue is a paradox.** After the ranges and circular movement, what is left undecided is a set of moves whose success turns on a route that turns on a fleet's dislodgement that turns, through a cut support, on those same moves. Following the dependencies around, each loop is a chain of decisions each taking the value of the next or its opposite: an even number of reversals gives two consistent results, an odd number gives none, and a loop never gives exactly one. That is the contract's "none or more than one". The argument is clearest when each fleet carries one army by one route; with several routes one fleet's dislodgement can feed several armies, so the spec does not rest on it. **AC-8.3 does**: an independent reference counts the consistent results of every small random board, and the flag must equal "none or more than one". If a board is found whose residue has exactly one consistent result, the rule gets a second step that counts the results of the residue by trying one move both ways and deciding what follows, and adopts the result when there is exactly one. Until a board shows that, the extra step is not written (fewest moving parts).
 
-**Circular movement and the search agree:** a circle whose routes are all sure is settled by the rule before the search can count "all succeed" and "all fail" as two results.
+The flag is cheap: there is no search, so a position of 34 units adjudicates as fast as before (AC-8.5).
 
 ### What a paradox does today
 
@@ -148,13 +144,13 @@ These twelve are the contract's list under "DATC scope". Each has a fixture with
 
 How each is detected today, from the rules above (to be confirmed by the specs; AC-6.3):
 
-- **6.F.14, 6.F.15, 6.F.26, 6.G.11:** two solutions: the carried army attacks and cuts the support, so the fleet survives; or it doesn't, the support is given, and the fleet is dislodged.
-- **6.F.16, 6.F.17, 6.F.18:** no solution: each guess leaves some decision at odds with its strengths.
-- **6.F.22, 6.F.23:** two solutions. **6.F.24:** none.
-- **6.F.27:** both paradoxes are in the same residue; none or two solutions.
-- **6.F.28:** the ring of fleets and armies is one residue; no solution.
+- **6.F.14, 6.F.15, 6.F.26, 6.G.11:** two results: the carried army attacks and cuts the support, so the fleet survives; or it doesn't, the support is given, and the fleet is dislodged.
+- **6.F.16, 6.F.17, 6.F.18:** no result: each way of settling the loop leaves some decision at odds with its strengths.
+- **6.F.22, 6.F.23:** two results. **6.F.24:** none.
+- **6.F.27:** two paradoxes in the same residue: a betrayal (no result) and a simple one (two results), so none in all.
+- **6.F.28:** the ring of six convoyed armies is one residue with two results (every attacked fleet dislodged, or none).
 
-If any of the twelve turns out to have exactly one solution, the contract's list is wrong. Stop and ask.
+Whatever the count, each of the twelve leaves a residue after the ranges and circular movement, which is what sets the flag. If any of the twelve is found to have exactly one consistent result, the contract's list is wrong. Stop and ask.
 
 ### Not encoded
 
@@ -180,12 +176,12 @@ Every case that #14 left out for #15 is therefore encoded, or pending for #39:
 
 ### Fixture format
 
-One new key: a top-level **`paradox: true`**. The loader refuses it together with an `after:` (a pending case has no asserted outcome), and refuses a value that isn't `true`. A case with `paradox: true` must have a `check:` on every order and may have no `result:`. Everything else in the format of #14 stays. The adjudication runner treats a `paradox: true` case as in AC-6.2 and an `after:` case as in AC-11.1 of spec 014, with `paradox: false`.
+One new key: a top-level **`paradox: true`**. The loader refuses it together with an `after:` (a pending case has no asserted outcome), and refuses a value that isn't `true`. A case with `paradox: true` must have a `check:` on every order and must have no `result:` (the loader of #14 already refuses a `result:` in a case with no `after:`). Everything else in the format of #14 stays. The adjudication runner treats a `paradox: true` case as in AC-6.2 and an `after:` case as in AC-11.1 of spec 014, with `paradox: false`.
 
 ## Definitions
 
 - **Route, carrying fleet, sure, lost, open:** see "The route of a move that goes by convoy".
-- **Paradox search, solution:** see "Detecting a paradox".
+- **Residue:** see "Detecting a paradox".
 
 ## User Stories
 
@@ -213,8 +209,8 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-2.1** Given an army ordered to a coastal province it can't reach by land, with fleets in a chain that all give matching convoy orders Then the move succeeds when nothing stops it; with a fleet of the chain missing or without a matching order, it is `:no_route`
 - [ ] **AC-2.2** Given a move with two routes, one of whose fleets is dislodged Then the move still succeeds (DATC 6.F.9 to 6.F.11, preferred option of 4.A.1); with every route broken it is `:no_route`
-- [ ] **AC-2.3** Given a route whose fleets belong to other powers, wholly or in part, Then it works (DATC 6.F.10, 6.F.11); and a fleet that gave the intent but is not on the route does not matter (DATC 6.G.6, 6.F.12)
-- [ ] **AC-2.4** Given the routing rules of the contract, for plain moves to a neighboring province Then: with a matching convoy order from a fleet of the army's own power that passes checking, the move goes by convoy and never falls back to land (DATC 6.G.1, 6.G.5, 6.G.8, 6.G.20); with a matching order only from another power, or from an own fleet whose order is void, it goes by land (DATC 6.G.2, 6.G.3, 6.G.7, 6.G.19); a `MoveViaConvoy` goes by convoy always (DATC 6.G.10, 6.G.12)
+- [ ] **AC-2.3** Given a route whose fleets belong to other powers, wholly or in part, Then it works (DATC 6.F.10, 6.F.11); and a fleet that gave the intent but is not on the route does not matter (DATC 6.G.6); a convoy order that fails checking is void and carries nothing (DATC 6.F.12)
+- [ ] **AC-2.4** Given the routing rules of the contract, for plain moves to a neighboring province Then: with a matching convoy order from a fleet of the army's own power that passes checking, the move goes by convoy and never falls back to land, even when the route runs through other powers' fleets and not through the fleet that gave the intent (DATC 6.G.1, 6.G.5, 6.G.6, 6.G.9); with a matching order only from another power, or from an own fleet whose order is void, it goes by land (DATC 6.G.2, 6.G.3, 6.G.7, 6.G.19); a `MoveViaConvoy` goes by convoy always and never falls back to land, even when no convoy was ordered or the route is broken (DATC 6.G.8, 6.G.10, 6.G.12, 6.G.20)
 - [ ] **AC-2.5** Given a convoyed move Then it can bounce, can receive support, and a unit that it faces may bounce it, as any move (DATC 6.F.2, 6.F.3)
 - [ ] **AC-2.6** Given a move by convoy to a neighboring province and an opposite move Then there is no head-to-head battle, whichever of the two goes by convoy (DATC 6.G.9, 6.G.10, 6.G.14, 6.G.15), and two armies may swap by convoy (DATC 6.G.1, 6.G.5, 6.G.12, 6.C.6, 6.E.11)
 
@@ -227,9 +223,9 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-3.1** Given an attacked fleet that is not dislodged (a bounce, a beleaguered garrison) Then the convoy is `:given` (DATC 6.F.4, 6.F.5)
-- [ ] **AC-3.2** Given a dislodged carrying fleet Then its `Convoy` order is `:disrupted` and `dislodged`, and the move it carried is `:no_route` and cuts no support (DATC 6.F.6) and contests no province (DATC 6.F.7, 6.F.8)
+- [ ] **AC-3.2** Given a dislodged carrying fleet Then its `Convoy` order is `:disrupted` and `dislodged`; and when every route of the move it carried is broken, that move is `:no_route`, cuts no support (DATC 6.F.6) and contests no province (DATC 6.F.7, 6.F.8)
 - [ ] **AC-3.3** Given a `Convoy` order with no matching move that goes by convoy (the army holds, goes by land, goes elsewhere, or the order is for a move that nobody ordered) Then its result is `:unmatched`, even when the fleet is dislodged (DATC 6.G.3, 6.D.27)
-- [ ] **AC-3.4** Given a convoyed move that dislodges a unit Then the dislodged unit has `attacker_from` the army's own province and `by_convoy: true` (DATC 4.A.4, 4.A.5, 6.G.13, 6.F.30); a unit dislodged by a move by land has `by_convoy: false`
+- [ ] **AC-3.4** Given a convoyed move that dislodges a unit Then the dislodged unit has `attacker_from` the army's own province and `by_convoy: true` (DATC 4.A.4, 4.A.5, 6.D.16, 6.G.10, 6.G.15, 6.F.21, 6.F.25); a unit dislodged by a move by land has `by_convoy: false`. A convoyed move is judged to come from the army's own province: it does not cut the support of the province it left or of a unit that supports an attack on it (6.G.13), and it is not a head-to-head battle with an attack on the fleet that carries it (6.F.30)
 - [ ] **AC-3.5** The result of a `Convoy` order and the result of a support never depend on whether the move they helped succeeded (the contract's promise), shown by a spec that changes only that move's fate
 
 ### Story 4: Circular movement with convoys
@@ -253,8 +249,8 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-5.1** Given each of the twelve pending cases Then `paradox` is `true`, nothing raises, and the position builds with each unit once (AC-6.2)
 - [ ] **AC-5.2** Given every encoded case, including 6.F.19 to 6.F.21, 6.F.25 and 6.F.29, and 6.C.4 to 6.C.7 Then `paradox` is `false`
-- [ ] **AC-5.3** Given the simplest paradox (the `paradox_pos` example) Then a spec shows the search finds two solutions, and given the betrayal case (6.F.18) it finds none. Resolver specs may call the internal search directly
-- [ ] **AC-5.4** Given a position in which the ranges alone can't decide a move but the orders have exactly one result, Then `paradox` is `false` and the result is that one. If no such position can be found, the spec for the one-solution branch drives it with a position built for the purpose, or the branch is removed and the spec says so (review)
+- [ ] **AC-5.3** Given the simplest paradox (the `paradox_pos` example) and the betrayal case (6.F.18) Then each leaves a residue after the ranges and circular movement, and the reference of AC-8.3 counts two consistent results for the first and none for the second. A paradox is therefore detected both ways the contract names (more than one, none)
+- [ ] **AC-5.4** Given every board where the reference of AC-8.3 finds exactly one consistent result and any dependency through a route Then `paradox` is `false`. If the random boards show the residue rule sets the flag on such a board, the rule gets the extra counting step of "Detecting a paradox" (and its own ACs) before the pull request is ready; if they show none, the spec says that no such board was found (review)
 - [ ] **AC-5.5** Given a paradox in one part of the board and independent orders elsewhere, Then `paradox` is `true`, nothing raises, and every unit of the position is in the next position once (the contract leaves every outcome unspecified)
 - [ ] **AC-5.6** Given `paradox` is `true` Then the outcome list has one outcome for each order and every outcome is a valid `TA::Outcome`, so the adjudication builds
 
@@ -266,13 +262,13 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 **Acceptance criteria:**
 
-- [ ] **AC-6.1** The 46 cases of "Encoded for #15" each have `result:` on every order and an `after:`, and with the 80 of #14 give a runner of exactly 126; the checking-only list is empty; none of "Not encoded" has an `after:`
+- [ ] **AC-6.1** The 46 cases of "Encoded for #15" each have `result:` on every order and an `after:`, and with the 80 of #14 give a runner of exactly 126; the checking-only list is empty; none of 6.B.9, 6.B.14 and 6.H has a file with an `after:` (6.F.7 does, for its movement step)
 - [ ] **AC-6.2** Each of the twelve pending files has `paradox: true`, `check:` on every order and no `after:`. For each, a spec asserts `paradox` is `true`, `result.position` builds, every unit is in the position once, and `outcomes` holds one outcome for each order and one for each implied hold. A second example for each is `skip`ped, with the reason "paradox resolution: #39". Those twelve are the only pending examples of the suite
-- [ ] **AC-6.3** Each of the twelve is checked to be one that the paradox search finds none or two solutions for. If one has exactly one, that is reported to the coordinator, not changed
+- [ ] **AC-6.3** For each of the twelve, a spec uses the reference of AC-8.3 (written over the fixture's position and orders) to show it has none or two consistent results. If one has exactly one, that is reported to the coordinator, not changed
 - [ ] **AC-6.4** The loader refuses `paradox: true` with an `after:`, and any other value of `paradox`. A spec shows each refusal
-- [ ] **AC-6.5** The checking runner still passes, with its expected lists updated: 6.B.18, 6.B.19 and 6.G.19 move into the adjudicated list; the twelve pending files are in the set it expects; `left_out` is updated
+- [ ] **AC-6.5** The checking runner still passes, with its expected lists updated: 6.B.18, 6.B.19 and 6.G.19 move into `Datc::ADJUDICATED` (126 entries) and `CHECKING_ONLY` is removed; a new constant `Datc::PARADOX_PENDING` holds the twelve; the runner expects 138 files in all (126 + 12, where 83 stand today); `left_out` is updated
 - [ ] **AC-6.6** Every fixture holds the units and orders of its DATC case and nothing more, written in our own words, with the summary citing no DATC text (review). The DATC overlap check finds 0 shared 8-word runs over every file the pull request changes (the maintainer's check, run by the author, result in the pull request)
-- [ ] **AC-6.7** The same orders in another order give the same results and the same flag, for every encoded case (AC-9.1 of spec 014), and the twelve pending ones
+- [ ] **AC-6.7** The same orders in another order give the same results and the same flag, for every encoded case (AC-9.1 of spec 014). For the twelve pending ones, the same flag, a valid position and one outcome for each order (the outcomes themselves are unspecified)
 
 ### Story 7: The stub is gone
 
@@ -284,7 +280,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 - [ ] **AC-7.1** `spec/trucebearer/adjudicator/adjudicate_convoy_stub_spec.rb` is deleted. A spec file of the same subject that holds real specs may replace it. Nothing says convoys never work
 - [ ] **AC-7.2** The `pending "convoys: #15"` lines of the two examples are gone
-- [ ] **AC-7.3** The resolver's comments about "this release" and "#15" are replaced by what the code now does, and the unreachable defensive branch of #14 (`last_resort`) is replaced by the search above. `Resolver` stays `private_constant` and `docs/interface.md` is not edited
+- [ ] **AC-7.3** The resolver's comments about "this release" and "#15" are replaced by what the code now does, and the defensive branch of #14 (`last_resort`) is replaced by the residue rule above. `Resolver` stays `private_constant` and `docs/interface.md` is not edited
 
 ### Story 8: Correctness beyond the DATC
 
@@ -294,12 +290,12 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 
 **Acceptance criteria:**
 
-- [ ] **AC-8.1** The generator makes boards with convoys: armies on the coast, fleets at sea that form chains of one to three, `Move`, `MoveViaConvoy` and `Convoy` orders (from own fleets and foreign fleets), attacks on carrying fleets, supporters attacked from the destination of a convoyed move, swaps by convoy, and circles with a convoyed move. At least 20 boards each hold a move that goes by convoy, a dislodged carrying fleet, a swap by convoy, and a flagged paradox, each counted by the spec from the orders. The boards of #14 stay and still pass
+- [ ] **AC-8.1** The generator makes boards with convoys: armies on the coast, fleets at sea that form chains of one to three, `Move`, `MoveViaConvoy` and `Convoy` orders (from own fleets and foreign fleets), attacks on carrying fleets, supporters attacked from the destination of a convoyed move, swaps by convoy, and circles with a convoyed move. At least 20 boards each hold a move that goes by convoy, a dislodged carrying fleet, a swap by convoy, and a flagged paradox. Each is counted by the spec from the orders and the result, and the paradox count takes the flag from the reference of AC-8.3 and not from the resolver. The boards of #14 stay and still pass
 - [ ] **AC-8.2** On **every** board, `TA.adjudicate` returns an `Adjudication` and raises nothing, every unit appears once, and no unit is dislodged by a unit of its own power. When `paradox` is `false`, the result satisfies the conditions of spec 014 as extended for convoys (route, cut with a route, no head-to-head with a convoy), re-stated independently in `spec/support/conditions.rb` from the contract and the DATC, not from the resolver
-- [ ] **AC-8.3** On boards of at most 12 units, a reference written in the spec, apart from the resolver, tries every set of move results (success or failure for each move), keeps those that satisfy the conditions, applies circular movement (it drops a consistent set in which a circle of moves fails although the set with that circle succeeding is also consistent), and says the board holds a paradox when **none or more than one** is left. `paradox` equals that on every such board. At least 20 small boards are flagged, and at least 20 hold a convoy and are not
+- [ ] **AC-8.3** On boards of at most 12 units, a reference written in the spec, apart from the resolver, tries every set of move results (success or failure for each move), keeps those that satisfy the conditions, applies circular movement, and says the board holds a paradox when **none or more than one** is left. `paradox` equals that on every such board. Circular movement in the reference means this: a **circle** is moves each into the province the next one leaves, of three or more, or of two when at least one goes by convoy; a consistent set is **dropped** when some circle's moves all fail although flipping exactly the moves of that circle to success, and nothing else, gives another consistent set. At least 20 small boards are flagged, and at least 20 hold a convoy and are not
 - [ ] **AC-8.4** On every board, a flagged board holds at least one move that goes by convoy, and the converse is not claimed
 - [ ] **AC-8.5** A position of 34 units, with convoys, adjudicates in under a second
-- [ ] **AC-8.6** The same boards with the orders shuffled give the same results and the same flag
+- [ ] **AC-8.6** The same boards with the orders shuffled give the same flag and a valid position, and, when the flag is `false`, the same results
 
 ### Story 9: Records
 
@@ -316,14 +312,14 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 ## Open Questions
 
 1. **A flagged board's other results.** The contract leaves every result unspecified while the flag is set, "even for orders that have nothing to do with the paradox". The proposal fails the moves that were undecided and keeps every other decision. **Recommendation:** keep this. It gives a valid position without any new rule. The alternative, failing every convoyed move, is simpler to state and changes more.
-2. **The search's exactness.** The search counts solutions, so an exact flag costs a few lines more than "flag whenever the ranges stall". **Recommendation:** the exact search, because the contract says exactly, and the reference of AC-8.3 would catch the shortcut otherwise. If the search shows no position with exactly one solution, AC-5.4's branch is removed and the rule becomes "flag whenever moves remain after circular movement", and the spec says so.
+2. **How the flag is detected.** The simple rule is "flag when moves are still undecided after the ranges and circular movement". Counting the consistent results of the residue would be more exact on paper, but the review argued that a residue never has exactly one, and the simple rule has fewer parts. **Recommendation:** the simple rule, guarded by the independent reference (AC-8.3, AC-5.4); the counting step is written only if a board shows the simple rule is wrong.
 3. **A swap where one army goes by convoy and the other by land.** Neither is a head-to-head battle. **Recommendation:** treat it as circular movement, as the contract's examples do (DATC 6.G.9).
-4. **Size.** About 46 fixtures, 12 pending fixtures, the resolver change, the generator and the independent check. **Proposal:** one pull request, unless the plan shows more than about 1 200 added lines of code and specs apart from fixtures. If it does, split at Gate B: routes and disruption first (with every encoded case, and boards with convoys but with the paradox flag left to the old defensive fallback), then the paradox search, the twelve pending fixtures and the reference check. A single spec covers both.
+4. **Size.** About 46 fixtures, 12 pending fixtures, the resolver change, the generator and the independent check. **Proposal:** one pull request, unless the plan shows more than about 1 200 added lines of code and specs apart from fixtures. If it does, split at Gate B: routes and disruption first (with every encoded case, and boards with convoys but with the paradox flag left to the old defensive fallback), then the paradox rule, the twelve pending fixtures and the reference check. A single spec covers both.
 
 ## Notes for the plan
 
 - The one place a route is decided is `Resolver#path?`, which #14 left as a stub. It becomes a three-valued question, `route(move)`, answering sure, lost or open, built on `Reach` with the carrying fleets only. `Reach` gets one new method that takes a set of seas, and its existing chain check calls it; nothing else in `reach.rb` or `check.rb` changes.
 - A fleet's dislodgement is three-valued like a support's cut: dislodged when some move into it has succeeded, not when every move into it has failed, open otherwise.
 - The strengths and the cut take the open route as a wider range. The ranges must stay sound: a range may be wider than the truth, never narrower, so a decision made from it holds under every outcome.
-- The paradox search works on a copy of the decisions, so a dropped guess leaves no trace.
+- The reference of AC-8.3 is a small, slow, separate piece of spec code (`spec/support/`): it tries every set of results for at most 12 units, and checks each against the conditions written in `conditions.rb`. It is not the resolver in disguise.
 - Fixtures are derived by hand from the DATC position and our own reading of the rules, with the contract's result names: for example, a convoy order whose army went by land is `:unmatched` where the DATC's own label differs (labels are free, DATC 4.E.2).
