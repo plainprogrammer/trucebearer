@@ -1,7 +1,7 @@
 require "rails_helper"
 require_relative "../support/rules_helpers"
 
-# Spec 024 Story 3: a broadcast carries the seven submitted states and nothing else, whatever the orders are. Since 1.2.0 (D10,
+# Spec 024 Story 3: a broadcast carries the seven submitted states and nothing else, whatever the orders are. Since 1.3.0 (D10,
 # AC-9.3) the same proof covers what SeatStatusChannel transmits to a subscriber as it arrives, after each step.
 RSpec.describe "The status payload", type: :channel do
   include RulesHelpers

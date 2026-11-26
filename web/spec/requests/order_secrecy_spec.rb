@@ -83,6 +83,8 @@ RSpec.describe "Order secrecy", type: :request do
       [ seat, game.reissue_seat!(seat) ] # a reissue row is in the history before any baseline (spec 026 AC-10.6)
     end
     let!(:france_seat_and_token) { game.take_seat!("france") }
+    # A position edit is in the history before any baseline (spec 027 AC-7.6). An owner edit keeps orders, so England's orders stay what the examples set.
+    let!(:position_edit) { game.edit_position!(1, { "action" => "owner_set", "center" => "bel", "to" => "germany" }) }
     let(:england_seat) { england_seat_and_token.first }
     let(:phase) { game.current_phase }
     let(:open_number) { 1 } # the number of the open phase the viewers are built for (spec 025: 2 after a reveal)
@@ -118,6 +120,14 @@ RSpec.describe "Order secrecy", type: :request do
       history = Nokogiri::HTML5(created.session.response.body).at_css("[data-seat-history]")
 
       expect(history.css("li").map { |row| row.text.squish }.join(" ")).to include("seat reissued").and include("stepped in")
+    end
+
+    it "has a position edit in the host page's history the sweep compares (spec 027 AC-7.6)" do
+      position_edit
+      created.session.get "/games/#{id}/host"
+      history = Nokogiri::HTML5(created.session.response.body).at_css("[data-seat-history]")
+
+      expect(history.css("li").map { |row| row.text.squish }.join(" ")).to include("board changed: BEL given to Germany")
     end
 
     ENTRIES = {

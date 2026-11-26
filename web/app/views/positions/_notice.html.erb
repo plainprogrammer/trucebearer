@@ -1,0 +1,6 @@
+<%# The seat's notice that the host moved units (spec 027 D3): the latest time, the same for every seat. locals: game, phase %>
+<% time = game.board_cleared_at(phase) %>
+<% if time %>
+  <%# The wrapper lets a .stack space the banner: .banner sets its own margin to 0, which would beat the stack's rule. %>
+  <div><%= render "shared/banner", kind: "warning", text: safe_join([ "The host changed the board at ", table_time(time), ". Orders saved before then were cleared, so check yours." ]) %></div>
+<% end %>

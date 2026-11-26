@@ -1,7 +1,7 @@
 # Feature 026: The host steps into another seat
 
 **Status:** Approved
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #26 (amended by #104)
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.0 | 2026-11-26 | Amended by spec 027 (the position editor, #27).<br>• The host page's Seat history list also holds the position edits of spec 027 D4, in the order "a reissue, then a step-in, then a position edit" at the same instant; its heading, hook and empty text are unchanged. The list's partial draws a row of words for a position edit, and the secrecy sweep keeps a position-edit row in the history it compares.<br>• The Out of Scope line for #27 is decided: edits that move units clear every seat's orders (spec 027 D3); a step-in sees what is left, which is none until the seat orders again. |
 | 1.1.0 | 2026-11-26 | Amended by #104 (record seat reissues). **MINOR**: adds behavior; the approved acceptance criteria that change are only the ones that name the list (AC-6.4, AC-6.6, AC-8.5, AC-8.6, AC-9.1).<br>• **D10 (new):** every reissue writes one append-only row in a second table, `reissues` (`phase_id`, `seat_id`, `created_at`), in the same transaction as the new token. A separate table, not a `seat_events` table with a kind; `step_ins` and its behavior do not change.<br>• **D6 / AC-6.4:** the host page's "Step-ins" list becomes "Seat history": step-ins and reissues together, oldest first, each row the phase title, the power and the time, with the words "stepped in" or "seat reissued". Its empty text is "Nothing has happened to a seat yet." and its hook is `data-seat-history` (the existing list specs follow).<br>• **D5:** option (c) (record every reissue) is now built, by D10. The stated residual (a browser that never holds the host cookie) is still not blocked, but it now leaves a row.<br>• **Story 10 (new):** AC-10.1 to AC-10.8. **AC-8.5** adds the history; **AC-8.6** also scans the constant `Reissue`; **AC-9.1** also checks the history at 360 pixels.<br>• Found at the first Fable review: the write order must not change what `reissue_seat!` returns (spec 024 D3); the sweep's setup is named; the scan pattern is a constant use, not the word<br>• Out of Scope and Open Question 1 updated. Who sees the history stays with the maintainer: only the host, as before |
 | 1.0.3 | 2026-11-26 | Found while building, within what Gate A approved: the layout draws the bar and the page inside one `.stack` while stepped in (the bar sits under any flash banner), because `.banner` sets its own margin to 0 and no new CSS is allowed, so the bar and the page need a stack of their own to be spaced (D7); the resolver's redirect for a host browser that holds another seat's cookie is a 303, so a `PUT` never repeats as a `PUT` (D5); the 409 page is headed with the seat's name while stepped in; the entry list is in the Seats list's order |
 | 1.0.2 | 2026-11-26 | Approved at Gate A (the maintainer's delegate: the record, option (b) of D5, the cookie, and `TRUCEBEARER_TIME_ZONE` kept, also in `config/deploy.yml`; recording every reissue, option (c), is a follow-up Issue and not built here). Minor fixes from the second Fable review (approved with minor fixes): the resolver's redirect goes to the open phase's confirmation and deletes the foreign seat cookie (D5); Leave and the own-seat link fall back to the host page when the browser holds no seat of its own (D7, AC-3.9); a revealed number redirects, a later or unknown one is a stranger (AC-1.7); where the bar's flag is set is named (D7, AC-3.4); the scan looks for the constant `StepIn` (AC-8.6); a host-only browser that joins as another power is a Non-Goal; FR wording |
@@ -364,5 +365,5 @@ Every new route is classified. The sweep and the scans are updated (Story 8). Th
 - ~~Recording every reissue~~ Done in 1.1.0 (D10, Issue #104) as a host-page history record. **Still out of scope:** telling a seat's owner that their seat was reissued (a notice like D6's), which only the maintainer can ask for.
 - **Showing the step-in and reissue history to every phone**, and in the results of #25.
 - **#24** (live status) and **#25** (results) must classify their routes in the table; neither shows a step-in.
-- **#27** (the position editor) clears orders it invalidates; a step-in sees what is left.
+- **#27** (the position editor, spec 027) clears every seat's orders when units move; a step-in sees what is left.
 - A game-level time zone and a viewer-local time (D6).

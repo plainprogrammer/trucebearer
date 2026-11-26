@@ -94,10 +94,20 @@ class Game < ApplicationRecord
   # Every reissue of this game, oldest first (spec 026 D10). Read through the phases, as the step-ins are.
   def reissue_history = Reissue.joins(:phase).where(phases: { game_id: id }).includes(:phase, :seat).order(:id)
 
-  # The step-ins and the reissues together, oldest first; at the same instant a reissue comes before a step-in (D10).
+  # Every hand edit of the position in this game, oldest first (spec 027 D4). Read through the phases, as the other histories are.
+  def position_edit_history = PositionEdit.joins(:phase).where(phases: { game_id: id }).includes(:phase).order(:id)
+
+  SEAT_HISTORY_ORDER = { reissue: 0, step_in: 1, position_edit: 2 }.freeze
+
+  # The reissues, the step-ins and the position edits together, oldest first; at the same instant a reissue comes before a step-in
+  # (spec 026 D10) and a position edit after both (spec 027 D4).
   def seat_history
-    (reissue_history.to_a + step_in_history.to_a).sort_by { |entry| [ entry.created_at, entry.kind == :reissue ? 0 : 1, entry.id ] }
+    (reissue_history.to_a + step_in_history.to_a + position_edit_history.to_a)
+      .sort_by { |entry| [ entry.created_at, SEAT_HISTORY_ORDER.fetch(entry.kind), entry.id ] }
   end
+
+  # When the latest edit that moved units was made in this phase, or nil: what a seat's notice says (spec 027 D3).
+  def board_cleared_at(phase) = PositionEdit.where(phase_id: phase.id).select(&:clears_orders?).map(&:created_at).max
 
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
@@ -137,5 +147,27 @@ class Game < ApplicationRecord
     end
     broadcast_seat_status if withdrew # the seat had submitted and no longer has (spec 024 D3)
     token
+  end
+
+  # One hand edit of the open phase's position by the host (spec 027 D1, D3, D4, D7). It runs under the phase lock, builds the new
+  # position through RulesEngine, refuses a change that changes nothing, stores the position, clears every seat's orders when units
+  # moved, and writes the record, all in one transaction. Returns the new PositionEdit row. The status stream hears of it after the
+  # commit when a submitted state was withdrawn, as for a reissue (spec 024 D3).
+  def edit_position!(number, intent)
+    withdrew = false
+    row = transaction do
+      phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
+      raise Phase::Revealed unless phase.number == number
+
+      result = PositionEdit.apply(phase.position, intent)
+      raise RulesEngine::EditRefused.new(:no_change) if result.position == phase.position
+
+      phase.update!(position: result.position)
+      entry = PositionEdit.create!(phase: phase, detail: result.detail)
+      withdrew = seats.map { |seat| seat.clear_orders!(phase) }.any? if entry.clears_orders?
+      entry
+    end
+    broadcast_seat_status if withdrew
+    row
   end
 end

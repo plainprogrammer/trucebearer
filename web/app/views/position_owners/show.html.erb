@@ -1,0 +1,24 @@
+<% content_for :title, "Supply-center owner" %>
+<% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
+
+<div class="stack">
+  <h1>Set a supply center's owner</h1>
+  <%= render "phases/header", phase: @phase %>
+  <%= render "positions/refusal" %>
+  <%= form_with url: game_position_owners_path(@game.public_id, @phase.number), method: :put, class: "stack" do %>
+    <div class="field">
+      <label class="field__label" for="owner-center">Supply center</label>
+      <%= select_tag "owner[center]", options_for_select([ [ "Choose a supply center", "" ] ] + center_options, field(:owner, :center)), id: "owner-center", class: "control" %>
+    </div>
+    <div class="field">
+      <label class="field__label" for="owner-power">Owner</label>
+      <%= select_tag "owner[power]", options_for_select([ [ "Choose an owner", "" ] ] + power_options + [ [ "Nobody", "nobody" ] ], field(:owner, :power)), id: "owner-power", class: "control" %>
+    </div>
+    <%= render "positions/clears_note", clears: false %>
+    <%= button_tag "Set owner", type: "submit", class: "button" %>
+  <% end %>
+</div>
+
+<% content_for :actions do %>
+  <%= link_to "Back", editor_path, class: "button button--secondary" %>
+<% end %>

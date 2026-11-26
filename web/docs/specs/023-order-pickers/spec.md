@@ -1,7 +1,7 @@
 # Feature 023: Enter movement orders with pickers
 
 **Status:** Approved
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #23
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.0 | 2026-11-26 | Amended by spec 027 (the position editor, #27).<br>• The note about #27 is decided (spec 027 D3, AC-5.1): an edit that moves units clears every seat's saved orders and submission, so a phone that still shows the old board is refused by the existing save check (spec 022 D4). The order screen gains one banner, spec 027's notice that the host moved units (`positions/_notice`, drawn only on a seat's own screen); no picker, endpoint or other screen changes. |
 | 1.1.0 | 2026-11-26 | Amended by spec 025 (reveal results to every phone, #25): AC-2.13 is read as "given a revealed phase, a `GET` of any step URL on a seat's own address is a 303 to that phase's results page, before the province is looked at" (it was the 409 page). A `PUT` keeps its 409, a stepped-in step URL keeps the 409 page, and a phase number later than the open one or unknown is still the stranger response. The order screen and the picker also subscribe to the results stream (spec 025 D2). Every other criterion holds unchanged |
 | 1.0.3 | 2026-11-26 | Refinements found while planning, within what Gate A approved: the draft has three keys, `draft[kind]`, `draft[target]` and `draft[to]` (the coast step and the by-land-or-convoy step are reached from `kind=move&to=...`, and their choices are the final saves, so `draft[coast]` and `draft[via]` are not needed); a fleet's move to a split-coast province with exactly one reachable coast still saves from the destination row, and the row's note names the coast so the player sees what will be saved |
 | 1.0.2 | 2026-11-26 | Changed after the second Fable review: the list's `.save-status` has a defined resting text (D6, AC-1.8); the "needs a convoy" mark is applied by an order helper that is given the unit, armies only (FR-3, AC-1.9); the two new `RulesEngine` methods are named as added by this feature and covered by the boundary spec (FR-3); "Saving…" without `:has` leaves the resting text (D6); the deploy-note claim is dropped; smaller wording fixes |
@@ -319,6 +320,6 @@ None unresolved. The maintainer is asked about D1, D3, D4, D5 and D7.
 
 - **#24** shows who has submitted, live, and reuses `.save-status` and the seat-status partial's neighbours.
 - **#26** steps into a seat: the host would see these same screens as that seat. It needs the sweep's exception of spec 022.
-- **#27** may change an open phase's position. A saved order is checked at save time (spec 022 D4), so #27 must re-check or clear orders and submissions, as 022 noted. Nothing here changes that.
+- **#27** may change an open phase's position. A saved order is checked at save time (spec 022 D4), so spec 027 decided it: an edit that moves units clears every seat's orders and submissions. Nothing here changes that.
 - **#82** adds glyphs (the chevron, "Saved") in one place per component.
 - A phase clock, a shared display, undo of an order, and a map.

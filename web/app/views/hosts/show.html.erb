@@ -18,6 +18,7 @@
     <h2 id="host-heading">Host</h2>
     <%= render "phases/status", game: @game, phase: @phase, level: 3 %>
     <%= link_to "Reveal orders", game_reveal_path(@game.public_id, @phase.number), class: "button" %>
+    <%= link_to "Edit the board", game_position_path(@game.public_id, @phase.number), class: "button button--secondary" %>
     <% if @game.open? %>
       <% join_link = join_game_url(@game.join_code) %>
       <%= qr_card(join_link, label: "QR code to join the game", caption: join_code_text(@game.join_code)) %>

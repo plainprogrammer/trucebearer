@@ -7,6 +7,7 @@
   <h1><%= heading %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
   <%= render "step_ins/notices", seat: @seat, phase: @phase unless @stepped_in_page %>
+  <%= render "positions/notice", game: @game, phase: @phase unless @stepped_in_page %>
   <% if @refusal %><%= render "shared/banner", kind: "danger", text: @refusal %><% end %>
   <p>Tap a unit to give it an order. A unit with no order holds.</p>
   <ul class="list">

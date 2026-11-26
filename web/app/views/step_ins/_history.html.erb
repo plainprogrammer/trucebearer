@@ -1,4 +1,4 @@
-<%# The game's seat history: each step-in and each reissue, oldest first (spec 026 D6, D10). Phases, powers and times only. locals: game %>
+<%# The game's seat history: each step-in, reissue and board edit, oldest first (spec 026 D6, D10, spec 027 D4). Phases, powers and times only. locals: game %>
 <% entries = game.seat_history %>
 <section class="stack" aria-labelledby="seat-history-heading" data-seat-history>
   <h2 id="seat-history-heading">Seat history</h2>
@@ -7,7 +7,11 @@
   <% else %>
     <ul class="list">
       <% entries.each do |entry| %>
-        <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <%= power_badge(entry.seat.power) %> <span><%= entry.kind == :reissue ? "seat reissued" : "stepped in" %></span> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
+        <% if entry.kind == :position_edit %>
+          <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <span>board changed: <%= position_edit_text(entry.detail) %></span> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
+        <% else %>
+          <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <%= power_badge(entry.seat.power) %> <span><%= entry.kind == :reissue ? "seat reissued" : "stepped in" %></span> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
+        <% end %>
       <% end %>
     </ul>
   <% end %>

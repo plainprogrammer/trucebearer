@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
-                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status results]
+                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status results segmented]
   # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
@@ -24,6 +24,17 @@ RSpec.describe "Style guide", type: :request do
     it "responds with 200 and one section for each component (AC-5.1)" do
       expect(response).to have_http_status(:ok)
       expect(page.css("section[data-component]").map { |s| s["data-component"] }).to match_array(components)
+    end
+
+    it "shows the segmented toggle: a legend and exactly one checked radio in each sample (spec 027 AC-9.4)" do
+      samples = page.css("section[data-component=segmented] fieldset.segmented")
+
+      expect(samples.size).to be >= 2
+      samples.each do |sample|
+        expect(sample.at_css("legend").text).to be_present
+        expect(sample.css("input[type=radio][checked]").size).to eq(1)
+        expect(sample.css("input[type=radio]").size).to be >= 2
+      end
     end
 
     it "shows static variants: each button variant, disabled, invalid, a disabled choice (AC-5.1)" do
