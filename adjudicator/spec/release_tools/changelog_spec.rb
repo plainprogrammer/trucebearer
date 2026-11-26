@@ -182,13 +182,19 @@ RSpec.describe ReleaseTools::Changelog do
   end
 
   describe "against the real CHANGELOG.md" do
+    let(:real) { File.read(File.expand_path("../../CHANGELOG.md", __dir__)) }
+
+    it "can always find and read its Unreleased section" do
+      expect { described_class.unreleased_empty?(real) }.not_to raise_error
+    end
+
+    # Right after a release Unreleased is empty and there is nothing to release.
     it "can release whatever is currently under Unreleased" do
-      real = File.read(File.expand_path("../../CHANGELOG.md", __dir__))
+      skip "nothing under Unreleased right now" if described_class.unreleased_empty?(real)
 
       result = described_class.release(real, version: "9.9.9", date: date)
 
-      expect(result).to include("## 9.9.9 (2026-11-25)")
-      expect(result).to include("Releases are git tags named")
+      expect(result).to include("## 9.9.9 (2026-11-25)", "Releases are git tags named")
       expect(described_class.unreleased_empty?(result)).to be(true)
     end
   end

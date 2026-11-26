@@ -6,7 +6,7 @@ module ReleaseTools
   # Reads, bumps and rewrites the gem version in lib/trucebearer/adjudicator/version.rb.
   module Version
     LINE = /^(\s*VERSION\s*=\s*)"([^"]*)"/
-    STRICT = /\A\d+\.\d+\.\d+\z/
+    STRICT = /\A(0|[1-9]\d*)(\.(0|[1-9]\d*)){2}\z/
     BUMPS = %w[major minor patch].freeze
 
     module_function
@@ -18,6 +18,7 @@ module ReleaseTools
 
     # `arg` is major, minor, patch, or an explicit X.Y.Z higher than `current`.
     def resolve(arg, current)
+      raise Error, "The current version #{current.inspect} is not X.Y.Z." unless STRICT.match?(current)
       return bump(arg, current) if BUMPS.include?(arg)
 
       raise Error, "Give major, minor, patch or a version like X.Y.Z (got #{arg.inspect})." unless STRICT.match?(arg)

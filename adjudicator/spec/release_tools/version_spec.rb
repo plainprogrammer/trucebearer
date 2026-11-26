@@ -52,10 +52,14 @@ RSpec.describe ReleaseTools::Version do
     end
 
     it "refuses anything that is not plain X.Y.Z" do
-      ["1.0", "v1.0.0", "1.0.0-rc1", "banana", ""].each do |bad|
+      ["1.0", "v1.0.0", "1.0.0-rc1", "0.01.0", "00.1.0", "banana", ""].each do |bad|
         expect { described_class.resolve(bad, "0.1.2") }.to raise_error(ReleaseTools::Error, /X\.Y\.Z/)
       end
     end
+  end
+
+  it "refuses to bump from a current version that is not X.Y.Z" do
+    expect { described_class.resolve("patch", "1.0") }.to raise_error(ReleaseTools::Error, /current version/)
   end
 
   describe ".rewrite_file" do

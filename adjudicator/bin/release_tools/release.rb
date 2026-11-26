@@ -85,20 +85,33 @@ module ReleaseTools
       File.write(path(VERSION_FILE), Version.rewrite_file(File.read(path(VERSION_FILE)), version))
       File.write(path(CHANGELOG_FILE), changelog)
       @lock_command.call(@root)
-      check_lock!(old_lock)
+      check_lock!(old_lock, version)
       @git.add(files)
       @git.commit(message)
-    rescue StandardError
-      @git.restore(files)
+    rescue StandardError, Interrupt
+      restore_files
       raise
     end
 
-    # Only the lines that name the gem itself may change when the version does.
-    def check_lock!(old_text)
+    # The tree was clean when we started, so putting HEAD's files back loses
+    # nothing. If even that fails, say so without hiding the original error.
+    def restore_files
+      @git.restore(files)
+    rescue Error => e
+      @out.puts "Could not restore the files (#{e.message}). Run: git checkout HEAD -- #{files.join(' ')}"
+    end
+
+    # Only lines that name the gem itself may change, and each must show the new version.
+    def check_lock!(old_text, version)
       old_lines = old_text.lines
       new_lines = File.read(path(LOCK_FILE)).lines
-      changed = old_lines.size != new_lines.size || old_lines.zip(new_lines).any? { |old, new| old != new && !old.include?(GEM_NAME) }
-      raise Error, "#{LOCK_FILE} changed in more than the gem's own version; nothing was committed." if changed
+      differing = old_lines.size == new_lines.size ? old_lines.zip(new_lines).reject { |old, new| old == new } : nil
+      own_lines = new_lines.grep(/#{GEM_NAME} \(/)
+      return if differing && own_lines.any? && own_lines.all? { |line| line.include?("(#{version})") } &&
+                differing.all? { |old, _new| old.include?(GEM_NAME) }
+
+      detail = differing ? differing.map { |old, new| "  - #{old.strip}\n  + #{new.strip}" }.join("\n") : "  the number of lines changed"
+      raise Error, "#{LOCK_FILE} must change only the #{GEM_NAME} lines, to #{version}; nothing was committed. Changes:\n#{detail}"
     end
 
     def tag!(tag, message)

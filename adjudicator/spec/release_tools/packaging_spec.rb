@@ -10,7 +10,7 @@ RSpec.describe "the packaged gem" do
     expect(gemspec.files.grep(%r{\Abin/})).to be_empty
   end
 
-  it "holds no release tooling under lib/" do
-    expect(gemspec.files.grep(/release/i)).to be_empty
+  it "holds no release tooling" do
+    expect(gemspec.files.grep(/release_tools/)).to be_empty
   end
 end

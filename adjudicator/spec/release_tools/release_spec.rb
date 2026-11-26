@@ -10,8 +10,9 @@ require_relative "../../bin/release_tools/release"
 # Every example works in a throwaway repository under a temp directory. The
 # Git wrapper is given a scrubbed environment so nothing here can read the
 # user's git configuration or reach the real repository.
-RSpec.describe ReleaseTools::Release do
+module ReleaseSpecFixtures
   GIT_ENV = {
+    "GIT_DIR" => nil, "GIT_WORK_TREE" => nil, "GIT_INDEX_FILE" => nil,
     "GIT_CONFIG_GLOBAL" => File::NULL,
     "GIT_CONFIG_NOSYSTEM" => "1",
     "GIT_AUTHOR_NAME" => "Spec", "GIT_AUTHOR_EMAIL" => "spec@example.invalid",
@@ -38,12 +39,14 @@ RSpec.describe ReleaseTools::Release do
   EMPTY_CHANGELOG = "# Changelog\n\n## Unreleased\n\n### Added\n\n### Changed\n\n### Fixed\n"
   VERSION_RB = "module Trucebearer\n  module Adjudicator\n    VERSION = \"0.0.0\"\n  end\nend\n"
   LOCK = "PATH\n  remote: .\n  specs:\n    trucebearer-adjudicator (0.0.0)\n\nCHECKSUMS\n  rake (1.0.0) sha256=abc\n  trucebearer-adjudicator (0.0.0)\n"
+end
 
+RSpec.describe ReleaseTools::Release do
   let(:tmp) { Dir.mktmpdir("release-spec") }
   let(:repo) { File.join(tmp, "repo") }
   let(:root) { File.join(repo, "adjudicator") }
   let(:out) { StringIO.new }
-  let(:git) { ReleaseTools::Git.new(root, env: GIT_ENV.merge("GIT_CEILING_DIRECTORIES" => tmp), config: GIT_CONFIG) }
+  let(:git) { ReleaseTools::Git.new(root, env: ReleaseSpecFixtures::GIT_ENV.merge("GIT_CEILING_DIRECTORIES" => tmp), config: ReleaseSpecFixtures::GIT_CONFIG) }
   let(:lock_calls) { [] }
   let(:lock_command) do
     calls = lock_calls
@@ -54,13 +57,13 @@ RSpec.describe ReleaseTools::Release do
       File.write(path, File.read(path).gsub(/trucebearer-adjudicator \([^)]*\)/, "trucebearer-adjudicator (#{version})"))
     end
   end
-  let(:changelog_text) { CHANGELOG }
+  let(:changelog_text) { ReleaseSpecFixtures::CHANGELOG }
   let(:release) do
     described_class.new(root: root, git: git, lock_command: lock_command, today: Date.new(2026, 11, 25), out: out)
   end
 
   def sh(*args)
-    output, status = Open3.capture2e(GIT_ENV.merge("GIT_CEILING_DIRECTORIES" => tmp), "git", "-C", repo, *args)
+    output, status = Open3.capture2e(ReleaseSpecFixtures::GIT_ENV.merge("GIT_CEILING_DIRECTORIES" => tmp), "git", "-C", repo, *args)
     raise "git #{args.join(' ')} failed: #{output}" unless status.success?
 
     output
@@ -75,9 +78,9 @@ RSpec.describe ReleaseTools::Release do
   before do
     FileUtils.mkdir_p(repo)
     sh("init", "-q", "-b", "main")
-    write("lib/trucebearer/adjudicator/version.rb", VERSION_RB)
+    write("lib/trucebearer/adjudicator/version.rb", ReleaseSpecFixtures::VERSION_RB)
     write("CHANGELOG.md", changelog_text)
-    write("Gemfile.lock", LOCK)
+    write("Gemfile.lock", ReleaseSpecFixtures::LOCK)
     sh("add", ".")
     sh("-c", "commit.gpgsign=false", "-c", "core.hooksPath=#{File::NULL}", "commit", "-q", "-m", "Start")
   end
@@ -93,7 +96,7 @@ RSpec.describe ReleaseTools::Release do
       sh("add", "adjudicator/README.md")
 
       expect { release.run("minor") }.to raise_error(ReleaseTools::Error, /not clean|uncommitted/i)
-      expect(File.read(File.join(root, "CHANGELOG.md"))).to eq(CHANGELOG)
+      expect(File.read(File.join(root, "CHANGELOG.md"))).to eq(ReleaseSpecFixtures::CHANGELOG)
       expect(lock_calls).to be_empty
       expect(sh("tag")).to be_empty
     end
@@ -111,7 +114,7 @@ RSpec.describe ReleaseTools::Release do
     end
 
     context "with nothing under Unreleased" do
-      let(:changelog_text) { EMPTY_CHANGELOG }
+      let(:changelog_text) { ReleaseSpecFixtures::EMPTY_CHANGELOG }
 
       it "refuses and changes nothing" do
         expect { release.run("minor") }.to raise_error(ReleaseTools::Error, /Unreleased.*empty/i)
@@ -124,6 +127,14 @@ RSpec.describe ReleaseTools::Release do
       sh("tag", "adjudicator-v0.1.0")
 
       expect { release.run("minor") }.to raise_error(ReleaseTools::Error, /adjudicator-v0\.1\.0.*already exists/)
+    end
+
+    it "refuses a lock step that leaves the gem at its old version" do
+      lazy = ->(_dir) {}
+      broken = described_class.new(root: root, git: git, lock_command: lazy, today: Date.new(2026, 11, 25), out: out)
+
+      expect { broken.run("minor") }.to raise_error(ReleaseTools::Error, /Gemfile\.lock.*0\.1\.0/m)
+      expect(status).to be_empty
     end
 
     it "refuses a version that is not higher than the current one" do

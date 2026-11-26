@@ -16,7 +16,11 @@ parser = OptionParser.new do |opts|
   opts.banner = "Usage: bin/release [--dry-run] major|minor|patch|X.Y.Z"
   opts.on("--dry-run", "Print what would change; write nothing") { dry_run = true }
 end
-args = parser.parse(ARGV)
+begin
+  args = parser.parse(ARGV)
+rescue OptionParser::ParseError => e
+  abort "bin/release: #{e.message}\n#{parser}"
+end
 abort parser.to_s unless args.size == 1
 
 root = File.expand_path("..", __dir__)
