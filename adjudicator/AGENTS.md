@@ -27,7 +27,9 @@ You are working on the rules engine. It is a plain Ruby gem. It takes a position
 | `CHANGELOG.md` | Changes since the last release, under "Unreleased" |
 | `bin/` | Development and release scripts |
 
-The gem skeleton (gemspec, Gemfile, Rakefile, version file) has not been written yet. Write it by hand to fit this layout. Don't run `bundle gem` over the folder.
+The gem skeleton was written by hand to fit this layout. It holds the gemspec, `Gemfile`, `Gemfile.lock`, `Rakefile`, `.rspec`, `.gitignore`, the entry point `lib/trucebearer/adjudicator.rb` with its `version.rb`, and `spec/spec_helper.rb`. Don't run `bundle gem` over the folder.
+
+Run the specs with `bundle exec rspec`; `bundle exec rake` does the same. Development dependencies are `rspec` and `rake` only, and they go in the `Gemfile`, not the gemspec, so the gem has no runtime dependencies. Commit `Gemfile.lock`. When the version changes, regenerate it with `bundle install`. The gemspec reads the Ruby version from the root `.ruby-version` and refuses `gem push` to any real host.
 
 ## How to work
 

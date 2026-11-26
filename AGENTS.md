@@ -34,9 +34,9 @@ Trucebearer is a mobile-first web app that helps a group around a physical board
 - **Ruby** is pinned in the root `.ruby-version` for both sides. Don't add a `.ruby-version` inside either folder. The upgrade policy is in `docs/architecture.md`.
 - **Test first, with RSpec**, on both sides.
 - **The name.** "Trucebearer" is always one word. Never give anything (a class, a file, a branch, a gem, a label) a name that contains or echoes "Diplomacy" or "Dip".
-- **No copied rules text.** Never paste text from the game's rulebook or from the DATC (Diplomacy Adjudicator Test Cases) document into code, comments, tests, fixtures or docs. Explain things in your own words and cite the section number.
+- **No copied rules text.** Never paste text from the game's rulebook or from the DATC (Diplomacy Adjudicator Test Cases) document into code, comments, tests, fixtures or docs. Explain things in your own words and cite the section number. One exception: the repository holds a single unmodified reference copy of the DATC v3.4, at `adjudicator/docs/reference/datc-v3.4.html`. It is for reading only. Quotes from it stay forbidden everywhere else, including code, comments, tests, fixtures and docs, and no other copy of the DATC may be added.
 - **No copied code.** Other open-source engines may be read as references only. Don't copy or translate their code.
-- **License.** Each folder has its own `LICENSE`: `web/` and `adjudicator/` are AGPL-3.0-or-later (the web app with an additional term in `web/NOTICE`), `assets/` and `docs/` are CC BY-SA 4.0, and a future native-shell folder will be MPL-2.0. See `NOTICE` for the map. Use of the name and logo follows `TRADEMARKS.md`.
+- **License.** Each folder has its own `LICENSE`: `web/` and `adjudicator/` are AGPL-3.0-or-later (the web app with an additional term in `web/NOTICE`), `assets/` and `docs/` are CC BY-SA 4.0, and a future native-shell folder will be MPL-2.0. See `NOTICE` for the map, including the one file inside `adjudicator/` that keeps its author's license. Use of the name and logo follows `TRADEMARKS.md`.
 - **Fewest moving parts.** Prefer the Ruby standard library and Rails defaults. Adding a dependency needs a reason in the pull request.
 
 ## Where decisions live
