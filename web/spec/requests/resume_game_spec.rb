@@ -166,6 +166,18 @@ RSpec.describe "Resuming a game", type: :request do
         open_session.tap { |s| s.get "/games/#{game_id}" }.then { |s| comparable(s.response, game_id) }
       end
       expect(existing).to eq(missing)
+
+      created = with_passphrase { create_game }
+      host_page = "/games/#{created.game.public_id}/host"
+      strangers = {
+        "a junk cookie" => junk_session(id).tap { |s| s.get "/games/#{id}" },
+        "a game that does not exist" => open_session.tap { |s| s.get "/games/#{GameFlow::MISSING_ID}" },
+        "the seat cookie on a host page" => seat_only_session(created).tap { |s| s.get host_page }
+      }
+      strangers.each do |label, stranger|
+        expect(stranger.response).to have_http_status(:not_found), label
+        expect(occurrences(stranger)).to eq(1), label
+      end
     end
 
     it "gives a reissued seat back to its replacement phone and not to the old one (AC-4.3)" do

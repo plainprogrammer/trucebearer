@@ -147,6 +147,8 @@ RSpec.describe "Order secrecy", type: :request do
       expect(listed["the host, with no seat"].map(&:first)).to eq([ "/games/#{id}/host" ])
       expect(listed["a stranger"]).to be_empty
       expect(listed["the host, with France's seat cookie"].map(&:first)).to eq([ "/games/#{id}/host" ])
+      expect(listed["the host, with France's seat cookie"].first.last).not_to include("France") # a foreign seat is no seat of this browser's
+      expect(viewers["the host, with France's seat cookie"].cookies["seat_#{id}"]).to be_present # and the home page deleted nothing
       expect(listed["the host, stepped into France"].map(&:first)).to eq([ "/games/#{id}/host" ])
     end
 

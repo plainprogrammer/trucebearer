@@ -20,7 +20,7 @@ The host fixes the board by hand: the host page has an "Edit the board" link nex
 
 ## Coming back to a game
 
-Open the home page on the phone that played before. It lists the games that phone belongs to as cards (the date the game started, the open phase, and your power), and each card opens that game's current phase. The page reads only the signed `host_` and `seat_` cookies that verify, makes no card for any other, and sets or removes no cookie. A host who opens the host link on a phone that holds the host's own seat lands on that seat; on a phone with no seat the link lands on the host page, and the host takes the seat back by reissuing it, which clears that seat's saved orders for the open phase. A player whose cookie is gone asks the host for a new QR code. The card's date is shown in the zone `TRUCEBEARER_TIME_ZONE` names (UTC when unset).
+Open the home page on the phone that played before. It lists the games that phone belongs to as cards (the date the game started, the open phase, and your power), and each card opens that game's current phase. The page looks at every `host_` and `seat_` cookie the phone sends, lists only the games whose signed cookie verifies, and sets or removes no cookie. A host who opens the host link on a phone that holds the host's own seat lands on that seat; on a phone with no seat, or with a seat that is not the host's own, the link lands on the host page, and the host takes the host's own seat back by reissuing it, which clears that seat's saved orders for the open phase. A player whose cookie is gone asks the host for a new QR code. The card's date is shown in the zone `TRUCEBEARER_TIME_ZONE` names (UTC when unset).
 
 ## Live updates
 
