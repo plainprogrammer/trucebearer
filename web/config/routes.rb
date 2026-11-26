@@ -24,6 +24,9 @@ Rails.application.routes.draw do
     get "host/seats/:power/reissue", to: "reissues#show", as: :game_reissue
     post "host/seats/:power/reissue", to: "reissues#create"
     get "host/seats/:power/qr", to: "reissues#qr", as: :game_seat_qr
+
+    # Phases (spec 022). A phase number is matched strictly in the controller, so a dot in it is a stranger, not a 404 page.
+    get "host/phases/:number/reveal", to: "reveals#show", as: :game_reveal, constraints: { number: %r{[^/]+} }
   end
 
   get "join", to: "joins#index", as: :join

@@ -49,6 +49,18 @@ module GameAccess
     stranger!(@game) unless @game && host?(@game)
   end
 
+  # A phase number is digits with no leading zero. Anything else, or a number the game doesn't have, is nil (spec 022 URLs).
+  def find_phase(game)
+    number = params[:number].to_s
+    number.match?(/\A[1-9][0-9]*\z/) ? game.phases.find_by(number: number.to_i) : nil
+  end
+
+  def require_seat
+    @game = find_game
+    @seat = @game && seat_of(@game)
+    stranger!(@game) unless @seat
+  end
+
   def too_many_tries = render("strangers/too_many", status: :too_many_requests)
 
   # IPv4 by address, IPv6 by its first 64 bits (spec FR-8). An IPv4-mapped IPv6 address counts as its IPv4 address.

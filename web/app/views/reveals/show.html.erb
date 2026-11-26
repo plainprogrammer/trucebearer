@@ -1,0 +1,17 @@
+<% content_for :title, "Reveal #{@phase.title}" %>
+
+<%= render layout: "shared/confirm", locals: { title: "Reveal #{@phase.title}?", confirm_label: "Reveal orders",
+      confirm_path: game_reveal_path(@game.public_id, @phase.number), cancel_path: game_host_path(@game.public_id) } do %>
+  <p>Orders for <%= @phase.title %> are locked and adjudicated. This cannot be undone.</p>
+  <% if @pending.empty? %>
+    <p>Every power has submitted.</p>
+  <% else %>
+    <p>These powers have not submitted:</p>
+    <ul class="list">
+      <% @pending.each do |entry| %>
+        <li><div class="list__row"><%= power_badge(entry.power) %> <% unless entry.seated %><span class="text-muted">no one has joined</span><% end %></div></li>
+      <% end %>
+    </ul>
+    <p>Their unordered units will hold.</p>
+  <% end %>
+<% end %>

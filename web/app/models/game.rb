@@ -1,5 +1,8 @@
 class Game < ApplicationRecord
   has_many :seats, dependent: :destroy
+  # Declared after seats. No destroy path for a game exists today, and a game with a revealed phase could not be
+  # destroyed anyway: a saved order of a revealed phase refuses to be destroyed (spec 022 AC-6.5).
+  has_many :phases, -> { order(:number) }, dependent: :destroy
 
   class SeatTaken < StandardError; end
   class NotOpen < StandardError; end
@@ -18,6 +21,7 @@ class Game < ApplicationRecord
         game = create!(public_id: SecureRandom.alphanumeric(12), host_token_digest: Token.digest(host_token),
                        join_code: JoinCode.generate)
         game.seats.create!(power: power, token_digest: Token.digest(seat_token))
+        game.phases.create!(number: 1, position: RulesEngine.starting_position)
         Started.new(game: game, host_token: host_token, seat_token: seat_token)
       end
     rescue ActiveRecord::RecordNotUnique
@@ -34,6 +38,12 @@ class Game < ApplicationRecord
   end
 
   def open? = joining_closed_at.nil?
+
+  # The one phase that has not been revealed. Every game has one from the moment it is created (spec 022 FR-1).
+  def current_phase = phases.find_by(revealed_at: nil)
+
+  # The phases already revealed, oldest first.
+  def history = phases.where.not(revealed_at: nil)
 
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
