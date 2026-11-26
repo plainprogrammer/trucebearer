@@ -44,6 +44,7 @@
 | "Without the supporter's province" | The chain search for a supported army leaves out the sea province of the supporting fleet (`without:`) | FR-2, AC-5.5 |
 | Non-order argument | `Check.call` raises `TA::InvalidInput` unless the position is a `TA::Position` and the order is one of the six classes | AC-2.7 |
 | Fixtures | One YAML file per case in `spec/datc/`, read by `spec/support/datc.rb` with `YAML.safe_load_file` (no classes, no aliases) | Story 8 |
+| Marshal | `CheckResult` includes `Shape::Marshalable` like the other value objects, and joins `marshal_spec.rb` (#77 merged as PR #78 while this plan was written; the coordinator asked for it) | FR-4, Non-Goals |
 | Spec helpers | `spec/support/board.rb` gains `loc`, `unit`, `position` and `verdict`. `spec/support/reasons_table.rb` reads the reasons table out of `docs/interface.md` and holds the precedence helper | AC-7.1, AC-7.3 |
 
 ## Files
@@ -59,6 +60,7 @@
 | `adjudicator/spec/support/datc.rb` | create | Loads and validates the fixtures |
 | `adjudicator/spec/datc/*.yml` | create | The 30 fixtures |
 | `adjudicator/spec/trucebearer/adjudicator/check_result_spec.rb` | create | `CheckResult` (Story 1) |
+| `adjudicator/spec/trucebearer/adjudicator/marshal_spec.rb` | edit | Add `CheckResult` to the Marshal round-trip and tamper specs (#77) |
 | `adjudicator/spec/trucebearer/adjudicator/reach_spec.rb` | create | The helpers (FR-3, AC-9.6) |
 | `adjudicator/spec/trucebearer/adjudicator/check_spec.rb` | create | The first spec, and Story 2 |
 | `adjudicator/spec/trucebearer/adjudicator/check_move_spec.rb` | create | Stories 3 and 4 |
@@ -80,8 +82,8 @@
 ## Phase 1: The first spec, and `TA::CheckResult`
 
 **Implements:** FR-1 | **Satisfies:** AC-1.1 to AC-1.8, AC-2.1
-**Files:** `spec/trucebearer/adjudicator/check_spec.rb`, `spec/trucebearer/adjudicator/check_result_spec.rb`, `lib/trucebearer/adjudicator/check_result.rb`, `lib/trucebearer/adjudicator.rb`
-**Interfaces:** Consumes: `Shape.boolean!`, `Shape.array!`, `Shape.symbol_of`, `Shape.text_of`, `Shape.format!`, `Shape.keys!`, `Shape::FORMAT` (from #10), `InvalidInput`. Produces: `TA::CheckResult.new(legal:, reasons:)`, `#to_h`, `.from_h(hash)`, `CheckResult::REASONS` (Array of 17 Symbols).
+**Files:** `spec/trucebearer/adjudicator/check_spec.rb`, `spec/trucebearer/adjudicator/check_result_spec.rb`, `spec/trucebearer/adjudicator/marshal_spec.rb`, `lib/trucebearer/adjudicator/check_result.rb`, `lib/trucebearer/adjudicator.rb`
+**Interfaces:** Consumes: `Shape.boolean!`, `Shape.array!`, `Shape.symbol_of`, `Shape.text_of`, `Shape.format!`, `Shape.keys!`, `Shape::FORMAT` (from #10), `Shape::Marshalable` (from #77, merged as PR #78), `InvalidInput`. Produces: `TA::CheckResult.new(legal:, reasons:)`, `#to_h`, `.from_h(hash)`, `CheckResult::REASONS` (Array of 17 Symbols).
 
 The very first spec of the feature is the starting-position hold. It is committed red, on its own, before any code. Then the `CheckResult` specs are written and the class built.
 
@@ -258,7 +260,14 @@ RSpec.describe TA::CheckResult do
 end
 ```
 
-- [ ] **Step 5: run and confirm the failure.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb` — expect: FAIL with `uninitialized constant Trucebearer::Adjudicator::CheckResult`.
+- [ ] **Step 4b: add `CheckResult` to the Marshal spec (#77, merged as PR #78).** `Shape::Marshalable` is what keeps `Marshal.load` honest for the other value objects, and `marshal_spec.rb` holds every one of them to it. In `spec/trucebearer/adjudicator/marshal_spec.rb`:
+  - in the comment above `objects`, replace `Every value object the Issue names; CheckResult joins when #11 lands.` with `Every value object: the ones the Issue names, and CheckResult (#11).`;
+  - add to `objects`, after the `Convoy` entry (add the comma to that line): `["CheckResult, legal", -> { TA::CheckResult.new(legal: true, reasons: []) }],` and `["CheckResult, illegal", -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }]`;
+  - add to `spots`, after the `Convoy` entry (add the comma): `[TA::CheckResult, ->(h) { h.merge("format" => 2) }, /format/],`, `[TA::CheckResult, ->(h) { h.merge("reasons" => ["bogus"]) }, /"bogus"/],` and `[TA::CheckResult, ->(h) { h.merge("legal" => true) }, /no reasons/]`;
+  - add to `bases`, after the `Convoy` entry (add the comma): `TA::CheckResult => -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }`.
+
+  The two `objects` entries make every generic example of that file (equal and deeply frozen after a round trip, `freeze: true`, the same bytes as a hand-built payload, hooks private, a payload that isn't a hash form, a missing or extra key) run for `CheckResult`. The three `spots` and the `bases` entry make a tampered payload raise `TA::InvalidInput` on load, as `from_h` would.
+- [ ] **Step 5: run and confirm the failure.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb spec/trucebearer/adjudicator/marshal_spec.rb` — expect: FAIL with `uninitialized constant Trucebearer::Adjudicator::CheckResult` (both files; `marshal_spec.rb` fails when it builds its `objects` list).
 - [ ] **Step 6: implement.** Create `lib/trucebearer/adjudicator/check_result.rb`:
 
 ```ruby
@@ -269,6 +278,8 @@ module Trucebearer
     # The answer to checking one order. Storable: its hash form carries format.
     # A legal result has no reasons. An illegal one has exactly one.
     CheckResult = Data.define(:legal, :reasons) do
+      include Shape::Marshalable
+
       def initialize(legal:, reasons:)
         Shape.boolean!(legal, "legal")
         list = Shape.array!(reasons, "reasons")
@@ -311,7 +322,7 @@ end
 
 Edit `lib/trucebearer/adjudicator.rb`: add `require_relative "adjudicator/check_result"` after the `order` require.
 
-- [ ] **Step 7: run and confirm.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb` — expect: all PASS. Then `bundle exec rspec --exclude-pattern "**/check_spec.rb"` — expect: no failures.
+- [ ] **Step 7: run and confirm.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb spec/trucebearer/adjudicator/marshal_spec.rb` — expect: all PASS. Then `bundle exec rspec --exclude-pattern "**/check_spec.rb"` — expect: no failures.
 - [ ] **Step 8: commit.** `git add -A adjudicator`, then `git commit -m "Add TA::CheckResult"` (with the trailer).
 
 ---
@@ -2351,7 +2362,7 @@ and in the #10 entry replace the sentence `` `TA::CheckResult` arrives with #11,
 
 - [ ] Run the full suite: `bundle exec rspec` and `bundle exec rake` — expect: 0 failures, exit 0.
 - [ ] Walk the spec's acceptance criteria against the specs: Story 1 in `check_result_spec.rb`; Story 2 in `check_spec.rb`; Stories 3 and 4 in `check_move_spec.rb`; Story 5 in `check_support_spec.rb`; Story 6 in `check_convoy_spec.rb`; Story 7 in `check_reasons_spec.rb`; Story 8 in `spec/datc/`; Story 9 in `check_examples_spec.rb`, the changelog, `ruleset.md`, the file list and `reach_spec.rb` (AC-9.6). The criteria marked (review) (AC-8.3, AC-9.2 to AC-9.5) are checked by reading, and by the implementation review.
-- [ ] If #77 (Marshal) has merged to `main`, merge `origin/main` and give `TA::CheckResult` the same handling it added to the other value objects, with a spec that mirrors #77's own. If it hasn't, leave it to the #77 worker and say so in the pull request.
+- [ ] `main` is merged in again if it moved (a merge, never a rebase). #77 has already merged (PR #78), so `CheckResult` includes `Shape::Marshalable` from Phase 1.
 - [ ] Dispatch the implementation review (read-only Opus), record its findings and how they were handled in the pull request description.
 - [ ] Commit any review fixes: `git commit -m "Settle the implementation review of checking an order"`.
 
