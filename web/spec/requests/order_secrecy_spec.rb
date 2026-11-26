@@ -441,6 +441,16 @@ RSpec.describe "Order secrecy", type: :request do
 
       def stream_names(body) = Nokogiri::HTML5(body).css("turbo-cable-stream-source").map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }
 
+      it "has a reveal row, with a reissue, a step-in and a position edit row, in the host page's History the sweep compares (spec 026 AC-11.6)" do
+        viewers # makes the step-in, as the AC-10.6 example does
+        created.session.get "/games/#{id}/host"
+        history = Nokogiri::HTML5(created.session.response.body).at_css("[data-seat-history]")
+        text = history.css("li").map { |row| row.text.squish }.join(" ")
+
+        expect(history.css("li a[href='/games/#{id}/host/phases/1/results']").size).to eq(1)
+        expect(text).to include("revealed").and include("seat reissued").and include("stepped in").and include("board changed: BEL given to Germany")
+      end
+
       it "answers every viewer but England the same whatever England orders in the open phase (AC-5.3)" do
         expect(phase.number).to eq(2)
         set_orders2(:none)
