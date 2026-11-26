@@ -1,7 +1,7 @@
 # Plan 021: Create a game and join it by QR code
 
 **Spec:** `web/docs/specs/021-create-game-join-qr/spec.md` v1.2.1 (Approved at Gate A)
-**Issue:** #21 · **Branch:** `web/21-create-game-join-qr` · **Plan version:** 1.0.0
+**Issue:** #21 · **Branch:** `web/21-create-game-join-qr` · **Plan version:** 1.1.0 (after the first Opus review; see the table at the end)
 
 ## Goal
 
@@ -27,12 +27,35 @@ Build games and seats as the spec says: create with the instance passphrase, a h
 **Satisfies:** AC-1.1 to AC-1.7, AC-3.4 to AC-3.7, AC-2.4, AC-8.1, AC-11.2 (host and seat cookies), AC-11.3.
 **Files:**
 - Create `spec/requests/games_spec.rb` (the first test), `spec/models/token_spec.rb`, `spec/models/join_code_spec.rb`, `spec/models/game_spec.rb`, `spec/models/seat_spec.rb`, `spec/models/passphrase_spec.rb`, `spec/config/cache_store_spec.rb`.
-- Create `db/migrate/<ts>_create_games_and_seats.rb` (and `db/schema.rb`, which the migration writes), `app/models/{token,join_code,passphrase,game,seat}.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/games/new.html.erb`, `app/views/strangers/{show,too_many}.html.erb`, `app/helpers/power_tiles_helper.rb`.
-- Change `config/routes.rb`, `config/environments/test.rb`, `config/initializers/filter_parameter_logging.rb`, `spec/rails_helper.rb`, `app/models/rules_engine.rb`, `spec/models/rules_engine_spec.rb`, `app/controllers/application_controller.rb`.
+- Create `db/migrate/<ts>_create_games_and_seats.rb` (and `db/schema.rb`, which the migration writes), `app/models/{token,join_code,passphrase,game,seat}.rb`, `app/controllers/concerns/game_access.rb`, `app/controllers/games_controller.rb`, `app/views/games/{new,turned_off}.html.erb`, `app/views/strangers/{show,too_many}.html.erb`, `app/helpers/power_tiles_helper.rb`, `spec/support/responses.rb`.
+- Change `config/routes.rb`, `config/environments/test.rb`, `config/initializers/filter_parameter_logging.rb`, `spec/rails_helper.rb` (also requires `support/responses`), `app/models/rules_engine.rb`, `spec/models/rules_engine_spec.rb`, `app/controllers/application_controller.rb`.
 
 ### 1a. Write the first test (red)
 
-`spec/requests/games_spec.rb`. It fails with `No route matches [POST] "/games"` until the route exists.
+First `spec/support/responses.rb`, loaded from `spec/rails_helper.rb` with `require_relative "support/responses"` (the rails_helper does not load `spec/support` by itself). Rack 3 hands several cookies back as an Array of lines with lower-case attribute names, so every cookie check goes through these helpers and matches attributes without regard to case:
+
+```ruby
+# Request-spec helpers for reading cookies and for comparing two responses (spec 021, ACs 5.x).
+module ResponseHelpers
+  def cookie_lines(response) = Array(response.headers["Set-Cookie"]).flat_map { |header| header.to_s.split("\n") }
+
+  def cookie_line(response, name) = cookie_lines(response).find { |line| line.start_with?("#{name}=") }
+
+  # What the stranger ACs compare: status, body, four headers, and the host_ and seat_ cookie lines. The game id in a
+  # cookie name is replaced by ID, and the session cookie is left out (its value differs on every response).
+  def comparable(response, id)
+    cookies = cookie_lines(response).grep(/\A(?:host|seat)_/).map { |line| line.sub(id, "ID").sub(/=[^;]*/, "=VALUE") }.sort
+    headers = %w[Content-Type Cache-Control Referrer-Policy].map { |name| response.headers[name] }
+    [ response.status, response.body.gsub(/\s+/, " "), headers, cookies ]
+  end
+end
+
+RSpec.configure { |config| config.include ResponseHelpers, type: :request }
+```
+
+(`comparable` keeps the cookie's attributes after `=VALUE`, so a deletion (`expires=Thu, 01 Jan 1970`) and a set differ, as they should.)
+
+`spec/requests/games_spec.rb`. Before any code exists it fails with `NameError: uninitialized constant Game` from its `change` blocks (a missing route alone would answer 404, not raise). Both examples are red for that reason, and green only when the whole of Phase 1 is in.
 
 ```ruby
 require "rails_helper"
@@ -51,7 +74,7 @@ RSpec.describe "Creating a game", type: :request do
 
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("That passphrase isn&#39;t right.")
-    expect(response.headers["Set-Cookie"].to_s).not_to match(/host_|seat_/)
+    expect(cookie_lines(response).grep(/\A(?:host|seat)_/)).to be_empty
   end
 
   it "creates a game and sets the host cookie with the right passphrase (AC-1.2)" do
@@ -60,8 +83,8 @@ RSpec.describe "Creating a game", type: :request do
 
     game = Game.last
     expect(response).to redirect_to("/games/#{game.public_id}/host")
-    expect(response.headers["Set-Cookie"]).to include("host_#{game.public_id}=")
-    expect(response.headers["Set-Cookie"]).to include("seat_#{game.public_id}=")
+    expect(cookie_line(response, "host_#{game.public_id}")).to be_present
+    expect(cookie_line(response, "seat_#{game.public_id}")).to be_present
   end
 end
 ```
@@ -139,7 +162,7 @@ end
 
 `spec/models/rules_engine_spec.rb` gains: `RulesEngine.powers.map(&:id)` equals the seven symbols; each `name` is the capitalized id; and `PowerBadgeHelper::POWER_NAMES == RulesEngine.powers.to_h { |p| [p.id.to_s, p.name] }` (the drift guard).
 
-Specs (each written before its module, shown red first):
+Specs (each written before its module, shown red first; each file starts with `require "rails_helper"`):
 
 ```ruby
 # spec/models/token_spec.rb
@@ -161,8 +184,9 @@ RSpec.describe Token do
   end
 
   it "compares with secure_compare on two digests" do
-    expect(ActiveSupport::SecurityUtils).to receive(:secure_compare).with(Token.digest("a"), Token.digest("b")).and_call_original
+    allow(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original
     Token.match?("a", Token.digest("b"))
+    expect(ActiveSupport::SecurityUtils).to have_received(:secure_compare).with(Token.digest("a"), Token.digest("b"))
   end
 end
 
@@ -212,9 +236,9 @@ RSpec.describe Passphrase do
 
   it "compares digests with secure_compare, a missing guess included" do
     ENV[Passphrase::ENV_NAME] = "open sesame"
-    expect(ActiveSupport::SecurityUtils).to receive(:secure_compare)
-      .with(Token.digest(""), Token.digest("open sesame")).and_call_original
+    allow(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original
     expect(Passphrase.correct?(nil)).to be(false)
+    expect(ActiveSupport::SecurityUtils).to have_received(:secure_compare).with(Token.digest(""), Token.digest("open sesame"))
     expect(Passphrase.correct?("open sesame")).to be(true)
     expect(Passphrase.correct?("Open sesame")).to be(false)
     expect(Passphrase.correct?("open sesame ")).to be(false)
@@ -376,9 +400,14 @@ module GameAccess
 
   # The one answer for every request that has no right to a page (spec D4, FR-6). A presented cookie is deleted only
   # when it fails verification for that id; an unknown game counts as a failure. A cookie that verifies is kept.
+  PUBLIC_ID_SHAPE = /\A[A-Za-z0-9]{12}\z/
+
   def stranger!(game = nil)
     public_id = params[:public_id].to_s
     KINDS.each do |kind|
+      # A path id that is not a public id never names a cookie of ours, and Rack refuses odd cookie names.
+      next unless public_id.match?(PUBLIC_ID_SHAPE)
+
       name = cookie_name(kind, public_id)
       next if cookies[name].nil?
 
@@ -401,10 +430,6 @@ module GameAccess
     address.ipv6? ? address.mask(64).to_s : address.to_s
   rescue IPAddr::InvalidAddressError
     request.remote_ip.to_s
-  end
-
-  def no_store
-    response.headers["Cache-Control"] = "no-store"
   end
 end
 ```
@@ -450,7 +475,7 @@ class GamesController < ApplicationController
 end
 ```
 
-Views: `games/new.html.erb` (title "Create a game", one `h1`, an error paragraph with `role="alert"` when `@error`, `form_with url: games_path` holding a `.field` with a `type="password"`? No: `type="text"` with `autocomplete="off"`, `autocapitalize="off"`, name `passphrase`, then `<%= power_tiles %>` inside the form); `games/turned_off.html.erb` (the one sentence "Creating games is turned off on this instance. Ask whoever runs it." and a link home); `strangers/show.html.erb` (`<h1>We can't find that page.</h1>` and a link home); `strangers/too_many.html.erb` (`<p>Too many tries. Wait a few minutes and try again.</p>` under an `h1` "Slow down").
+Views: `games/new.html.erb` (title "Create a game", one `h1`, an error paragraph with `role="alert"` when `@error`, `form_with url: games_path` holding a `.field` whose `label` reads "Passphrase" and whose input is `type="text"`, `name="passphrase"`, `autocomplete="off"`, `autocapitalize="off"` and has no `value`, so a wrong guess is never echoed back (spec FR-5); then `<%= power_tiles %>` inside the form); `games/turned_off.html.erb` (an `h1` that is the sentence "Creating games is turned off on this instance. Ask whoever runs it." and a link home); `strangers/show.html.erb` (`<h1>We can't find that page.</h1>` and a link home); `strangers/too_many.html.erb` (one `h1` that is the sentence "Too many tries. Wait a few minutes and try again." and nothing else in `main`, so the sentence is the only text besides the page's header, AC-8.8).
 
 `app/helpers/power_tiles_helper.rb`:
 
@@ -469,6 +494,9 @@ module PowerTilesHelper
     end
     tag.ul(safe_join(items), class: "power-tiles")
   end
+
+  # A power's name as the rules engine reports it (spec FR-7).
+  def power_name(id) = RulesEngine.powers.find { |power| power.id.to_s == id.to_s }&.name
 end
 ```
 
@@ -511,7 +539,7 @@ Config:
 
 ### 1e. More request examples in `games_spec.rb` (red first, then green)
 
-Written before the controller code in 1d, in the same file as 1a: AC-1.1 (`GET /games/new` shows a passphrase field and seven `button.power-tile` with the seven names, no game exists); AC-1.4 (a table of guesses: `""`, missing, one short `"open sesam"`, one long `"open sesamee"`, a case change `"Open sesame"` each give 422, the same message, and a body equal to the body for `"wrong"`); AC-1.5 (right passphrase, power `""`, missing, `"narnia"` give 422 "Pick one of the seven powers." and no game); AC-1.6 (`ENV[...] = nil` and `"  "`: `GET /games/new` and `POST /games` give 403, the text "Creating games is turned off on this instance. Ask whoever runs it.", no `name="passphrase"` field, no game, and `expect(Rails.logger).to receive(:warn).with(/TRUCEBEARER_PASSPHRASE/)`); AC-1.7 (a post makes `ActiveSupport::SecurityUtils.secure_compare` receive two 64-character digests, and with a `StringIO` logger swapped in for `Rails.logger` the log after the post does not contain `open sesame`); AC-11.2 (stub `allow(Rails.configuration).to receive(:force_ssl).and_return(true)`, `https!`, post; then the `Set-Cookie` lines for `host_` and `seat_` include `HttpOnly`, `SameSite=Lax`, `Secure`; with it stubbed `false` they include `HttpOnly` and `SameSite=Lax` and not `Secure`; the session cookie line, if present, has `HttpOnly` and `SameSite=Lax`); AC-11.3 (the raw `host_<id>` value is not the host token, and `ActionDispatch::Cookies::CookieJar.build(request, cookies.to_hash).signed["host_#{game.public_id}"]` verifies; since the host token is only on the next page, the example reads the seat token the same way and checks `Token.match?(that, seat.token_digest)`).
+Written before the controller code in 1d, in the same file as 1a: AC-1.1 (`GET /games/new` shows a passphrase field and seven `button.power-tile` with the seven names, no game exists); AC-1.4 (a table of guesses: `""`, missing, one short `"open sesam"`, one long `"open sesamee"`, a case change `"Open sesame"` each give 422, the same message, and a body equal to the body for `"wrong"`); AC-1.5 (right passphrase, power `""`, missing, `"narnia"` give 422 "Pick one of the seven powers." and no game); AC-1.6 (`ENV[...] = nil` and `"  "`: `GET /games/new` and `POST /games` give 403, the text "Creating games is turned off on this instance. Ask whoever runs it.", no `name="passphrase"` field, no game, and `expect(Rails.logger).to receive(:warn).with(/TRUCEBEARER_PASSPHRASE/)`); AC-1.7 (`allow(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original`, then a post makes it receive two 64-character digests; and with `Rails.logger.broadcast_to(Logger.new(io))` for the example (removed in `ensure`; `ActionController::LogSubscriber` logs through the broadcast logger, not through a swapped-in object) the log `io` contains `[FILTERED]` for the passphrase and does not contain `open sesame`); AC-11.2 (stub `allow(Rails.configuration).to receive(:force_ssl).and_return(true)`, `https!`, post; then the `host_` and `seat_` lines (from `cookie_line`) match `/;\s*httponly/i`, `/;\s*samesite=lax/i` and `/;\s*secure/i`; with it stubbed `false` they match the first two and not the third; the session cookie line, if present, matches the first two); AC-11.3 (the raw `host_<id>` value is not the host token, and `ActionDispatch::Cookies::CookieJar.build(request, cookies.to_hash).signed["host_#{game.public_id}"]` verifies; since the host token is only on the next page, the example reads the seat token the same way and checks `Token.match?(that, seat.token_digest)`).
 
 **Verify Phase 1:** `bundle exec rspec spec/requests/games_spec.rb spec/models spec/config` green, then the whole suite green (the layout, styleguide and words specs read new files: `words_spec` forbids the trademarked name in new files, and nothing here contains it). Run `bin/rails db:migrate` and commit `db/schema.rb`. Commits: one for the red spec, then one per green step ("Add tokens, join codes and the passphrase", "Add the games and seats tables", "Create a game with the instance passphrase").
 
@@ -521,7 +549,7 @@ Written before the controller code in 1d, in the same file as 1a: AC-1.1 (`GET /
 **Satisfies:** AC-1.8, AC-2.1 to AC-2.5, AC-3.1 to AC-3.3, AC-3.8, AC-5.5, AC-4.10 (the player's page), AC-11.2 for the flash cookie.
 **Files:**
 - Create `spec/requests/host_spec.rb`, `spec/helpers/qr_helper_spec.rb`, `spec/helpers/join_code_helper_spec.rb`, `app/helpers/{qr,join_code}_helper.rb`, `app/controllers/{hosts,host_links,seat_links}_controller.rb` (seat links are used in Phase 4 but share the stranger tests here, so the controller is made now), `app/views/hosts/show.html.erb`, `app/views/games/show.html.erb`.
-- Change `Gemfile`, `Gemfile.lock`, `app/controllers/games_controller.rb`, `config/routes.rb` (already added), `app/views/layouts/application.html.erb` (a notice slot, no change otherwise), `app/views/home/index.html.erb`, `spec/requests/root_spec.rb`.
+- Change `Gemfile`, `Gemfile.lock`, `app/controllers/games_controller.rb`, `config/routes.rb` (already added), `app/views/layouts/application.html.erb` (one `<p role="status">` for `flash[:notice]` at the top of `main`, so every page reads the flash and a token left in it is dropped), `spec/rails_helper.rb` (already requires `support/responses`), `app/views/home/index.html.erb`, `spec/requests/root_spec.rb`.
 
 ### 2a. The dependency
 
@@ -541,7 +569,7 @@ module QrHelper
       svg_attributes: { role: "img", "aria-label": label, class: "qr-card__code" }
     )
     svg.sub(/<\?xml[^>]*\?>/, "").sub(/ fill="[^"]*"/, "").html_safe
-  rescue RQRCode::QRCodeRunTimeError => error
+  rescue RQRCodeCore::QRCodeRunTimeError => error
     Rails.logger.error("QR code could not be made: #{error.message}")
     nil
   end
@@ -584,7 +612,7 @@ class HostsController < ApplicationController
     @seats = @game.seats.index_by(&:power)
     return unless @host_token
 
-    no_store # the one page that shows the host link (spec D6)
+    no_store # ActionController's own: Cache-Control no-store. The one page that shows the host link (spec D6)
   end
 end
 ```
@@ -597,7 +625,6 @@ end
 
 <div class="stack">
   <h1>Your game</h1>
-  <% if flash[:notice] %><p role="status"><%= flash[:notice] %></p><% end %>
 
   <% if @host_token %>
     <div class="field">
@@ -651,7 +678,7 @@ end
 ```erb
 <% content_for :title, "Your seat" %>
 <div class="stack">
-  <h1>You hold <%= @seat.power.capitalize %></h1>
+  <h1>You hold <%= power_name(@seat.power) %></h1>
   <p><%= power_badge(@seat.power) %></p>
   <p>The host will start the game. Keep this page.</p>
   <% if @host %>
@@ -663,14 +690,15 @@ end
 </div>
 ```
 
-(The seat's power name is read from `RulesEngine.powers` by id: `h1` uses `RulesEngine.powers.find { |p| p.id.to_s == @seat.power }.name`, through a private helper `power_name(id)` in `PowerTilesHelper`.)
+(`games/show` writes its `h1` as `You hold <%= power_name(@seat.power) %>`, and `reissues/show` its heading as `Reissue <%= power_name(@seat.power) %>`; both names come through `RulesEngine`.)
 
 `HostLinksController` and `SeatLinksController`:
 
 ```ruby
 class HostLinksController < ApplicationController
+  # Declared before the rate limit, so a 429 carries it too, and every outcome looks alike (spec D4).
+  before_action { response.set_header("Referrer-Policy", "no-referrer") }
   rate_limit to: 20, within: 1.minute, scope: :links, by: -> { client_key }, with: -> { too_many_tries }
-  before_action { response.set_header("Referrer-Policy", "no-referrer") } # for every outcome, so they look alike (spec D4)
 
   def show
     game = find_game
@@ -682,8 +710,8 @@ class HostLinksController < ApplicationController
 end
 
 class SeatLinksController < ApplicationController
-  rate_limit to: 20, within: 1.minute, scope: :links, by: -> { client_key }, with: -> { too_many_tries }
   before_action { response.set_header("Referrer-Policy", "no-referrer") }
+  rate_limit to: 20, within: 1.minute, scope: :links, by: -> { client_key }, with: -> { too_many_tries }
 
   def show
     game = find_game
@@ -701,12 +729,12 @@ end
 
 `spec/requests/host_spec.rb`, with `create_game` as a helper that posts the form and returns `[game, host_token]` by reading the host link from the redirect target's page:
 
-- AC-1.8: after `post /games`, `follow_redirect!`; the page has `input#host-link` whose value is `http://www.example.com/games/<id>/host-link?token=<32 chars>`; the response has `Cache-Control: no-store` and `meta[name=turbo-cache-control][content=no-cache]`; a second `get` of the same URL shows no `#host-link` and no 32-character token anywhere in the body.
+- AC-1.8: after `post /games`, `follow_redirect!`; the page has `input#host-link` whose value is `http://www.example.com/games/<id>/host-link?token=<32 chars>`; the response has `Cache-Control: no-store` and `meta[name=turbo-cache-control][content=no-cache]`; a second `get` of the same URL shows no `#host-link`, and the body does not contain the token read from the first load.
 - AC-2.1: open the link in a new session (`open_session`, so no cookies): it redirects to `/games/<id>/host`, sets `host_<id>`, has `Referrer-Policy: no-referrer`; following it shows `.host-section` and not the token.
-- AC-2.2, 5.6: a wrong token, an empty token, a missing token and an unknown game each give the stranger page (404, `We can't find that page.`) with no `host_` or `seat_` `Set-Cookie` value.
+- AC-2.2, 5.6: for `host-link` and for `seat-link` alike, a wrong token, an empty token, a missing token and an unknown game each give the stranger page (404, `We can't find that page.`) with no `host_` or `seat_` `Set-Cookie` value, and `Referrer-Policy: no-referrer`.
 - AC-2.3: the host page for a phone with the cookie shows `.host-section`; for a phone without, with a cookie for another game, and with the seat cookie only, the stranger page.
 - AC-2.5: a phone with a valid host cookie and valid seat cookie requests a wrong-token `host-link`, a wrong-token `seat-link`, and `/games/<id>/host` carrying the seat cookie only after the host cookie is removed; both cookies still verify afterwards (read with `host?`-equivalent: `GET /games/<id>/host` still gives 200 and `GET /games/<id>` still gives 200).
-- AC-5.5: the sameness table. For each of four conditions (no cookie, a junk `host_<id>` cookie, a cookie for another game, the seat cookie on the host page) it requests `/games/<existing id>/host` and `/games/<missing id>/host`, and compares status, normalized body, and the headers `Content-Type`, `Cache-Control`, `Referrer-Policy` and the `host_`/`seat_` `Set-Cookie` lines with the id replaced by `ID`. A small helper `comparable(response, id)` in `spec/support/responses.rb` returns that tuple.
+- AC-5.5: the sameness table. For each of four conditions (no cookie; a junk cookie named for the id in the path; a valid cookie of another game; the existing game's own valid seat cookie sent on the host page, which both requests carry) it requests `/games/<existing id>/host` and `/games/<missing id>/host`, and compares status, normalized body, and the headers `Content-Type`, `Cache-Control`, `Referrer-Policy` and the `host_`/`seat_` `Set-Cookie` lines with the id replaced by `ID`. A small helper `comparable(response, id)` in `spec/support/responses.rb` returns that tuple.
 - AC-3.1 to 3.3: the host page has `.qr-card svg[role=img]`, `.join-code` text `ABC DEF` for the game's code, and `.qr-card__link` text `https://play.example.org/join/<code>` when requested with `headers: { "HOST" => "play.example.org" }` after `https!`; the svg equals `qr_code_svg(that url, "QR code to join the game")` (rendered through `ApplicationController.helpers`); with another host name (and `http`) it follows the request and differs; with a port (`"HOST" => "play.example.org:8443"`) the URL includes the port.
 - AC-3.8: the page has no `img`, no `script` outside the importmap tags, no `fill`/`style` attribute in the `svg`, and every `src`/`href` on the page is relative or the page's own host (the QR card's link text is text, not a `href`).
 - AC-4.10: a phone with a valid seat sees `/games/<id>` with its badge name and no other seat's details; a stranger sees the stranger page.
@@ -973,7 +1001,7 @@ end
 **Implements:** FR-10, FR-12 (docs, README, deploy, production).
 **Satisfies:** AC-9.1 to AC-9.8 (the geometry ACs are proved in Phase 7), AC-11.4.
 **Files:**
-- Change `app/assets/stylesheets/components.css`, `app/assets/stylesheets/application.css` (the index comment), `app/views/styleguide/show.html.erb`, `app/helpers/styleguide_helper.rb`, `spec/support/stylesheets.rb` (`Contrast::DOCUMENTED_PAIRS`), `spec/requests/styleguide_spec.rb`, `spec/styles/stylesheet_rules_spec.rb` (no change unless the budget fails), `docs/design-system.md`, `README.md`, `config/deploy.yml`, `.kamal/secrets`, `config/environments/production.rb`, `spec/config/production_config_spec.rb` (create).
+- Change `app/assets/stylesheets/components.css`, `app/assets/stylesheets/application.css` (the index comment), `app/views/styleguide/show.html.erb`, `app/helpers/styleguide_helper.rb`, `spec/support/stylesheets.rb` (`Contrast::DOCUMENTED_PAIRS`), `spec/requests/styleguide_spec.rb`, `spec/docs/design_system_spec.rb`, `spec/styles/stylesheet_rules_spec.rb` (no change unless the budget fails), `docs/design-system.md`, `README.md`, `config/deploy.yml`, `.kamal/secrets`, `config/environments/production.rb`, `spec/config/production_config_spec.rb` (create).
 
 ### 6a. Styles (red first: the style guide spec expects the four sections)
 
@@ -1109,11 +1137,11 @@ Four sections are added to `show.html.erb`, after `mono-text`, each `section dat
   </section>
 ```
 
-`spec/requests/styleguide_spec.rb`: the `components` list gains `join-code qr-card power-tile host-section` (AC-9.1), the old comment about 31 pairs is dropped (the count is `Contrast::DOCUMENTED_PAIRS.size`), and new examples check AC-9.3 (open tiles and taken tiles each show a power name; taken tiles contain "Taken") and that the existing no-inline-style example still passes.
+`spec/requests/styleguide_spec.rb`: the existing example "shows seven power badges" counts every `.power-badge` on the page, and the new sections add more, so it is scoped to `section[data-component=power-badge] .power-badge` (and its token-name read stays as it is). The `components` list gains `join-code qr-card power-tile host-section` (AC-9.1), the old comment about 31 pairs is dropped (the count is `Contrast::DOCUMENTED_PAIRS.size`), and new examples check AC-9.3 (open tiles and taken tiles each show a power name; taken tiles contain "Taken" and are `div`s, not buttons) and that the existing no-inline-style example still passes.
 
 ### 6c. The `ice-pale` pairs
 
-Add to `Contrast::DOCUMENTED_PAIRS` in `spec/support/stylesheets.rb` and, in the same order, to `StyleguideHelper::PAIRS` (the styleguide spec asserts the two are equal): `["primary","ice-pale",3.0]`, `["primary-pressed","ice-pale",3.0]`, `["border","ice-pale",3.0]`, `["danger","ice-pale",3.0]`, `["danger-pressed","ice-pale",3.0]`, `["focus","ice-pale",3.0]`, `["link","ice-pale",4.5]`, `["link-visited","ice-pale",4.5]`. (The `PAIRS` strings are `"3"` and `"4.5"` as in the helper.) `docs/design-system.md`: the "Documented pairs" table gains the rows `` `primary`, `primary-pressed`, `border`, `danger`, `danger-pressed` against `ice-pale` | 3 ``, `` `focus` against `ice-pale` | 3 `` (merged into the existing focus row) and `` `link` and `link-visited` on `ice-pale` | 4.5 `` (merged into the link row); the palette row for `--color-ice-pale` says "the host section" is now built; the catalog rows for the four components say "#21 (built)" with the final class names (`.join-code`, `.qr-card` with `__code`, `__caption`, `__link`, `.power-tiles`, `.power-tile` with `--taken`, `.host-section`) and the helper names (`join_code_text`, `qr_card`, `power_tiles`). If a computed ratio is under its minimum, stop and raise it with the numbers; no color value is changed.
+Add to `Contrast::DOCUMENTED_PAIRS` in `spec/support/stylesheets.rb` and, in the same order, to `StyleguideHelper::PAIRS` (the styleguide spec asserts the two are equal): `["primary","ice-pale",3.0]`, `["primary-pressed","ice-pale",3.0]`, `["border","ice-pale",3.0]`, `["danger","ice-pale",3.0]`, `["danger-pressed","ice-pale",3.0]`, `["focus","ice-pale",3.0]`, `["link","ice-pale",4.5]`, `["link-visited","ice-pale",4.5]`. (The `PAIRS` strings are `"3"` and `"4.5"` as in the helper.) `docs/design-system.md`: the "Documented pairs" table gains the rows `` `primary`, `primary-pressed`, `border`, `danger`, `danger-pressed` against `ice-pale` | 3 ``, `` `focus` against `ice-pale` | 3 `` (merged into the existing focus row) and `` `link` and `link-visited` on `ice-pale` | 4.5 `` (merged into the link row); the palette row for `--color-ice-pale` says "the host section" is now built; the catalog rows for the four components say "#21 (built)" with the final class names (`.join-code`, `.qr-card` with `__code`, `__caption`, `__link`, `.power-tiles`, `.power-tile` with `--taken`, `.host-section`) and the helper names (`join_code_text`, `qr_card`, `power_tiles`). If a computed ratio is under its minimum, stop and raise it with the numbers; no color value is changed. `spec/docs/design_system_spec.rb` gains an example (AC-9.6): for each of `.join-code`, `.qr-card`, `.power-tile` and `.host-section` there is a catalog line that names the class and says `#21` and "built", and the four helper names `join_code_text`, `qr_card`, `power_tiles` appear in the document.
 
 ### 6d. Production config, deploy, README
 
@@ -1128,12 +1156,13 @@ Add to `Contrast::DOCUMENTED_PAIRS` in `spec/support/stylesheets.rb` and, in the
 
 **Implements:** Story 9 (geometry), Story 10.
 **Satisfies:** AC-9.2, AC-9.7, AC-9.8, AC-10.1 to AC-10.4.
-**Files:** Create `spec/system/create_and_join_spec.rb`. Change `spec/system/styleguide_layout_spec.rb` (the tappable list and one quiet-zone example).
+**Files:** Create `spec/system/create_and_join_spec.rb`, `spec/system/screens_layout_spec.rb`. Change `spec/system/styleguide_layout_spec.rb` (the tappable list and three examples).
 
 `styleguide_layout_spec.rb`: `tappable` gains `".power-tile:not(.power-tile--taken)"`. Two new examples at 360 pixels:
 
 - AC-9.7: every `.join-code` has the class `mono`; its computed font size is at least that of a probe element given `font-size: var(--text-2xl)` (the probe is created in the page with `document.createElement` and a class from `.sg-type-step--2xl`, which the style guide already has); it fits (`scrollWidth <= clientWidth`) and is one line (`height < 1.5 * font size * line height`, read from `getBoundingClientRect` and the computed `line-height`).
-- AC-9.8: for each `.qr-card__code`, `getBoundingClientRect().width >= 200`; and the quiet zone, in modules, is at least 4 on every side: with `scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width` and `path.getBoundingClientRect()`, `(path.left - svg.left) / scale >= 4 - 0.05`, the same for the top, and `(svg.right - path.right) / scale` and `(svg.bottom - path.bottom) / scale` at least `4 - 0.05`.
+- AC-9.3: `.power-tile--taken` has a computed `border-top-style` of `dashed` and the same computed `color` as an element with the `text-muted` class; an open `button.power-tile` has `solid`.
+- AC-9.8: each `.qr-card` has a computed `background-color` of `rgb(255, 255, 255)` (the `surface` token); for each `.qr-card__code`, `getBoundingClientRect().width >= 200`; and the quiet zone, in modules, is at least 4 on every side: with `scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width` and `path.getBoundingClientRect()`, `(path.left - svg.left) / scale >= 4 - 0.05`, the same for the top, and `(svg.right - path.right) / scale` and `(svg.bottom - path.bottom) / scale` at least `4 - 0.05`.
 
 `create_and_join_spec.rb`:
 
@@ -1256,7 +1285,9 @@ RSpec.describe "Creating a game and joining it", type: :system do
 end
 ```
 
-(The fields have the labels "Passphrase" and "Game code"; the buttons are "Join" and the tile names. The host's `current_path` is the host page because the redirect landed there.) Every screen the host and players pass through is measured for sideways scroll at 360. The screens not visited by this flow (turned-off page, reissue confirm, QR page, stranger page, 429 page) get one short example each that visits them through a prepared game and checks no sideways scroll and tap targets at 360, so Story 10's AC-10.4 holds for every screen the feature adds.
+(The fields have the labels "Passphrase" and "Game code"; the buttons are "Join" and the tile names. The host's `current_path` is the host page because the redirect landed there.) Every screen the host and players pass through is measured for sideways scroll at 360.
+
+`spec/system/screens_layout_spec.rb` covers every screen the feature adds, at 360 and 768 (AC-9.2, 10.4). It makes a game with `Game.start!`, signs in the browser by visiting a host link and a seat link, then for each of these paths visits it and checks `scrollWidth <= clientWidth` and that every `a, button, input, select, .power-tile:not(.power-tile--taken)` in `main` is at least 44 by 44 (half a pixel of tolerance, as in the style guide spec): `/`, `/games/new`, `/games/new` with the variable unset (the turned-off page), `/join`, `/join/<code>`, `/join/ZZZZZZ` (the not-open page), `/games/<id>` as a seat holder, `/games/<id>/host`, `/games/<id>/host/close`, `/games/<id>/host/seats/<power>/reissue`, `/games/<id>/host/seats/<power>/qr` (reached by posting the reissue form, since the page is shown once), `/games/<id>` as a stranger (the stranger page), and a 429 page (31 quick visits to `/join/<code>`). Each path is checked with `expect(page).to have_css("h1")` first, so a blank page cannot pass.
 
 **Verify Phase 7:** `bundle exec rspec spec/system` green (needs Chrome), then the whole suite. Commit: "Test creating and joining a game in a real browser".
 
@@ -1297,3 +1328,15 @@ end
 - **Contrast on `ice-pale`**: eight pairs computed by the contrast spec, which stops the phase if one fails.
 - **`force_ssl` pending the maintainer**: Phase 6d carries both paths; only that step changes.
 - **A request-spec limitation**: concurrency is simulated by order, because the POST consults no earlier page; the database index is the arbiter, and `game_spec` tests it directly.
+
+## Changes after the Opus plan review (round 1)
+
+| Finding | Change |
+|---|---|
+| B1 Set-Cookie is an Array with lower-case attributes | `spec/support/responses.rb` (`cookie_lines`, `cookie_line`, `comparable`) and case-insensitive attribute matches |
+| B2 `secure_compare` expectation too strict | `allow(...).and_call_original` then `have_received` |
+| B3 styleguide badge count | The existing example is scoped to its own section |
+| B4 log check could pass for nothing | `Rails.logger.broadcast_to`, and `[FILTERED]` must be in the captured log |
+| NB1 to NB13 | `RQRCodeCore::QRCodeRunTimeError`; the support file is required; Phase 1a's stated failure reason; `turned_off` in the file list; `power_name` defined and used; one notice slot in the layout; `Referrer-Policy` declared before `rate_limit`; cookie deletion only for a 12-character id; AC-5.5 setup written out; the passphrase field's label and no echo; the AC-1.8 token check; Rails' own `no_store`; `require "rails_helper"` in each spec |
+| Coverage gaps | AC-9.2 and 10.4: `screens_layout_spec.rb` at 360 and 768 over every new screen; AC-9.3: computed style of the taken tile; AC-9.6: an example on the design-system page; AC-9.8: the card's white ground; AC-8.8: the 429 page's `h1` is the sentence; AC-5.6: seat-link cases |
+| NB14 (trailer name) | Not changed: this session's attribution line is "Claude Sonnet 5.5" |
