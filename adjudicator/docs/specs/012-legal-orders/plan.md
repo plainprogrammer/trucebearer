@@ -41,17 +41,17 @@
 | Sorting | Candidates are built already in list order. Provinces and coasts sort by `to_s`. `SORTED_COASTAL` is sorted once when the file loads. Groups are concatenated in the contract's order, so the list needs no final sort | AC-4.1, AC-4.2 |
 | Argument errors | `Shape.instance_of!` for both arguments, so the message is `"position" must be a Trucebearer::Adjudicator::Position, got nil` as `TA.check` gives for its own | AC-2.3 |
 | On the board | `position.units.include?(unit)`: `Data` equality on power, type and location | AC-2.2 |
-| Sample positions | `spec/support/legal_positions.rb` holds every sampled position, the stress position, the six random boards (fixed seeds) and the full candidate space of a unit | AC-5.2, AC-5.3 |
-| Seeds | Boards are `[seed, armies, sea_fleets, coast_fleets]`: `[1, 22, 8, 4]` (34 units, the mid-game board), `[2, 18, 6, 4]`, `[3, 12, 3, 3]`, `[4, 8, 2, 2]`, `[5, 3, 1, 1]`, `[6, 1, 1, 0]` | AC-5.2 |
+| Sample positions | `spec/support/legal_positions.rb` holds every sampled position, the stress position, the six random boards (fixed seeds) and the full candidate space of a unit, built fresh for each unit (a cache would hold about 1.8 million orders in memory for the rest of the suite, which the review measured at about 245 MB, for a 20% saving) | AC-5.2, AC-5.3 |
+| Seeds | Boards are `[seed, armies, sea_fleets, coast_fleets]`: `[1, 22, 8, 4]` (34 units, the mid-game board), `[2, 18, 6, 4]` (28 units), `[3, 12, 3, 3]`, `[4, 8, 2, 2]`, `[5, 3, 1, 1]`, `[6, 3, 2, 0]` (5 units). The first coast fleet of every board that has one is always put on a split coast (bulgaria, spain or saint petersburg, one drawn with the seed), so the split coasts are exercised by random boards too | AC-5.2 |
 | Relative guard | Median of 3 runs of approach A against the median of 5 runs of `TA.legal_orders`, at least 10 times. **If this guard ever flakes on CI, drop it and keep the absolute ceilings; say so in the pull request** (coordinator's note at Gate A) | AC-6.3 |
 | Recording times | The measured times for the pull request come from a throwaway script kept outside the repository (the scratchpad) that uses the same positions through `LegalPositions`. No benchmark code ships | AC-6.5 |
 | Agreement spec running time and CI | See "Agreement spec: how long, and how CI runs it" below | AC-5.5 |
 
 ## Agreement spec: how long, and how CI runs it
 
-The agreement spec checks 11,482 candidates for every unit of every sampled position: about 22 units of the start, 12 and 12 of the split-coast positions, 2 of `ln`, 12 of the three convoy positions, 39 of the stress position, 34 + 30 + 18 + 12 + 5 + 2 of the random boards, and two units of each of the two non-movement positions: roughly 240 units. A unit costs about 0.03 s to check (candidates are built once per power and province and reused), so the whole spec is expected to take **about 8 to 10 s locally** (measured in Phase 2, and recorded in the pull request). The suite takes about 9 s today, so the full suite would take about 20 s.
+The agreement spec checks 11,482 candidates for every unit of every sampled position: about 200 units in all (22 of the start, 11 and 12 of the split-coast positions, 2 of `ln`, 2 of `at_sea`, 12 of the three convoy positions, 39 of the stress position, 34 + 28 + 18 + 12 + 5 + 5 of the random boards, and two units of each of the two non-movement positions). A unit costs about 0.06 s (building its candidates and checking each), so the spec takes **about 12 s locally** (the plan review ran it in a scratch copy: 12.3 s). The full suite takes about 9 s today and is expected to take about 30 s with this feature (the review measured 29.8 s with the speed spec's 8 s included).
 
-It runs in CI with everything else: `.github/workflows/adjudicator.yml` runs `bundle exec rspec` with no filter and has a 10-minute timeout, and **no spec is tagged or excluded**. If Phase 2 measures more than about 30 s, tag it `:slow`, keep it in the default run (a tag excludes nothing here), and say so in the pull request.
+It runs in CI with everything else: `.github/workflows/adjudicator.yml` runs `bundle exec rspec` with no filter and has a 10-minute timeout, and `.rspec` and `spec_helper.rb` have no tag filter. Because it is over the spec's 10 s line (AC-5.5), it is **tagged `:slow`** (`RSpec.describe "...", :slow`), a tag that only names it and excludes nothing. Phase 2 measures the real time and the pull request states it and how CI runs it.
 
 ## Files
 
@@ -112,7 +112,7 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/legal_orders_spec.rb`. Expec
 
 ### Step 2: The sample positions the list specs need
 
-Create `spec/support/legal_positions.rb`. Phase 2 adds the rest of this module with `Edit`.
+Create `spec/support/legal_positions.rb`. Phase 2 adds the rest of this module with `Edit` (the stress position, the random boards, the sample list and the candidate space).
 
 ```ruby
 # frozen_string_literal: true
@@ -149,6 +149,27 @@ module LegalPositions
   def no_chain_through
     Board.position(Board.unit(:england, :army, "lon"), Board.unit(:england, :fleet, "eng"),
                    Board.unit(:england, :fleet, "iri"), Board.unit(:england, :fleet, "nth"))
+  end
+
+  # Fleets on bul/ec, spa/nc and stp/nc, with neighbors. A position holds one unit per
+  # province, so the six split coasts need two positions.
+  def north_coasts
+    Board.position(
+      Board.unit(:turkey, :fleet, "bul/ec"), Board.unit(:turkey, :army, "con"), Board.unit(:russia, :fleet, "bla"),
+      Board.unit(:austria, :army, "rum"), Board.unit(:france, :fleet, "spa/nc"), Board.unit(:france, :army, "gas"),
+      Board.unit(:france, :fleet, "mao"), Board.unit(:italy, :army, "por"), Board.unit(:russia, :fleet, "stp/nc"),
+      Board.unit(:england, :fleet, "bar"), Board.unit(:germany, :army, "nwy")
+    )
+  end
+
+  # Fleets on bul/sc, spa/sc and stp/sc, with neighbors.
+  def south_coasts
+    Board.position(
+      Board.unit(:turkey, :fleet, "bul/sc"), Board.unit(:turkey, :army, "gre"), Board.unit(:italy, :fleet, "aeg"),
+      Board.unit(:austria, :army, "ser"), Board.unit(:france, :fleet, "spa/sc"), Board.unit(:france, :army, "mar"),
+      Board.unit(:france, :fleet, "gol"), Board.unit(:italy, :fleet, "wes"), Board.unit(:russia, :fleet, "stp/sc"),
+      Board.unit(:russia, :fleet, "bot"), Board.unit(:russia, :army, "fin"), Board.unit(:germany, :army, "lvn")
+    )
   end
 end
 ```
@@ -285,12 +306,13 @@ Add to `legal_orders_spec.rb`, inside the same `RSpec.describe`, after the first
     end
 
     it "depends on the position alone, and changes neither argument (AC-3.8)" do
+      ln = LegalPositions.ln
       reversed = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
-                                  dislodged_units: [], standoffs: [], units: LegalPositions.ln.units.reverse)
+                                  dislodged_units: [], standoffs: [], units: ln.units.reverse)
       army = Board.unit(:england, :army, "lon")
-      before = [LegalPositions.ln.to_h, army.to_h]
-      expect(TA.legal_orders(reversed, army)).to eq(TA.legal_orders(LegalPositions.ln, army))
-      expect([LegalPositions.ln.to_h, army.to_h]).to eq(before)
+      before = [ln.to_h, army.to_h]
+      expect(TA.legal_orders(reversed, army)).to eq(TA.legal_orders(ln, army))
+      expect([ln.to_h, army.to_h]).to eq(before)
     end
 
     it "gives a lone unit its hold and its moves only (AC-3.9)" do
@@ -316,9 +338,9 @@ Add to `legal_orders_spec.rb`, inside the same `RSpec.describe`, after the first
     end
 
     def lists
-      [[LegalPositions.start, LegalPositions.start.units], [LegalPositions.ln, LegalPositions.ln.units],
-       [LegalPositions.at_sea, LegalPositions.at_sea.units]].flat_map do |position, units|
-        units.map { |unit| [position, TA.legal_orders(position, unit)] }
+      [LegalPositions.start, LegalPositions.ln, LegalPositions.at_sea, LegalPositions.north_coasts,
+       LegalPositions.south_coasts].flat_map do |position|
+        position.units.map { |unit| [position, TA.legal_orders(position, unit)] }
       end
     end
 
@@ -473,30 +495,9 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/legal_orders_spec.rb`, expec
 
 ### Step 1: Extend the sample positions (Edit `spec/support/legal_positions.rb`)
 
-Add these methods inside `module LegalPositions`, before the closing `end`:
+Add these methods inside `module LegalPositions`, before the closing `end` (`north_coasts` and `south_coasts` already exist from Phase 1):
 
 ```ruby
-  # Fleets on bul/ec, spa/nc and stp/nc, with neighbors. A position holds one unit per
-  # province, so the six split coasts need two positions.
-  def north_coasts
-    Board.position(
-      Board.unit(:turkey, :fleet, "bul/ec"), Board.unit(:turkey, :army, "con"), Board.unit(:russia, :fleet, "bla"),
-      Board.unit(:austria, :army, "rum"), Board.unit(:france, :fleet, "spa/nc"), Board.unit(:france, :army, "gas"),
-      Board.unit(:france, :fleet, "mao"), Board.unit(:italy, :army, "por"), Board.unit(:russia, :fleet, "stp/nc"),
-      Board.unit(:england, :fleet, "bar"), Board.unit(:germany, :army, "nwy")
-    )
-  end
-
-  # Fleets on bul/sc, spa/sc and stp/sc, with neighbors.
-  def south_coasts
-    Board.position(
-      Board.unit(:turkey, :fleet, "bul/sc"), Board.unit(:turkey, :army, "gre"), Board.unit(:italy, :fleet, "aeg"),
-      Board.unit(:austria, :army, "ser"), Board.unit(:france, :fleet, "spa/sc"), Board.unit(:france, :army, "mar"),
-      Board.unit(:france, :fleet, "gol"), Board.unit(:italy, :fleet, "wes"), Board.unit(:russia, :fleet, "stp/sc"),
-      Board.unit(:russia, :fleet, "bot"), Board.unit(:russia, :army, "fin"), Board.unit(:germany, :army, "lvn")
-    )
-  end
-
   # A fleet in each of the 19 sea provinces and an army in each of the first 20 coastal
   # provinces by identifier, the seven powers dealt in turn in identifier order.
   def stress
@@ -510,18 +511,22 @@ Add these methods inside `module LegalPositions`, before the closing `end`:
 
   # [seed, armies, fleets at sea, fleets on a coast]. The first board has 34 units and is
   # the mid-game board of the speed target.
-  RANDOM_BOARDS = [[1, 22, 8, 4], [2, 18, 6, 4], [3, 12, 3, 3], [4, 8, 2, 2], [5, 3, 1, 1], [6, 1, 1, 0]].freeze
+  RANDOM_BOARDS = [[1, 22, 8, 4], [2, 18, 6, 4], [3, 12, 3, 3], [4, 8, 2, 2], [5, 3, 1, 1], [6, 3, 2, 0]].freeze
 
   def random_board(seed, armies, sea_fleets, coast_fleets)
     rng = Random.new(seed)
     powers = Board.powers.sort_by(&:to_s)
     seas = Board.sea.sort_by(&:to_s).shuffle(random: rng).first(sea_fleets)
     coastal = Board.map.provinces.select { |province| province.type == :coastal }.sort_by { _1.id.to_s }
-                   .shuffle(random: rng).first(coast_fleets)
-    land = (Board.army_provinces - coastal.map(&:id)).sort_by(&:to_s).shuffle(random: rng).first(armies)
-    fleets = seas.map { |id| id.to_s } +
-             coastal.map { |province| province.coasts.empty? ? province.id.to_s : "#{province.id}/#{province.coasts.sort.sample(random: rng)}" }
-    units = fleets.map { |place| [:fleet, place] } + land.map { |id| [:army, id.to_s] }
+    split, plain = coastal.partition { |province| !province.coasts.empty? }
+    # The first coast fleet always stands on a split coast, so the boards exercise them.
+    on_coast = split.shuffle(random: rng).first(coast_fleets.clamp(0, 1)) +
+               plain.shuffle(random: rng).first([coast_fleets - 1, 0].max)
+    land = (Board.army_provinces - on_coast.map(&:id)).sort_by(&:to_s).shuffle(random: rng).first(armies)
+    coast_places = on_coast.map do |province|
+      province.coasts.empty? ? province.id.to_s : "#{province.id}/#{province.coasts.sort.sample(random: rng)}"
+    end
+    units = (seas.map(&:to_s) + coast_places).map { |place| [:fleet, place] } + land.map { |id| [:army, id.to_s] }
     Board.position(*units.each_with_index.map { |(type, place), i| Board.unit(powers[i % 7], type, place) })
   end
 
@@ -537,7 +542,7 @@ Add these methods inside `module LegalPositions`, before the closing `end`:
   end
 
   # Every order the six classes can form for the unit's owner and province, with every
-  # province and every location: 11,482 orders. Built fresh.
+  # province and every location: 11,482 orders. Built fresh each time.
   def candidates(unit)
     power = unit.power
     at = unit.location.province
@@ -550,15 +555,9 @@ Add these methods inside `module LegalPositions`, before the closing `end`:
       provinces.product(provinces).map { |from, to| O::Convoy.new(power: power, at: at, from: from, to: to) }
   end
 
-  CANDIDATES = {}
-
-  # The same, built once for each owner and province and shared by the agreement spec.
-  def candidate_space(unit)
-    CANDIDATES[[unit.power, unit.location.province]] ||= candidates(unit).freeze
-  end
 ```
 
-`random_board` and `stress` build units on distinct provinces by construction (fleets on seas or on coastal provinces, armies on the other land provinces). Check it by running `ruby -Ilib -Ispec -e 'require "support/legal_positions"; LegalPositions.samples.each { |n, p| puts "#{n}: #{p.units.size}" }'`: the first random board must print 34 units and the stress position 39.
+`random_board` and `stress` build units on distinct provinces by construction (fleets on seas or on coastal provinces, armies on the other land provinces). Check it by running `ruby -Ilib -Ispec -e 'require "support/legal_positions"; LegalPositions.samples.each { |n, p| puts "#{n}: #{p.units.size} units, split coasts: #{p.units.select { _1.location.coast }.size}" }'`. Expected: the starting position 22, the stress position 39, and the six random boards 34, 28, 18, 12, 5 and 5 units, with one split-coast fleet on each of boards 1 to 5 (the plan review confirmed these counts, and that the seeds give `spa/sc`, `bul/ec`, `spa/nc`, `spa/sc` and `bul/sc`).
 
 ### Step 2: The agreement spec, then watch it guard
 
@@ -575,8 +574,9 @@ require_relative "../../support/legal_positions"
 # sampled position, every listed order passes TA.check (AC-5.1), and every order of the
 # unit's whole candidate space that passes TA.check is listed (AC-5.2). The candidate space
 # is built here, not by the generator, so a narrowing that is too tight can't hide.
-# It takes about 8 to 10 seconds in all and runs in CI with the rest (`bundle exec rspec`).
-RSpec.describe "TA.legal_orders agrees with TA.check" do
+# It takes about 12 seconds in all, so it is tagged :slow. The tag only names it: .rspec has no
+# filter and CI runs `bundle exec rspec`, so it runs in CI with everything else.
+RSpec.describe "TA.legal_orders agrees with TA.check", :slow do
   it "builds a candidate space of 11,482 orders for a unit" do
     expect(LegalPositions.candidates(Board.unit(:england, :fleet, "lon")).size).to eq(11_482)
   end
@@ -585,13 +585,15 @@ RSpec.describe "TA.legal_orders agrees with TA.check" do
     it "agrees in both directions for every unit of #{name}" do
       position.units.each do |unit|
         listed = TA.legal_orders(position, unit)
-        passing = LegalPositions.candidate_space(unit).select { |order| TA.check(position, order).legal }
+        passing = LegalPositions.candidates(unit).select { |order| TA.check(position, order).legal }
 
         extra = listed - passing
         missing = passing - listed
-        expect(extra).to eq([]), "#{unit.inspect}: listed but refused by TA.check, e.g. #{extra.first(3).inspect}"
-        expect(missing).to eq([]), "#{unit.inspect}: legal but not listed, e.g. #{missing.first(3).inspect}"
-        expect(listed.size).to eq(listed.uniq.size)
+        aggregate_failures(unit.inspect) do
+          expect(extra).to eq([]), "listed but refused by TA.check, e.g. #{extra.first(3).inspect}"
+          expect(missing).to eq([]), "legal but not listed, e.g. #{missing.first(3).inspect}"
+          expect(listed.size).to eq(listed.uniq.size)
+        end
       end
     end
   end
@@ -601,18 +603,18 @@ RSpec.describe "TA.legal_orders agrees with TA.check" do
       position = TA::Position.from_h(LegalPositions.start.to_h.merge("phase" => phase.to_s))
       position.units.first(2).each do |unit|
         expect(TA.legal_orders(position, unit)).to eq([])
-        expect(LegalPositions.candidate_space(unit).count { |order| TA.check(position, order).legal }).to eq(0)
+        expect(LegalPositions.candidates(unit).count { |order| TA.check(position, order).legal }).to eq(0)
       end
     end
   end
 end
 ```
 
-Run it with `bundle exec rspec spec/trucebearer/adjudicator/legal_orders_agreement_spec.rb`; it passes at once, because Phase 1 built the generator. Record the time `rspec` prints (the spec's running time for the pull request, and the check against "about 8 to 10 s").
+Run it with `bundle exec rspec spec/trucebearer/adjudicator/legal_orders_agreement_spec.rb`; it passes at once, because Phase 1 built the generator. Record the time `rspec` prints (the spec's running time for the pull request, and the check against "about 12 s").
 
-**Prove it can fail (not committed):** in `legal_orders.rb`, temporarily change N1 so that a fleet's moves drop one coast (for example `.reject { |_, coast| coast == :nc }` after `FLEET_STEPS.fetch`). Run the spec: the north-coast sample must fail with "legal but not listed". Undo with `git checkout adjudicator/lib/trucebearer/adjudicator/legal_orders.rb`. Then temporarily make N4 require `unit.location.province` to touch `from` (an invented narrowing that is too tight) and confirm one of the convoy samples fails. Undo again. Say in the pull request that both mutations were caught.
+**Prove it can fail (not committed):** in `legal_orders.rb`, temporarily change N1 so that a fleet's moves drop one coast (for example `.reject { |_, coast| coast == :nc }` after `FLEET_STEPS.fetch`). Run the spec: the north-coast sample must fail with "legal but not listed". Undo with `git checkout -- lib/trucebearer/adjudicator/legal_orders.rb`. Then temporarily make N4 require `unit.location.province` to touch `from` (an invented narrowing that is too tight) and confirm one of the convoy samples fails. Undo again the same way. Say in the pull request that both mutations were caught.
 
-Run `bundle exec rspec`; green. If the agreement spec runs more than about 30 s, tag it `:slow` (in `describe`'s metadata) and say so in the pull request; CI still runs it. Commit: `Add the spec that checks the list against TA.check in both directions`.
+Run `bundle exec rspec`; green. State the measured time and that it is tagged `:slow` (which excludes nothing from CI) in the pull request. Commit: `Add the spec that checks the list against TA.check in both directions`.
 
 **Verifies:** AC-5.1 to AC-5.4. AC-5.5 is the recorded time.
 
@@ -682,7 +684,7 @@ RSpec.describe "TA.legal_orders speed" do
 end
 ```
 
-Run it. It passes at once (the generator exists), so confirm it can fail (not committed): temporarily add `sleep 0.05` as the first line of `LegalOrders.call`. The first example must then fail (22 × 0.05 s is over 1 s) and so must the ratio example (the listing is no longer 10 times faster). Undo with `git checkout adjudicator/lib/trucebearer/adjudicator/legal_orders.rb`.
+Run it. It passes at once (the generator exists), so confirm it can fail (not committed): temporarily add `sleep 0.05` as the first line of `LegalOrders.call`. The first example must then fail (22 × 0.05 s is over 1 s) and so must the ratio example (the listing is no longer 10 times faster). Undo with `git checkout -- lib/trucebearer/adjudicator/legal_orders.rb`.
 
 ### Step 2: Measure for the pull request
 
@@ -757,7 +759,7 @@ Run it; green. Then edit the header comment of `interface_examples_spec.rb`: rep
 In `CHANGELOG.md`, under "Unreleased → Added", after the #11 entry, add:
 
 ```
-- `TA.legal_orders(position, unit)`: every legal order for one unit, in the list order of `docs/interface.md` (hold, moves by destination and coast, moves via convoy, supports to hold, supports to move, convoys). It agrees with `TA.check` exactly, includes legal but pointless orders, and is empty for a position that isn't in a movement phase or a unit that isn't on the board. It checks only candidates a unit could possibly give and asks the checker about each, so it takes a few milliseconds for the 22 units of the starting position. (#12)
+- `TA.legal_orders(position, unit)`: every legal order for one unit, in the list order of `docs/interface.md` (hold, moves by destination and coast, moves via convoy, supports to hold, supports to move, convoys). It agrees with `TA.check` exactly, includes legal but pointless orders, and is empty for a position that isn't in a movement phase or a unit that isn't on the board. It checks only candidates a unit could possibly give and asks the checker about each, so it takes under 20 ms for the 22 units of the starting position. (#12)
 ```
 
 ### Step 3: Whole-suite proof and commit
@@ -781,5 +783,5 @@ From `adjudicator/`: `bundle exec rspec` and `bundle exec rake`, both green. Che
 
 - **Spec coverage:** FR-1 and FR-2 by Phase 1; FR-3 by Phase 4; AC-1.x to AC-4.x and AC-7.5 by the Phase 1 spec; AC-5.x by Phase 2; AC-6.1 to AC-6.3 by Phase 3, AC-6.4 and AC-6.5 by the review and the pull request; AC-7.1 to AC-7.4 by Phase 4. No gap.
 - **Placeholders:** none; every code step shows code.
-- **Names:** `LegalOrders.call`, `LegalOrders.candidates`, `LegalPositions.candidates`, `LegalPositions.candidate_space`, `LegalPositions.samples`, `LegalPositions.random_board(s)` and `LegalPositions.stress` are used with the same signatures in every phase.
+- **Names:** `LegalOrders.call`, `LegalOrders.candidates`, `LegalPositions.candidates`, `LegalPositions.samples`, `LegalPositions.random_board(s)` and `LegalPositions.stress` are used with the same signatures in every phase.
 - **Risk:** the agreement spec's running time (stated above, measured in Phase 2) and the relative guard (dropped, not loosened, if it flakes).
