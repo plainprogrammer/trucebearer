@@ -79,6 +79,12 @@
   .app-actions__inner > form > .button {
     flex: 1 1 34%;
     min-width: min-content;
+  }
+
+  /* A button reads its minimum width from this property (it sits in a later
+     layer than this file). Set on the item itself, not inherited by a deeper button. */
+  .app-actions__inner > .button,
+  .app-actions__inner > form > .button {
     --_min-width: min-content;
   }
 

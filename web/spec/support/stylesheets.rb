@@ -32,7 +32,7 @@ module Stylesheets
     infobackground infotext inactivecaption inactivecaptiontext appworkspace activeborder
     inactiveborder activecaption
   ].freeze
-  VENDOR_COLOR = /-(?:webkit|moz)-(?:link|activelink|focus-ring-color|any-link)\b/i
+  VENDOR_COLOR = /-(?:webkit|moz)-(?:link|activelink|focus-ring-color|any-link|hyperlinktext|activehyperlinktext|visitedhyperlinktext)\b/i
   COLOR_FUNCTION = /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\(/i
   HEX_COLOR = /#[0-9a-f]{3,8}\b/i
 
@@ -55,7 +55,8 @@ module Stylesheets
 
   # [[selector, body], ...] for every innermost rule.
   def rules(css)
-    css.scan(/([^{}]+)\{([^{}]*)\}/m).map { |sel, body| [ sel.strip, body ] }
+    # A selector starts after the last ";" (an @layer line, say) or "}" before it.
+    css.scan(/([^{}]+)\{([^{}]*)\}/m).map { |sel, body| [ sel.split(";").last.to_s.strip, body ] }
   end
 
   # { "--color-page" => "#f6f3ec", ... } from the token file.
@@ -71,11 +72,12 @@ module Stylesheets
   # --color-* token may hold a six-digit hex value (and nothing else may hold a color).
   def violations(css, label, token_file: false)
     out = []
+    px_props = declarations(css).select { |p, v, _| p.start_with?("--") && v.match?(/\d\s*px/i) }.map(&:first)
     declarations(css).each do |prop, value, line|
       at = "#{label}:#{line}"
       color_token = token_file && prop.start_with?("--color-") && value.match?(/\A#[0-9a-f]{6}\z/i)
       # Quoted text is not a color. A var() keeps its fallback, which may be a color.
-      plain = value.gsub(/"[^"]*"|'[^']*'/, "").gsub(/var\(\s*--[\w-]+/, "(")
+      plain = value.gsub(/"[^"]*"|'[^']*'/, "").gsub(/--[\w-]+/, "")
       words = plain.downcase.scan(/[a-z]+/)
       unless color_token
         out << "#{at}: hex color in #{prop}" if value.match?(HEX_COLOR)
@@ -86,6 +88,9 @@ module Stylesheets
       out << "#{at}: banned opacity" if prop == "opacity" && value != "1"
       font_prop = %w[font font-size].include?(prop) || prop.start_with?("--text-", "--font-")
       out << "#{at}: px font size in #{prop}" if font_prop && value.match?(/\d\s*px/i)
+      if %w[font font-size].include?(prop) && (reads = value.scan(/var\(\s*(--[\w-]+)/).flatten & px_props).any?
+        out << "#{at}: #{prop} reads a px custom property (#{reads.join(', ')})"
+      end
       out << "#{at}: !important" if value.include?("!important")
     end
     out << "#{label}: @import" if css.include?("@import")

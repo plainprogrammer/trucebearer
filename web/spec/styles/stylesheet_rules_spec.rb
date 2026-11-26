@@ -74,7 +74,7 @@ RSpec.describe "Stylesheet rules" do
     css = files.map { |f| Stylesheets.read(f) }.join("\n")
     components = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "components.css")))
     [ ".button", "a.list__row", ".choice" ].each do |selector|
-      rule = components.find { |sel, _| sel.split(",").map(&:strip).include?(selector) && sel.exclude?(":") }
+      rule = components.find { |sel, _| sel.split(",").map(&:strip).include?(selector) && !sel.include?(":") }
       expect(rule&.last).to include("touch-action: manipulation"), "#{selector} needs touch-action: manipulation"
     end
     expect(css).to include("safe-area-inset-bottom")
@@ -120,12 +120,16 @@ RSpec.describe "Stylesheet rules" do
       expect(found("a { color: var(--color-text, black); }")).not_to be_empty
       expect(found("a { color: Window; }")).not_to be_empty
       expect(found("a { color: -webkit-link; }")).not_to be_empty
+      expect(found("a { color: -moz-hyperlinktext; }")).not_to be_empty
+      expect(found("a { anchor-name: --menu; grid-area: header; }")).to be_empty
       expect(found('a::after { content: "Error: field required"; }')).to be_empty
     end
 
     it "flags a px size reached through a font custom property (AC-1.5)" do
       expect(found(":root { --text-xs: 12px; }")).not_to be_empty
       expect(found(":root { --tap-min: max(44px, 2.75rem); }")).to be_empty
+      expect(found(":root { --size: 12px; } a { font-size: var(--size); }")).not_to be_empty
+      expect(found(":root { --tap-min: 44px; } a { min-height: var(--tap-min); }")).to be_empty
     end
 
     it "flags px font sizes (AC-1.5)" do
