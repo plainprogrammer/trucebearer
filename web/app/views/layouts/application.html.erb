@@ -31,6 +31,7 @@
     </header>
 
     <main class="app-main app-column">
+      <%= render "step_ins/bar", step_in: @step_in if @step_in %>
       <% if flash[:banner].is_a?(Hash) %><%= render "shared/banner", kind: flash[:banner]["kind"], text: flash[:banner]["text"] %><% end %>
       <% if flash[:notice] %><p role="status"><%= flash[:notice] %></p><% end %>
       <%= yield %>

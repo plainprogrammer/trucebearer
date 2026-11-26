@@ -4,5 +4,5 @@
   <h1>Your orders</h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
   <%= render "shared/banner", kind: "danger", text: "The host has already revealed this phase. Your orders were not saved." %>
-  <%= link_to "Go to the current phase", game_seat_orders_path(@game.public_id, @game.current_phase.number), class: "button" %>
+  <%= link_to "Go to the current phase", orders_path_for(@game.current_phase.number), class: "button" %>
 </div>

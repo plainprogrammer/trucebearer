@@ -9,12 +9,12 @@
     <% @step.choices.each do |choice| %>
       <li>
         <% if choice.save %>
-          <%= form_with url: game_seat_orders_path(@game.public_id, @phase.number), method: :put do %>
+          <%= form_with url: orders_path_for(@phase.number), method: :put do %>
             <%= hidden_field_tag "orders[#{@province}]", choice.save, id: nil %>
             <%= button_tag type: "submit", name: nil, class: "list__row" do %><%= render "order_pickers/choice", choice: choice %><% end %>
           <% end %>
         <% else %>
-          <%= link_to game_order_picker_path(@game.public_id, @phase.number, @province, draft: choice.draft), class: "list__row" do %>
+          <%= link_to picker_path_for(@phase.number, @province, draft: choice.draft), class: "list__row" do %>
             <%= render "order_pickers/choice", choice: choice %>
           <% end %>
         <% end %>
@@ -25,6 +25,6 @@
 
 <% content_for :actions do %>
   <%= render "shared/save_status", state: :saves_on_pick %>
-  <% back = @step.back ? game_order_picker_path(@game.public_id, @phase.number, @province, draft: @step.back) : game_seat_orders_path(@game.public_id, @phase.number) %>
+  <% back = @step.back ? picker_path_for(@phase.number, @province, draft: @step.back) : orders_path_for(@phase.number) %>
   <%= link_to "Back", back, class: "button button--secondary" %>
 <% end %>
