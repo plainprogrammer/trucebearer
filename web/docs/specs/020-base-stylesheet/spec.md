@@ -17,7 +17,7 @@
 | 1.1.0 | 2026-11-25 | Changed after the first independent review.<br>• Interaction states get their own tokens and documented pairs, and tricks that dodge the contrast proof (`opacity`, `filter`, `color-mix()`) are banned.<br>• The action area is in the page flow and sticks to the bottom; the header scrolls away. Focus rule is WCAG 2.4.11 ("not entirely hidden") with one scroll-padding token.<br>• The gap rule is scoped to separate controls. Power colors appear on the style guide only inside badges, and a single badge helper is the one way to render one.<br>• Every AC now has a verification row. Checks that need a phone are marked as owed to the maintainer, not claimed.<br>• The style guide shows static variants only, with no measured ratios, so no parser ships in production code.<br>• Reflow is checked at 320 pixels, and the layout is designed for 360 and up.<br>• Hue is measured in HSL on the final hex values, as a circular distance. The color-detection rules are made complete and the root view's own `main` is removed |
 | 1.2.0 | 2026-11-25 | Changed after the second independent review.<br>• Power pairs are shown on the style guide through the badges only.<br>• The "tokens only" rule gets a narrow, stated exemption, and the focus ring gets tokens.<br>• The forbidden-words check scans a fixed set of paths and file names, and exempts `docs/specs/`.<br>• `opacity`, `filter`, `mix-blend-mode` and `color-mix()` are banned outright.<br>• Pressed states change shape as well as fill, and every state has a stated treatment.<br>• The keyboard-open claim is removed from AC-3.9. The helper accepts a symbol or a string.<br>• Markup conventions are shown on the style guide only, with no form builder.<br>• The phone pass gets a tracking Issue. Smaller fixes to limits, wording and Verification |
 | 1.2.1 | 2026-11-25 | Approved at Gate A. While planning: AC-2.8 allows the single declaration `opacity: 1`, since Firefox dims placeholder text by default and no other way cancels it. The phone-pass Issue is #71 |
-| 2.0.0 | 2026-11-26 | Amended by Issue #81 (the Cold War re-theme), a MAJOR change because it replaces FR-9 and reverses two shipped rules (no web fonts, no icons).<br>• **Palette (FR-2, FR-3, AC-2.x):** the #20 palette is replaced by the fixed Cold War values of decision 41; `ice`, `ice-pale` and `steel` are added, and the new pairs are documented. `ice` may only be a background (AC-2.9), and `on-power` must stay equal to the artwork's white (AC-2.10).<br>• **Power colors (FR-4, FR-9, AC-4.4, AC-4.5, AC-4.6, AC-5.4):** the even-spread method is replaced by seven fixed values (decision 42) that no one tunes by eye. AC-4.2's 25-degree rule stays. Power colors may also appear in the unit-icon and supply-center rules, including as the text and border of the power-initial tag.<br>• **Fonts and icons (Non-goals, AC-6.2, AC-6.3, FR-1, FR-6):** system fonts, plus exactly one `@font-face` whose `url()` points to a font file this app serves, and no request to a third party. The only icons are the two helpers' inline drawings.<br>• **New:** Story 7 (unit and supply-center icons, FR-10), Story 8 (the monospace, FR-11) and Story 9 (the design-system document, FR-12).<br>• **One more change the Issue did not list:** AC-1.1 exempts the initial inside a unit icon's drawing, because it cannot be 14 pixels inside a 12-unit tag at any icon size.<br>• **Where the header sits:** the Issue's pairs (`text` on `ice`, `focus` on `ice`, `steel` on `page`) imply a header on `ice` with a `steel` rule; FR-2 says so |
+| 2.0.0 | 2026-11-26 | Amended by Issue #81 (the Cold War re-theme), a MAJOR change because it replaces FR-9 and reverses two shipped rules (no web fonts, no icons).<br>• **Palette (FR-2, FR-3, AC-2.x):** the #20 palette is replaced by the fixed Cold War values of decision 41; `ice`, `ice-pale` and `steel` are added, and the new pairs are documented. `ice` may only be a background (AC-2.9), and `on-power` must stay equal to the artwork's white (AC-2.10).<br>• **Power colors (FR-4, FR-9, AC-4.4, AC-4.5, AC-4.6, AC-5.4):** the even-spread method is replaced by seven fixed values (decision 42) that no one tunes by eye. AC-4.2's 25-degree rule stays. Power colors may also appear in the unit-icon and supply-center rules, including as the text and border of the power-initial tag.<br>• **Fonts and icons (Non-goals, AC-6.2, AC-6.3, FR-1, FR-6):** system fonts, plus exactly one `@font-face` whose `url()` points to a font file this app serves, and no request to a third party. The only icons are the two helpers' inline drawings.<br>• **New:** Story 7 (unit and supply-center icons, FR-10), Story 8 (the monospace, FR-11) and Story 9 (the design-system document, FR-12).<br>• **Also changed, and not in the Issue's list:**<br>– AC-1.1 exempts the initial inside a unit icon's drawing at 20 to 48 pixels, because it cannot be 14 pixels inside a 12-unit tag.<br>– The Issue's pairs (`text` on `ice`, `focus` on `ice`, `steel` on `page`) imply a header on `ice` with a `steel` rule; FR-2 says so.<br>– AC-5.1 gains three style-guide sections and FR-7 the matching content; AC-7.3 also rejects a bad `size`; the NFR on performance allows one font request and a `swap` re-set of `.mono` text; the Verification rows move the layout checks onto the system specs of #73 and add rows for the new ACs.<br>– The Out of Scope line about a monospace token for join codes is replaced by the later-Issue list, and the line about automated geometry specs is dropped, since #73 shipped them.<br>– AC-2.9 and AC-2.10 are new checks (`ice` is background only; `on-power` is the artwork's white; every palette value is held exactly), and AC-6.2 declares the font for a weight range so no bold is faked.<br>• Reviewed by a read-only Fable pass at Gate A (round 1: no blocking findings; 17 non-blocking, applied) |
 
 ## Problem Statement
 
@@ -62,7 +62,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 
 **Acceptance criteria:**
 
-- [ ] **AC-1.1** Given any page that uses the layout When it is shown at a width of 360 CSS pixels Then body text is at least 16 CSS pixels and no text on the page is smaller than 14 CSS pixels. (One exemption: the initial inside a unit icon's drawing. It is part of an image whose accessible name carries the full words, and it scales with the icon, so it cannot be 14 pixels inside a tag that is 12 of the icon's 32 units. See AC-7.5)
+- [ ] **AC-1.1** Given any page that uses the layout When it is shown at a width of 360 CSS pixels Then body text is at least 16 CSS pixels and no text on the page is smaller than 14 CSS pixels. (One exemption: the initial inside a unit icon's drawing, at the sizes this app uses, 20 to 48 pixels. It is part of an image whose accessible name, or the visible label beside it, carries the full words, and it scales with the icon, so it cannot be 14 pixels inside a tag that is 12 of the icon's 32 units. See AC-7.5)
 - [ ] **AC-1.2** Given the `/styleguide` page When every button, link styled as a button, header app-name link, tappable list row, text field, select, text area, checkbox row and radio row is measured at widths of 360 and 768 CSS pixels Then each one's tappable area is at least 44 by 44 CSS pixels. (Links inside running text are exempt.)
 - [ ] **AC-1.3** Given two separate controls (buttons, links styled as buttons, fields) that sit next to each other or one above the other When they are measured Then the gap between their tappable areas is at least 8 CSS pixels. (Rows of one list, and rows of one group of choices, touch each other on purpose, and each is at least 44 pixels tall.)
 - [ ] **AC-1.4** Given a text field, select or text area When it is focused on a phone Then its text size is at least 16 CSS pixels, so Mobile Safari does not zoom the page
@@ -120,7 +120,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 - [ ] **AC-4.3** Given a view that needs a power badge When it renders one Then it does so through one helper, `power_badge(identifier)`, which accepts the identifier as a symbol or a string and prints the power's name as the badge text; and given an identifier that is not one of the seven, or none, Then it raises `ArgumentError` rather than render a badge
 - [ ] **AC-4.4** Given the stylesheets When they are searched for `--color-power-` references outside the token definitions Then they occur only in rules whose every selector is a power badge (`.power-badge--<id>`), a unit icon (`.unit-icon--<id>`) or a supply-center icon (`.supply-center-icon--<id>`) variant. Those rules may use a power color as the fill of the badge, of the unit's silhouette and of the owned supply center, and as the text and border of the power-initial tag, and nowhere else
 - [ ] **AC-4.5** Given the `/styleguide` page When it shows power colors Then it does so only through the power badges (one for each of the seven powers, each with its name and its token name beside it, and none without a name), the unit section (AC-7.10) and the supply-center section (AC-7.10), and a power color appears on no other sample
-- [ ] **AC-4.6** Given the plan and `web/docs/design-system.md` When they are read Then each records the seven final values, says they are the fixed values of decision 42 and that none was derived by a method or tuned, and says that no edition's colors, artwork or fonts were sampled, traced or looked up for them
+- [ ] **AC-4.6** Given the plan (the version 2.0.0 phases in `plan.md` of this spec folder) and `web/docs/design-system.md` When they are read Then each records the seven final values, says they are the fixed values of decision 42 and that none was derived by a method or tuned, and says that no edition's colors, artwork or fonts were sampled, traced or looked up for them. And given the old derivation under "The palette" in `plan.md` and the comment at the top of `tokens.css` Then each is marked superseded by 2.0.0 (the plan) or rewritten (the comment), so no file still says the colors come from an even spread
 
 ### Story 5: A visual check and a menu of parts
 
@@ -145,7 +145,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 **Acceptance criteria:**
 
 - [ ] **AC-6.1** Given the stylesheet files When they are inspected Then they are plain CSS files in the app's stylesheet folder, served by Propshaft, and no step turns other files into them
-- [ ] **AC-6.2** Given the stylesheet files When they are searched for `@font-face`, `@import` and `url(` Then there is no `@import`, there is exactly one `@font-face` and exactly one `url(`, and that `url(` is inside the `@font-face` and points to the `.woff2` file in `app/assets/fonts/` by a path that names no scheme and no host (so it can only be served by this app). The `@font-face` sets `font-display: swap`
+- [ ] **AC-6.2** Given the stylesheet files When they are searched for `@font-face`, `@import` and `url(` Then there is no `@import`, there is exactly one `@font-face` and exactly one `url(`, and that `url(` is inside the `@font-face` and points to the `.woff2` file in `app/assets/fonts/` by a path that names no scheme and no host (so it can only be served by this app). The `@font-face` sets `font-display: swap` and declares the one face for the weight range 400 to 700, so the browser never fakes a bold of a face that is Medium only
 - [ ] **AC-6.3** Given a page with the layout When it is loaded Then every request the page makes (the page, stylesheets, scripts, the font) is to this app's own origin and none goes to a third party, and the only request for a font is the one `.woff2` file
 - [ ] **AC-6.4** Given the Gemfile and the importmap When they are compared with `main` Then they have no new gem and no new pin, and the app has no Node file
 - [ ] **AC-6.5** Given the contents and the file names under `app/`, `lib/` and `spec/` (other than the spec that holds the search pattern) and the contents of `config/routes.rb` When they are searched without regard to case for `diplomacy` or a word that starts with `dip` Then there are no matches. (`docs/specs/` is exempt by name, since the spec and plan must be free to discuss the rule)
@@ -163,12 +163,12 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 - [ ] **AC-7.2** Given `decorative: true` When a unit icon or a supply-center icon is rendered Then it has `aria-hidden="true"` and no `role` and no `aria-label` (a visible label sits next to it), and is otherwise the same drawing
 - [ ] **AC-7.3** Given a power that is not one of the seven or is missing, or a type that is not `army` or `fleet` (for example `:submarine`), or a size that is not an Integer above zero When `unit_icon` is called Then it raises `ArgumentError` and renders nothing. And given a supply-center owner that is not one of the seven (an empty string, say) or a size that is not an Integer above zero When `supply_center_icon` is called Then it raises `ArgumentError` too. (A `nil` owner is not an error: it means unowned, AC-7.6)
 - [ ] **AC-7.4** Given a size under 24 When a unit icon is rendered Then it is drawn from the `-small` artwork (`army-small.svg` or `fleet-small.svg`), and from 24 up from the full artwork (`army.svg` or `fleet.svg`). A supply-center icon has one drawing for every size
-- [ ] **AC-7.5** Given any unit icon at any size When it is rendered Then the bottom-right 12 by 12 units of the drawing (x and y above 20) hold the power-initial tag: a tile in `surface` with a border in the power's color, and the power's initial in the power's color (A, E, F, G, I, R, T), written as `<text>` hidden from assistive technology (the label already says the words) and set in the monospace of FR-11. The tag is part of the drawing, so it works where no name is printed
+- [ ] **AC-7.5** Given any unit icon at any size When it is rendered Then the bottom-right 12 by 12 units of the drawing hold the power-initial tag: a tile spanning x and y from 20 to 32 in `surface`, with a border drawn inside the tile at least 1.5 units wide (so about 1 pixel at size 20) in the power's color, and the power's initial in the power's color (A, E, F, G, I, R, T), written as `<text>` inside the tile, hidden from assistive technology (the label already says the words) and set in the monospace of FR-11. The text's size is an SVG `font-size` attribute in drawing units, so it scales with the icon and no stylesheet writes a `px` size. The tag is part of the drawing, so it works where no name is printed
 - [ ] **AC-7.6** Given `supply_center_icon(nil)` When it is rendered Then it is an inline `<svg>` with `role="img"`, `aria-label="Supply center, unowned"`, `viewBox="0 0 32 32"`, `width` and `height` of 32 and the classes `supply-center-icon supply-center-icon--unowned`. Given `supply_center_icon(:italy)` Then its label is "Supply center, Italy" and its classes are `supply-center-icon supply-center-icon--italy`. The owner accepts a symbol or a string
-- [ ] **AC-7.7** Given the icons shown in a real browser When their computed colors are read Then: the silhouette of a unit is filled with its power's color token and its marks are white; the tag's tile is filled with `surface` and bordered, and its initial filled, with the power's color token; an owned supply center's disk and edge are filled with the owner's color token and its center is white; an unowned one has a white disk and its edge and center are filled with `text`
-- [ ] **AC-7.8** Given the views and helpers When they are searched for `<svg` Then it occurs only in the two icon helpers' own files and in no view, so the two helpers are the only way to draw these icons, as `power_badge` is for a badge
+- [ ] **AC-7.7** Given the icons shown in a real browser When their computed colors are read Then: the silhouette of a unit is filled with its power's color token and its marks are white; the tag's tile is filled with `surface` and bordered, and its initial filled, with the power's color token; an owned supply center's disk and edge are filled with the owner's color token and its center with `on-power`; an unowned one has a white disk and its edge and center are filled with `text`
+- [ ] **AC-7.8** Given the views and helpers When they are searched for `<svg` Then it occurs only in the icon helper module's file and in no view, so the two helpers are the only way to draw these icons, as `power_badge` is for a badge
 - [ ] **AC-7.9** Given the five drawings in `app/assets/images/icons/` and their masters in `assets/icons/` When the spec compares each pair byte for byte Then they are identical, there is no copy without a master and no master drawing without a copy, and a difference fails the spec naming the file. And given the app's code When it is searched Then nothing reads `assets/icons/` at run time (the Docker build context is `web/`, so only the copies exist there)
-- [ ] **AC-7.10** Given the `/styleguide` page When its unit section is read Then it shows every power's army and fleet at 20, 32 and 48 pixels (42 icons, the 20 pixel row using the small drawings), each through `unit_icon`; and its supply-center section shows each of the seven owners and the unowned look, each through `supply_center_icon`, and names each power beside its icon
+- [ ] **AC-7.10** Given the `/styleguide` page When its unit section is read Then it shows every power's army and fleet at 20, 32 and 48 pixels (42 icons, the 20 pixel row using the small drawings), each through `unit_icon`, with the power named beside each and one row of them on an `ice-pale` ground (so the power-on-`ice-pale` pairs of FR-3 are shown on something); and its supply-center section shows each of the seven owners and the unowned look, each through `supply_center_icon`, and names each power beside its icon
 
 ### Story 8: One monospace for the few places that need it (added in 2.0.0)
 
@@ -179,7 +179,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 **Acceptance criteria:**
 
 - [ ] **AC-8.1** Given the token file When `--font-mono` is read Then it is `"Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace`
-- [ ] **AC-8.2** Given an element with the class `mono` When its computed font family is read in a real browser Then it starts with `Plex Mono`; and given the stylesheets Then `--font-mono` is read only by `.mono` and by the power-initial tag's rule
+- [ ] **AC-8.2** Given an element with the class `mono` When its computed font family is read in a real browser Then it starts with `Plex Mono`, and `document.fonts.load('1rem "Plex Mono"')` resolves with exactly one loaded face (so the file really loads); and given the stylesheets Then, in this version, `--font-mono` is read only by `.mono` and by the power-initial tag's rule. (Later components get the face by carrying the `mono` class in their markup, and do not read the token)
 - [ ] **AC-8.3** Given `app/assets/fonts/` When it is listed Then it holds exactly one font file, a `.woff2` of IBM Plex Mono Medium cut down to the Latin subset, and the `OFL.txt` of the same release beside it. And given that file When its SHA-256 is computed Then it equals the one `web/NOTICE` records
 - [ ] **AC-8.4** Given `web/NOTICE` When it is read Then it credits IBM Plex Mono (IBM Corp., SIL Open Font License 1.1) with the source URL, the release version and the file's SHA-256, and carries the CC BY-SA 4.0 notice for the inlined artwork from `assets/icons/`
 
@@ -192,7 +192,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 **Acceptance criteria:**
 
 - [ ] **AC-9.1** Given `web/docs/design-system.md` When it is read Then it holds the palette with every value, the power colors, the type rules, the unit and supply-center rules, the helper rules, and the component catalog (what each screen Issue builds, with its class names and the Issue that builds it), as Issue #81 sets them out
-- [ ] **AC-9.2** Given the token file and the document When the spec compares them Then every `--color-*` token name and value in the token file appears in the document, so the document cannot fall behind the tokens
+- [ ] **AC-9.2** Given the token file and the document When the spec compares them Then every `--color-<name>` token in the token file appears in the document with its hex value on the same line, so the document cannot fall behind the tokens
 
 ## Functional Requirements
 
@@ -208,7 +208,7 @@ The styles are plain modern CSS files in `app/assets/stylesheets/`, linked by th
 - Set `lang="en"`, the viewport meta tag and `viewport-fit=cover` in the layout, so the stylesheet can use the unsafe-area insets.
 
 **Must not:**
-- Use `@import`, a `url(` other than the one in the single `@font-face` (AC-6.2), a font other than that one, JavaScript or inline `style` attributes.
+- Use `@import`, a `url(` other than the one in the single `@font-face` (AC-6.2), a web font other than that one, JavaScript or inline `style` attributes.
 - Use `!important`, other than in one documented place if the plan can show it is needed.
 
 ### FR-2: Tokens
@@ -247,7 +247,7 @@ Where each color is used:
 | `page` | Page background |
 | `surface` | Action area, list rows, fields, secondary button fill, badges' surroundings, the power-initial tag's tile |
 | `ice` | Background only (AC-2.9): the header's fill. Never text, never a control's edge |
-| `ice-pale` | Background only, for selected rows, the host section and the "acting as" banner. Those parts come from later Issues, so no rule here uses it; its pairs are documented now so they can |
+| `ice-pale` | Selected rows, the host section and the "acting as" banner, all from later Issues, so no rule here reads it (the style guide shows one row of units on it). Its text, muted-text and power-color pairs are documented now; a later Issue that puts a border, a primary or danger control, a link or a focus ring on it adds that pair then |
 | `steel` | Decorative only: the rule under the header. It carries no meaning and no control uses it |
 | `text` | Body text, headings, the label on a secondary button, the unowned supply center's edge and center |
 | `text-muted` | Hints, placeholder text, secondary text |
@@ -257,7 +257,7 @@ Where each color is used:
 | `danger`, `danger-pressed`, `on-danger` | Error text and an invalid field's edge; danger button fill, its pressed and hover fill, and its label |
 | `focus` | Focus ring |
 | `disabled-fill`, `disabled-text` | A disabled control |
-| `power-<id>`, `on-power` | A power badge's fill and name; a unit icon's silhouette; an owned supply center's disk and edge; the text and border of the power-initial tag (FR-10) |
+| `power-<id>`, `on-power` | A power badge's fill and name; a unit icon's silhouette; an owned supply center's disk and edge, and `on-power` for its center; the text and border of the power-initial tag (FR-10) |
 
 Treatments that need no color of their own:
 
@@ -274,7 +274,7 @@ Treatments that need no color of their own:
 - Write each color token as a six-digit hex value with no transparency, so that every contrast ratio is exact and no blending is involved.
 
 **Must not:**
-- Write a raw color, a raw font stack, a raw font size or a raw spacing value outside the token file. Rules read tokens only. Exempt are media query conditions (custom properties cannot be used there), `0`, percentages and layout fractions, and the family name inside the one `@font-face` (it cannot read a token). Only the color and font-size rules are tested (AC-2.4, AC-1.5). The rest is a review check.
+- Write a raw color, a raw font stack, a raw font size or a raw spacing value outside the token file. Rules read tokens only. Exempt are media query conditions (custom properties cannot be used there), `0`, percentages and layout fractions, the family name and weight range inside the one `@font-face` (it cannot read a token), and the presentation attributes inside the inlined drawings (their white and the tag text's `font-size` in drawing units), which are markup and not a stylesheet. Only the color and font-size rules are tested (AC-2.4, AC-1.5). The rest is a review check.
 - Hold a color in a custom property that is not a `--color-*` token in the token file (AC-2.5).
 
 ### FR-3: Palette and contrast
@@ -295,7 +295,7 @@ The light palette is original and fixed (FR-2, FR-9). The contrast spec parses t
 | `on-danger` on `danger`, on `danger-pressed` | Label of a danger button | 4.5 |
 | `danger` and `danger-pressed` against `page`, against `surface` | Edge of a danger button or an invalid field | 3 |
 | `focus` against `page`, against `surface`, against `ice` | Focus ring (on `ice`: the header's link) | 3 |
-| `steel` against `page`, against `surface` | The decorative rule under the header (not required by WCAG; held to the non-text level so it reads as a line) | 3 |
+| `steel` against `page`, against `surface` | The decorative rule under the header (not required by WCAG; held to the non-text level against the page below it so it reads as a line. Against the `ice` header above it the ratio is lower, and that is accepted because the rule is decorative) | 3 |
 | `disabled-text` on `disabled-fill` | Label of a disabled control | 3 |
 | `on-power` on each `power-<identifier>` | A power's name in its badge | 4.5 |
 | each `power-<identifier>` on `surface` | The power's initial in its tag, on the tag's tile | 4.5 |
@@ -442,9 +442,9 @@ The two helpers are the only way to draw these icons, as `power_badge` is the on
 **Must:**
 - Draw from the five masters in `assets/icons/` (`army`, `army-small`, `fleet`, `fleet-small`, `supply-center`), inlined. The app never reads the repository's root folder at run time, since the Docker build context is `web/`. Each master is copied into `app/assets/images/icons/`, byte for byte, and a spec fails if a copy ever differs from its master (AC-7.9).
 - Find each part of a drawing by the names in `assets/icons/README.md`: the silhouette, the white marks, the disk, the edge, the center. Because the artwork's ids would repeat on a page with many icons, the helper turns each id into a class and emits no `id`. It sets `width` and `height` from `size` and adds no `style` attribute.
-- Color by class and token, never by a raw value in the stylesheet (AC-2.4): a unit's `color` is its power's token, so the silhouette (`currentColor`) takes it; the marks keep the artwork's white; an unowned supply center has `color` set to `text`; an owned one has the disk and the edge filled with the owner's token and the center white.
-- Draw the power-initial tag inside the unit's `svg`, in the corner the artwork leaves empty: a tile in `surface` with a border in the power's color and the initial in the power's color, in the monospace, hidden from assistive technology (AC-7.5). The tag's border is drawn inside the tile and thick enough to read at 20 pixels.
-- Use the `-small` unit drawings for any size under 24 (AC-7.4).
+- Color by class and token, never by a raw value in the stylesheet (AC-2.4): a unit's `color` is its power's token, so the silhouette (`currentColor`) takes it; the marks keep the artwork's white; an unowned supply center has `color` set to `text`; an owned one has the disk and the edge filled with the owner's token and the center with `on-power`.
+- Draw the power-initial tag inside the unit's `svg`, in the corner the artwork leaves empty: a tile in `surface` with a border in the power's color and the initial in the power's color, in the monospace, hidden from assistive technology (AC-7.5).
+- Use the `-small` unit drawings for any size under 24 (AC-7.4). At that size the initial is only about 5 pixels tall, so a visible name always sits beside a unit icon under 24 pixels (and the icon is then `decorative: true`), until the map work in 1.x settles a better tag.
 - Name the icon for assistive technology with `aria-label` (the words in AC-7.1 and AC-7.6), or hide it with `aria-hidden="true"` when `decorative: true` because a visible label sits next to it (AC-7.2).
 - Raise `ArgumentError` for an unknown power, type, owner or size (AC-7.3), and accept symbols and strings.
 
@@ -456,7 +456,7 @@ The two helpers are the only way to draw these icons, as `power_badge` is the on
 **Must:**
 - Use IBM Plex Mono Medium, the Latin subset, as one WOFF2 file: the subset file IBM publishes in its official release (or the same file in the `@ibm/plex-mono` package at a pinned version), with no subsetting tool installed. The file sits in `app/assets/fonts/` with the `OFL.txt` of the same release. `web/NOTICE` records the source URL, the release version and the file's SHA-256 (AC-8.3, AC-8.4).
 - Load it with one `@font-face` named `Plex Mono`, with `font-display: swap`, whose `url()` is this app's path to the file and nothing else (AC-6.2).
-- Offer the `.mono` class, which sets `font-family: var(--font-mono)` and `font-weight: var(--weight-regular)`, and leaves size to the rule that uses it. The face is Medium only, so a regular-weight request is matched by the browser to that one face. No rule may ask for a bold of it: the browser would fake one.
+- Offer the `.mono` class, which sets `font-family: var(--font-mono)` and `font-weight: var(--weight-regular)`, and leaves size to the rule that uses it. The face is Medium only, so a regular-weight request is matched by the browser to that one face. The `@font-face` declares the face for a weight range (AC-6.2), so a bold request is never faked.
 - Use it only for phase headers, join codes, province abbreviations, outcome tags and the power-initial tag, and elsewhere only through `.mono`. Phase headers are capitals with letter spacing set in CSS, from source text in sentence case. Those headers, codes and tags come from later Issues; here only `.mono` and the tag exist.
 - Treat the font as a new asset, not a dependency: it adds no gem, pin or Node file (AC-6.4). The reason (a six-character join code is read aloud and must have even letters; no system monospace is the same on every phone) is given in the pull request.
 
@@ -469,7 +469,7 @@ The two helpers are the only way to draw these icons, as `power_badge` is the on
 
 **Must:**
 - Name every color token and value (AC-9.2) and every component's class name, in the pattern of #20 (block, `__element`, `--variant`).
-- Say, in the type rules, that the face is Medium only and must not be bolded.
+- Say, in the type rules, that the face is Medium only, so bold and regular look the same in `.mono`, and that a screen must not rely on bold to mean anything there.
 
 **Must not:**
 - Contradict `docs/architecture.md`. If it would, raise an Issue first.
@@ -533,7 +533,7 @@ When version 1.2.1 was approved the Gemfile had no browser-driving gem, so geome
 | The viewport is shorter than 30rem | The action area stops sticking and follows the content (AC-3.9) |
 | The on-screen keyboard is open | The browser does not shrink the layout viewport, so the action area may be covered by the keyboard. Nothing requires it to stay visible |
 | A person navigates with a keyboard | Every control shows a focus ring, and none is entirely hidden behind the action area |
-| The system asks for forced colors | Borders and text stay visible because they are real borders and text, not fills alone |
+| The system asks for forced colors | Borders and text stay visible because they are real borders and text, not fills alone. The icons are SVG fills and strokes, so they keep their own colors on the forced background; this is checked by hand in Chrome's emulation with the other forced-colors checks |
 | The system asks for reduced motion | No transition runs |
 | A color token is added without a documented pair | The contrast spec fails and names it |
 | A pair falls below its threshold | The contrast spec fails and prints the pair, ratio and threshold |
@@ -543,8 +543,7 @@ When version 1.2.1 was approved the Gemfile had no browser-driving gem, so geome
 | `supply_center_icon` gets an unknown owner or a bad size | It raises `ArgumentError`. A `nil` owner is the unowned look, not an error |
 | A unit icon is shown at 20 pixels | The `-small` drawing is used, and the tag's initial is very small. The icon is still labelled, and in a list the power is named beside it |
 | The font file fails to load | `swap` keeps the fallback monospace on screen, and nothing else depends on the font. Icons and layout are unchanged |
-| A copy of a drawing no longer matches its master | The file spec fails and names the file |
-| A request for `/styleguide` in production | 404 |
+| A copy of a drawing no longer matches its master | The file spec fails and names the file. Note: `.github/workflows/web.yml` runs only on `web/**` changes, so a pull request that edits a master alone (a `repo` change) does not run it, and the failure shows on the next web pull request. Adding `assets/icons/**` to that workflow's paths is a root change for its own Issue, and is not made here || A request for `/styleguide` in production | 404 |
 | The stylesheet is blocked or fails to load | The page is still readable and usable as plain, unstyled HTML, since no content comes from CSS |
 
 ## Open Questions
@@ -565,5 +564,4 @@ None. The decisions already made, for the record:
 - Glyphs for outcomes, seat states, banners and chrome (#82), the map-only icons (1.x), and every screen component of the catalog other than the ones built here (#21 to #28 and 1.0).
 - Hiding the header or action area in a Hotwire Native wrapper, which a path configuration can decide later. The layout keeps them as separate, named regions so a later rule can target them.
 - Replacing the helper's seven hardcoded names with the gem's map names, once the app pins the gem.
-- Automated browser specs for geometry (see Verification).
 - Print styles, right-to-left layouts and translations.
