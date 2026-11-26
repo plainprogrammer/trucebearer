@@ -1,7 +1,7 @@
 # Feature 028: Resume a game in a later session
 
-**Status:** Draft
-**Version:** 1.0.2
+**Status:** Approved
+**Version:** 1.0.3
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #28
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.3 | 2026-11-26 | Approved at Gate A (the maintainer's delegate): D1 to D6, the amendments to specs 021 and 022. The optional game name is follow-up Issue #121 (D4); the host page's dead "Your own seat" link for a browser with no seat is Issue #120, a known limit this feature does not fix. |
 | 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): AC-3.4 normalizes the CSRF token as the sweep does, AC-3.6 fixes the cookie order with a raw header, a stale AC number, "the queries", and AC-8.5 takes the next free minor. |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **B1:** the layout's CSRF tags make Rails set its session cookie on `GET /`, so "no `Set-Cookie`" is gone: the page sets and deletes no `host_`, `seat_` or `step_in_` cookie (D7, AC-1.6, AC-2.3).<br>• **B2:** spec 022's route table (FR-9) calls `GET /` "no game data"; D10 and AC-8.6 amend it.<br>• **B3:** the host on a fresh phone reaches the host's own seat by reissuing it, which clears that seat's saved orders; D5, the Problem Statement, AC-7.3 and the Gate A question say so, and the dead "Your own seat" link on the host page is a follow-up Issue.<br>• Minors: an identity proof for the home page (AC-3.4), backdated games and distinct powers (AC-3.2), a seat cookie re-signed under another name (AC-3.3), the first 40 ids in request order and at most three queries (D2, AC-3.6), `PUBLIC_ID_SHAPE` reused, `own_seat_target` reused for hosts, the "Your games" heading defined, AC-3.12 and AC-4.4 reworded, `web/README.md`, `StepInsHelper#table_zone`, how a session end is simulated, and the shared stylesheet budget. |
 | 1.0.0 | 2026-11-26 | First draft |
@@ -90,13 +91,13 @@ For a browser that holds the host cookie, the link is `own_seat_target(game)` (t
 - **(b) The date the game started, in the table's time zone. Chosen.** No column, no form, no new input to escape. It tells two games apart when they started on different days, and the card also shows the phase and the power. Two games that started on one day with the same power are told apart by the phase only. This is not a name, so the catalog row is rewritten to say "Start date".
 - **(c) The join code.** Rejected: the code lets anyone join while joining is open, so it is not shown outside the host's page.
 
-If (a) is wanted, it is one follow-up Issue: a nullable `games.name`, a field on the create form and the title falling back to the date.
+If (a) is wanted, it is follow-up Issue #121: a nullable `games.name`, a field on the create form and the title falling back to the date.
 
 The date is in `StepInsHelper#table_zone` (the zone `TRUCEBEARER_TIME_ZONE` names, or UTC, as spec 026 D6 does for times), so the variable is read in one place, and is drawn as a `<time datetime=...>` element.
 
 **D5. The host link goes where the host's seat is.** Spec 021 AC-2.1 sends every verified host link to the host page. The Issue says it "lands on the host's seat with host controls". After the host cookie is set, `HostLinksController#show` redirects to `own_seat_target`, which `GameAccess` already defines: the seat page when the browser holds the host's own seat, the host page when it holds no seat of its own. A fresh browser with only the host link lands on the host page, as today. A rejected token is unchanged.
 
-**What a fresh phone can and cannot do.** The server keeps only a digest of the host's seat token, so a host link alone can't give a browser the host's seat. A host on a spare phone reaches the host's own seat again the way any player does: on the host page, "Reissue seat" on the host's own row, then open the new link in that browser (spec 026 AC-7.3 stores the cookie because the seat is the host's own). That clears the host's saved orders for the open phase (spec 022 D9) and ends the seat cookie on the host's first phone, so it is for a lost phone, not a convenience. This is the reading of the Issue's "lands on the host's seat with host controls" that this spec builds, and Gate A confirms it. A fresh phone needs no seat to use the host controls. The host page's "Your own seat" link leads a browser with no seat to the stranger page; the host page is #112's and #105's ground, so a follow-up Issue records it and this feature does not touch it. The redirect that follows creating a game (`games#create`) stays on the host page, because that page shows the host link once.
+**What a fresh phone can and cannot do.** The server keeps only a digest of the host's seat token, so a host link alone can't give a browser the host's seat. A host on a spare phone reaches the host's own seat again the way any player does: on the host page, "Reissue seat" on the host's own row, then open the new link in that browser (spec 026 AC-7.3 stores the cookie because the seat is the host's own). That clears the host's saved orders for the open phase (spec 022 D9) and ends the seat cookie on the host's first phone, so it is for a lost phone, not a convenience. This is the reading of the Issue's "lands on the host's seat with host controls" that this spec builds, and Gate A confirms it. A fresh phone needs no seat to use the host controls. The host page's "Your own seat" link leads a browser with no seat to the stranger page; the host page is #112's and #105's ground, so Issue #120 records it and this feature does not touch it. The redirect that follows creating a game (`games#create`) stays on the host page, because that page shows the host link once.
 
 **D6. A lost cookie: one static line, on the home page and the stranger page.** "Lost your seat? Ask the host for a new QR code." It is a partial (`shared/_lost_seat`) drawn on the home page for every browser, and on the stranger page, which is the page a player with no cookie meets at a saved game address. It is identical for every viewer and every request, so it tells nobody whether a game exists, whether the phone ever held a seat, or which games there are. The stranger page stays one answer for everyone (spec 021 D4, AC-5.5): the line is part of that one answer. The host's side of the path is the "Reissue seat" row that already exists on the host page; this feature adds no route.
 
@@ -275,12 +276,12 @@ One partial, `shared/_lost_seat`, with no locals.
 
 ## Open Questions
 
-1. **Gate A:** D1 (list, no redirect), D4 (start date, no name), D5 (the host link goes to `own_seat_target`; a fresh phone reaches the host's seat by reissuing it).
+None. Gate A settled D1, D4 and D5.
 
 ## Out of Scope (Future Considerations)
 
-- An optional game name (follow-up Issue, D4).
+- An optional game name (Issue #121, D4).
 - A list of games tied to an account, and claiming a seat with one (#42 to #44).
 - Removing stale cookies from the home page.
-- The host page's "Your own seat" link, dead for a browser with no seat (a follow-up Issue; #112 and #105 are on that page).
+- The host page's "Your own seat" link, dead for a browser with no seat (Issue #120; #112 and #105 are on that page).
 - Order counts or submitted states on a card.
