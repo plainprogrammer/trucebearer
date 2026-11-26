@@ -93,6 +93,20 @@ RSpec.describe "Rate limits", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  it "treats an IPv4-mapped IPv6 address as its IPv4 address (AC-8.9)" do
+    mapped = { "REMOTE_ADDR" => "::ffff:203.0.113.7" }
+    mapped_other = { "REMOTE_ADDR" => "::ffff:203.0.113.8" }
+    30.times { get "/join/#{code}", headers: mapped }
+    get "/join/#{code}", headers: mapped
+    expect(limited?).to be(true)
+
+    get "/join/#{code}", headers: mapped_other # a different IPv4 address, not the same /64
+    expect(response).to have_http_status(:ok)
+
+    get "/join/#{code}", headers: one_address # the plain form of the limited address
+    expect(limited?).to be(true)
+  end
+
   it "chooses the bucket by the client behind a private proxy (AC-8.10)" do
     behind = ->(client) { { "REMOTE_ADDR" => "10.0.0.5", "HTTP_X_FORWARDED_FOR" => client } }
     31.times { get "/join/#{code}", headers: behind.call("198.51.100.9") }

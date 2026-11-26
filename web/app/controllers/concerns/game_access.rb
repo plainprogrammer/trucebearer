@@ -52,9 +52,10 @@ module GameAccess
 
   def too_many_tries = render("strangers/too_many", status: :too_many_requests)
 
-  # IPv4 by address, IPv6 by its first 64 bits (spec FR-8).
+  # IPv4 by address, IPv6 by its first 64 bits (spec FR-8). An IPv4-mapped IPv6 address counts as its IPv4 address.
   def client_key
     address = IPAddr.new(request.remote_ip)
+    address = address.native
     address.ipv6? ? address.mask(64).to_s : address.to_s
   rescue IPAddr::InvalidAddressError
     request.remote_ip.to_s
