@@ -1,0 +1,5 @@
+<%# The seven rows of the status list (spec 024 D6). Used inside the live list by seat_status, and alone as the body of a
+    stream message, so the page and the message cannot differ. locals: statuses (seven Phase::Status) %>
+<% statuses.each do |status| -%>
+  <li class="seat-status__row" data-power="<%= status.power %>"><%= power_badge(status.power) %> <span class="seat-status__state"><%= status.submitted ? "Submitted" : "Not submitted" %></span></li>
+<% end -%>
