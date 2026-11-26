@@ -1,7 +1,7 @@
 # Feature 014: Adjudicate movement phases without convoys
 
-**Status:** Draft
-**Version:** 1.1.0
+**Status:** Approved
+**Version:** 1.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #14
@@ -15,6 +15,7 @@
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | Initial draft |
 | 1.1.0 | 2026-11-26 | Folded in the Gate A review (round 1, changes required, five blocking):<br>• Attack strength drops the owner's supports only when the unit in the province stays or is the head-to-head opponent (6.D.35, 6.E.9).<br>• A unit is dislodged when it stays (it follows no move, or its move fails); "loses a head-to-head battle" is defined once as "the opposing move succeeds".<br>• AC-7.3, AC-5.2, AC-6.1, AC-8.2, AC-8.7, AC-9.3, AC-9.6 and AC-10.1 are made consistent and testable.<br>• 6.D.8 is encoded (no convoy is ordered, so its result is the same before and after #15).<br>• The convoy section says openly where it departs from the contract; AC-5.3 is flagged; the random specs seed the hard shapes and carry a minimum count of each; the paradox check needs no counter |
+| 1.2.0 | 2026-11-26 | Gate A approved by the coordinator under the maintainer's delegation. Rulings: convoys never work yet (option 1), pinned in its own spec file, and the spec and the CHANGELOG entry say convoy routing arrives with #15 before 0.2.0 ships; the Outcome and Adjudication impossible objects are added to `docs/interface.md` (one Ruby example each, only rules that follow from the contract, and the duplicate-province rule agrees with the duplicate-order raise), after `origin/main` is merged in; 6.F.1 is encoded; one pull request for now (Gate B decides); wrong-class arguments raise `TA::InvalidInput`; the implementation review confirms the defensive branch is unreachable. Status is now Approved |
 
 ## Problem Statement
 
@@ -96,7 +97,7 @@ Circular movement and every other cycle of moves resolve with `paradox: false` (
 
 ### Convoys in this release
 
-#15 has not been built, so this feature needs a rule for any input that involves a convoy. **The behavior proposed here is the recommendation. Gate A decides it (Open Question 1).** It is temporary: 0.2.0 ships only after #15, and the specs that pin it are named so that #15 replaces them.
+#15 has not been built, so this feature needs a rule for any input that involves a convoy. **Approved at Gate A (Open Question 1, option 1).** It is temporary: convoy routing arrives with #15, before 0.2.0 ships, and the file that pins it is named so that #15 replaces it. The CHANGELOG entry says so too.
 
 Convoys never work. The convoy routing rules of `### Convoy routing` are applied as written to decide whether a move **goes by convoy**: a move to a province an army can't reach by land, a `MoveViaConvoy`, or a plain `Move` to a province the army can reach by land when a fleet of the army's own power gives a matching `Convoy` order that passes checking. Then:
 
@@ -106,7 +107,7 @@ Convoys never work. The convoy routing rules of `### Convoy routing` are applied
 
 Nothing raises. Every other rule of this feature applies unchanged to the other orders of the same call. Two examples of the contract (`by_sea`, and the paradox position) disagree with this and are written pending (AC-1.3).
 
-**Alternatives.** (2) Raise `TA::InvalidInput` for any convoy input: simple, and it fails loudly instead of returning a result that is silently wrong for any input where a convoy would have worked, but it adds a case to the contract's list of errors (as the wrong-class errors of AC-5.3 already do, see Open Question 5), and has to be undone. (3) Build the routes now (without paradoxes): it adds #15's route and disruption logic and fixtures to this pull request and makes it about twice the size, and #15 would shrink to paradoxes and 6.F to 6.G. The recommendation (1) keeps each issue to its own scope and leaves one place for #15 to change: the function that says whether a move has a working route.
+**Alternatives (not taken).** (2) Raise `TA::InvalidInput` for any convoy input: simple, and it fails loudly instead of returning a result that is silently wrong for any input where a convoy would have worked, but it adds a case to the contract's list of errors (as the wrong-class errors of AC-5.3 already do, see Open Question 5), and has to be undone. (3) Build the routes now (without paradoxes): it adds #15's route and disruption logic and fixtures to this pull request and makes it about twice the size, and #15 would shrink to paradoxes and 6.F to 6.G. The recommendation (1) keeps each issue to its own scope and leaves one place for #15 to change: the function that says whether a move has a working route.
 
 ## DATC cases
 
@@ -211,7 +212,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-3.2** The `to_h` of the interface's example (England's fleet holding in London) is exactly the hash shown in `### TA::Adjudication`, with `"format" => 1` first, and `from_h` of its JSON round trip equals the original
 - [ ] **AC-3.3** Given a missing or unknown key, a missing or unknown `format`, a non-boolean `paradox`, a list that isn't an `Array`, or an element that doesn't build Then `from_h` raises `TA::InvalidInput` and the message includes the offending key or value
 - [ ] **AC-3.4** These are impossible, and each raises `TA::InvalidInput` from `new` and `from_h`: an outcome in the list after an implied-hold outcome that is submitted; implied-hold outcomes that are not in ascending order of province (including two for one province); two submitted outcomes for the same power and province (adjudication refuses that input). The position may be in any phase, since 0.3 will change it
-- [ ] **AC-3.5** The "Impossible objects" examples that follow from AC-2.4 and AC-3.4 are specs. They are added to `docs/interface.md` only if Open Question 2 is answered yes
+- [ ] **AC-3.5** The "Impossible objects" examples that follow from AC-2.4 and AC-3.4 are specs. They are added to `docs/interface.md` under `### Impossible objects`, one Ruby example each for `TA::Outcome` and `TA::Adjudication` (Open Question 2, yes)
 
 ### Story 4: `Marshal`
 
@@ -360,19 +361,19 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-14.1** `docs/ruleset.md` gets a row for each choice this feature makes that the DATC leaves open, citing the section: what a standoff is (6.H.6, 6.H.9, 6.H.17), the result name of each outcome (4.E.2), that a unit whose owner gave no legal order holds and can be supported (4.E.3, 6.D.28 to 6.D.30, already partly recorded under 4.E.1), the circular-movement rule (5.B.9) and what is done with a circle that no rule decides, and the temporary convoy behavior (4.A.3)
-- [ ] **AC-14.2** `CHANGELOG.md` has an entry under "Unreleased", "Added", naming `TA::Outcome`, `TA::Adjudication` and `TA.adjudicate` and #14, and says that convoys arrive with #15 (and, if Open Question 2 is yes, a line for the new "Impossible objects" examples). No other entry is touched. When #13 moves the entries under 0.1.0 and `main` is merged in, the entry stays under "Unreleased" (review)
-- [ ] **AC-14.3** `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is not among them unless Open Question 2 is answered yes (then only its "Impossible objects" list is changed)
+- [ ] **AC-14.2** `CHANGELOG.md` has an entry under "Unreleased", "Added", naming `TA::Outcome`, `TA::Adjudication` and `TA.adjudicate` and #14, and says that convoy routing arrives with #15, before 0.2.0 ships (a second "Added" line, or part of the same entry, covers the new "Impossible objects" examples of the contract). No other entry is touched. When #13 moves the entries under 0.1.0 and `main` is merged in, the entry stays under "Unreleased" (review)
+- [ ] **AC-14.3** `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is among them only for its "Impossible objects" list (Open Question 2); nothing else in it changes
 
 ## Open Questions
 
-1. **What does `TA.adjudicate` do in this release with a convoy?** Options, with the one recommended first:
+1. **What does `TA.adjudicate` do in this release with a convoy?** *Decided at Gate A: option (1).* Options, with the one recommended first:
    - **(1) Convoys never work (recommended).** A move that goes by convoy is `:no_route`, a legal `Convoy` order is `:unmatched`, and nothing raises. Described under "Convoys in this release". The contract promises more for 0.2.0, but 0.2.0 ships only after #15 and the temporary behavior can't reach the app.
    - **(2) Refuse.** Raise `TA::InvalidInput`. Needs a third error case in the contract.
    - **(3) Build the routes now,** without paradoxes. About double the size of this pull request.
-2. **Impossible objects.** The contract's `### Impossible objects` list has no `TA::Outcome` or `TA::Adjudication` entry, but `## Value objects` says every value object is validated, and the Issue asks for "impossible objects". AC-2.4 and AC-3.4 propose a set, all following from the contract's wording of the outcome list, the dislodged flag and the results table. One forward note: "an implied hold is a `Hold` that is `:held`" will need loosening in 0.3, when retreat and disband orders can be implied. **Recommendation:** add those examples to the contract's list (an addition under "Added", no Issue for the app needed). The alternative is to keep them only in this spec and in specs; then the contract would say less than the code does.
-3. **6.F.1.** It is outside 6.A to 6.E, but spec 011 parked it for #14, every order in it is void, and no convoy is resolved. **Recommendation:** encode it (one file). The alternative is to leave it to #15 with the other two parked cases (6.F.12 and 6.G.7), which need a route.
-4. **Splitting the work.** The Issue allows a split by DATC section. The code is one resolver, so a split by section doesn't map to code. **Recommendation:** one pull request, unless the plan at Gate B shows it is too large. If it is: the first pull request holds the two value objects, `TA.adjudicate` for holds, moves, bounces and void orders, and its fixtures (6.A and the move-only cases of 6.B); the second adds supports, dislodgement, head-to-head, circular movement, and the fixtures of 6.C to 6.E, and "Closes #14". Both would follow this one spec.
-5. **Wrong-class arguments.** The contract names two cases that raise. A wrong-class position, `orders` or order element is malformed input, and `TA.check` and `TA.legal_orders` already raise `TA::InvalidInput` for it (the contract's own rule: malformed input raises, a broken rule doesn't). AC-5.3 does the same here. **Recommendation:** keep it, and word the contract's "two cases only" as "two rules failures" when the contract is next edited. The alternative is to let a `NoMethodError` out, which the contract's last paragraph in `## Errors` rules out.
+2. **Impossible objects.** *Decided at Gate A: yes, add them to `docs/interface.md`, one Ruby example each, inside the 0.2.0 material, with a CHANGELOG "Added" line. Every rule must follow from what the contract already says about outcomes, and the duplicate-province rule must agree with the duplicate-order raise. `origin/main` is merged in first, since #13 edits the same file.* The contract's `### Impossible objects` list has no `TA::Outcome` or `TA::Adjudication` entry, but `## Value objects` says every value object is validated, and the Issue asks for "impossible objects". AC-2.4 and AC-3.4 propose a set, all following from the contract's wording of the outcome list, the dislodged flag and the results table. One forward note: "an implied hold is a `Hold` that is `:held`" will need loosening in 0.3, when retreat and disband orders can be implied. **Recommendation:** add those examples to the contract's list (an addition under "Added", no Issue for the app needed). The alternative is to keep them only in this spec and in specs; then the contract would say less than the code does.
+3. **6.F.1.** *Decided at Gate A: encode it.* It is outside 6.A to 6.E, but spec 011 parked it for #14, every order in it is void, and no convoy is resolved. **Recommendation:** encode it (one file). The alternative is to leave it to #15 with the other two parked cases (6.F.12 and 6.G.7), which need a route.
+4. **Splitting the work.** *Decided at Gate A: one pull request for now; Gate B decides from the plan's size.* The Issue allows a split by DATC section. The code is one resolver, so a split by section doesn't map to code. **Recommendation:** one pull request, unless the plan at Gate B shows it is too large. If it is: the first pull request holds the two value objects, `TA.adjudicate` for holds, moves, bounces and void orders, and its fixtures (6.A and the move-only cases of 6.B); the second adds supports, dislodgement, head-to-head, circular movement, and the fixtures of 6.C to 6.E, and "Closes #14". Both would follow this one spec.
+5. **Wrong-class arguments.** *Decided at Gate A: keep, they raise.* The contract names two cases that raise. A wrong-class position, `orders` or order element is malformed input, and `TA.check` and `TA.legal_orders` already raise `TA::InvalidInput` for it (the contract's own rule: malformed input raises, a broken rule doesn't). AC-5.3 does the same here. **Recommendation:** keep it, and word the contract's "two cases only" as "two rules failures" when the contract is next edited. The alternative is to let a `NoMethodError` out, which the contract's last paragraph in `## Errors` rules out.
 
 ## Notes for the plan
 
