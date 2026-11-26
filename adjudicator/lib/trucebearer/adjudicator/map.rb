@@ -12,6 +12,7 @@ module Trucebearer
       Province = Data.define(:id, :name, :type, :coasts, :supply_center, :home)
 
       DATA_PATH = File.expand_path("../../../data/maps/classic.yml", __dir__)
+      NO_NEIGHBORS = Set.new.freeze
 
       class << self
         # The classic map. Takes no path: the gem has one map, built in. The loader
@@ -25,7 +26,9 @@ module Trucebearer
           new(
             id: raw["map"],
             powers: raw["powers"].map { |p| Power.new(id: p["id"].to_sym, name: p["name"]) },
-            provinces: raw["provinces"].map { |p| build_province(p) }
+            provinces: raw["provinces"].map { |p| build_province(p) },
+            armies: raw["armies"].to_h { |from, tos| [from.to_sym, tos.map(&:to_sym).to_set.freeze] }.freeze,
+            fleets: raw["fleets"].to_h { |from, tos| [fleet_key(from), tos.map { |to| fleet_key(to) }.to_set.freeze] }.freeze
           )
         end
 
@@ -39,13 +42,19 @@ module Trucebearer
             home: entry["home"]&.to_sym
           )
         end
+
+        # "spa/nc" -> [:spa, :nc]; "alb" -> [:alb, nil]
+        def fleet_key(text)
+          province, coast = text.split("/")
+          [province.to_sym, coast&.to_sym]
+        end
       end
 
       private_class_method :new
 
       attr_reader :id, :powers, :provinces, :supply_centers
 
-      def initialize(id:, powers:, provinces:)
+      def initialize(id:, powers:, provinces:, armies:, fleets:)
         @id = id.freeze
         @powers = powers.sort_by(&:id).freeze
         @provinces = provinces.sort_by(&:id).freeze
@@ -55,6 +64,8 @@ module Trucebearer
         @home_centers = @powers.to_h do |power|
           [power.id, @provinces.select { |province| province.home == power.id }.map(&:id).freeze]
         end.freeze
+        @armies = armies
+        @fleets = fleets
         freeze
       end
 
@@ -72,6 +83,38 @@ module Trucebearer
 
       def home_centers(power_id)
         @home_centers.fetch(power_id) { raise InvalidInput, "unknown power #{power_id.inspect}" }
+      end
+
+      # True when a unit of this type can move between the two locations in one step.
+      # Arguments are checked first, so a malformed question raises instead of answering false.
+      def adjacent?(unit_type, from, to)
+        unless %i[army fleet].include?(unit_type)
+          raise InvalidInput, "unit type must be :army or :fleet, got #{unit_type.inspect}"
+        end
+
+        from_key = lookup_key(unit_type, from, "from")
+        to_key = lookup_key(unit_type, to, "to")
+        table = unit_type == :army ? @armies : @fleets
+        table.fetch(from_key, NO_NEIGHBORS).include?(to_key)
+      end
+
+      private
+
+      # An army is looked up by province alone. A fleet by province and coast.
+      def lookup_key(unit_type, location, label)
+        raise InvalidInput, "#{label} must be a TA::Location, got #{location.inspect}" unless location.is_a?(Location)
+
+        if unit_type == :army
+          raise InvalidInput, "an army location must not name a coast, got #{location.inspect}" if location.coast
+
+          location.province
+        else
+          if location.coast.nil? && !province(location.province).coasts.empty?
+            raise InvalidInput, "a fleet location on a split-coast province must name a coast, got #{location.inspect}"
+          end
+
+          [location.province, location.coast]
+        end
       end
 
       # Last statement of the class body: everything it needs is defined above.
