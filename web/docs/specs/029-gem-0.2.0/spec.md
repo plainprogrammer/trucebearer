@@ -1,7 +1,7 @@
 # Feature 029: Upgrade to adjudicator-v0.2.0 and retire the stand-in
 
 **Status:** Draft
-**Version:** 0.1.0
+**Version:** 0.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #29
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 0.2.0 | 2026-11-26 | Changed after the first Fable review (1 blocking, 8 non-blocking, all taken): the dislodged-units examples of `reveal_post_spec.rb` stub `adjudicate` with a made-up result, so they are rewritten on a real position and AC-3.5 gets a defined check (D2, D6); the two DATC specs go through seats and `reveal!` so "the reveal completes" is proved (D4); AC-3.1's pattern and AC-3.2's home are fixed; the stand-in comments in `rules_engine.rb` and spec 025's screenshots are listed; the amended specs get target versions and fuller lists; the CHANGELOG reading is recorded |
 | 0.1.0 | 2026-11-26 | First draft, for Gate A |
 
 ## Problem Statement
@@ -43,9 +44,9 @@ This feature moves the pin to the tag, answers `RulesEngine.adjudicate` and the 
 
 ## Decisions
 
-**D1. `RulesEngine` is the change.** `adjudicate` calls `TA.adjudicate(position, orders)`. `load_adjudication` coerces with `TA::Adjudication` and `TA::Adjudication.from_h`, like the other three loaders. The stand-in's three constants and its module are deleted, with `RESULTS`, `OUTCOME_KEYS` and `ADJUDICATION_KEYS`, which only they used. `RulesObjectType.adjudication` needs no change: it already stores `object.to_h` as JSON and loads through `RulesEngine.load_adjudication`. `Phase#reveal!` needs no change: it passes the result to `update_all` and gives `result.position` to `next_movement_position`.
+**D1. `RulesEngine` is the change.** `adjudicate` calls `TA.adjudicate(position, orders)`. `load_adjudication` coerces with `TA::Adjudication` and `TA::Adjudication.from_h`, like the other three loaders. The stand-in's two `Data` classes and its module are deleted, with `RESULTS`, `OUTCOME_KEYS` and `ADJUDICATION_KEYS`, which only they used, and with every comment in the file that names the stand-in (the header comment, the `stand_in?` comment and the "not part of the stand-in" remark on `next_movement_position`). `RulesObjectType.adjudication` needs no change: it already stores `object.to_h` as JSON and loads through `RulesEngine.load_adjudication`. `Phase#reveal!` needs no change: it passes the result to `update_all` and gives `result.position` to `next_movement_position`.
 
-**D2. No test double.** The stand-in does not survive under `spec/`. The Issue allows a double "if specs need fast fixed outcomes". They do not. Run with the real engine in place of the stand-in, the whole suite (768 examples) fails in only seven examples: the stand-in's own spec and the pin spec. Every other spec, system specs included, passes unchanged, in the same minute as before. Fixed outcomes already come from `spec/support/results_fixtures.rb`, which builds results from hand-written hash forms and loads them through `RulesEngine.load_adjudication`. A fake engine kept for tests could drift from the real one and hide the very bugs this upgrade is for, and it would be one more moving part. The stand-in's own spec (`spec/models/rules_engine_stand_in_spec.rb`) is deleted with it; a smaller spec of the real wiring replaces it (Story 2).
+**D2. No test double.** The stand-in does not survive under `spec/`. The Issue allows a double "if specs need fast fixed outcomes". They do not. Run with the real engine in place of the stand-in, the whole suite (768 examples) fails in only seven examples: the stand-in's own spec and the pin spec. Every other spec, system specs included, passes unchanged, in the same minute as before. Fixed outcomes already come from `spec/support/results_fixtures.rb`, which builds results from hand-written hash forms and loads them through `RulesEngine.load_adjudication`. A fake engine kept for tests could drift from the real one and hide the very bugs this upgrade is for, and it would be one more moving part. The stand-in's own spec (`spec/models/rules_engine_stand_in_spec.rb`) is deleted with it; a smaller spec of the real wiring replaces it (Story 2). One existing spec does hand-edit a result and stub `RulesEngine.adjudicate` to return it: the dislodged-units examples of `spec/requests/reveal_post_spec.rb` (spec 022 AC-5.4). It is rewritten on a real dislodging position (the one of AC-2.1), so no spec keeps a made-up adjudication standing in for the engine (AC-3.5). Stubs that make `adjudicate` raise, or wrap the real one, to test failure and timing stay: they replace no result.
 
 **D3. The practice note and `stand_in?` go.** `RulesEngine.stand_in?`, the partial `results/_practice_note` and the line in `results/_section` that renders it are deleted, as spec 025 D6 said #29 would. The note has no stylesheet rule of its own (it used `text-muted`), so nothing is removed from the stylesheets. The style guide's results sample stops rendering the note. Nothing replaces it: real results need no disclaimer, and the paradox warning (spec 025 D6) stays as it is.
 
@@ -54,9 +55,9 @@ This feature moves the pin to the tag, answers `RulesEngine.adjudicate` and the 
 - Dislodged unit: DATC 6.D.9 (an Italian army in Venice moves into Trieste with support from Tyrolia, while Austria's army in Albania gives a support that matches no move and Austria's army in Trieste holds). The result has one dislodged unit, the Austrian army in Trieste. The host page's banner count equals the number of dislodged units in the stored position and equals the number of Dislodged tags (spec 025 AC-2.2), the held row carries the Dislodged tag and no Held tag, and the unmatched support reads "Not used".
 - Paradox: DATC 6.F.14 (the simplest convoy paradox). The result has `paradox` true, the host page and the seat page show the one paradox warning, marked `data-paradox`, and the stored position is valid, so the reveal completes and opens the next phase. The outcome values are unspecified by the gem while the flag is set, so the spec asserts the flag, the warning and the next phase, and no outcome.
 
-The positions are written as data (units and orders) with the section number cited. No DATC text is copied.
+Each spec goes through the real path: it sets the open phase's position to the DATC position, saves each power's orders through its seat, and calls `Phase#reveal!` (or the host's reveal request), so the paradox's "the reveal completes" is proved and not assumed. A helper in `spec/support/results_fixtures.rb` does that set-up. The positions are written as data (units and orders) with the section number cited. No DATC text is copied. A spec may not write the bare token `TA` even in a comment or an example name, because the boundary spec scans `spec/` for it.
 
-**D5. Stored stand-in rows.** The app has never been deployed (#30 comes later), so no production data holds a stand-in result. No migration is written. A development database that holds a revealed phase from before this change fails to load that row, because the stand-in's output may not pass the gem's `from_h` checks. `RulesObjectType` documents that such a row is repaired by hand, never by the model, and a development database may simply be reset (`bin/rails db:reset`). The upgrade pull request says so.
+**D5. Stored stand-in rows.** The app has never been deployed (#30 comes later), so no production data holds a stand-in result. No migration is written. A development database that holds a revealed phase from before this change may fail to load that row, because the stand-in's output need not pass the gem's `from_h` checks (most rows will load, and show their fake outcomes). The pull request must not promise either. `RulesObjectType` documents that such a row is repaired by hand, never by the model, and a development database may simply be reset (`bin/rails db:reset`). The upgrade pull request says so.
 
 **D6. Files touched besides `app/models/rules_engine.rb`, each with its reason.**
 
@@ -74,7 +75,9 @@ The positions are written as data (units and orders) with the section number cit
 | `spec/models/rules_engine_stand_in_spec.rb` | Deleted (D2). |
 | `spec/docs/spec_amendments_spec.rb` | One example per amended spec, as for specs 024 and 025. |
 | `spec/requests/results_spec.rb`, `spec/views/results_partials_spec.rb`, `spec/requests/styleguide_spec.rb`, `spec/system/reveal_results_spec.rb` | Their practice-note assertions (spec 025 AC-7.1, AC-8.1, AC-8.4) become assertions that the note is gone. |
+| `spec/requests/reveal_post_spec.rb` | Its dislodged-units examples stub `adjudicate` with a hand-edited result (D2); they are rewritten on a real position. |
 | `spec/models/rules_engine_next_phase_spec.rb`, `spec/requests/order_secrecy_spec.rb` | Example names and comments that say "stand-in" (no assertion changes). |
+| `docs/specs/025-reveal-results/screens/*.png` | The six screenshots are drawn from pages that carry the practice note; they are regenerated by the existing opt-in system spec (`SCREENSHOTS=<dir>`), so the committed images match the pages. |
 | `spec/support/results_fixtures.rb` | One helper that reveals a phase from a position and orders through `RulesEngine` (D4). |
 | New specs | Listed in the traceability table. |
 
@@ -107,28 +110,28 @@ The stale comment Issue #29's comment names ("two cases only" in the stand-in's 
 
 **As a** maintainer **I want** no trace of the fake engine in the app **So that** nobody can call it by mistake
 
-- [ ] **AC-3.1** Given every file under `app/`, `lib/`, `config/`, `db/` and `bin/` When scanned for `StandIn`, `stand_in` and `practice-note` or `practice_note` Then none matches, `rules_engine.rb` included (`spec/models/rules_engine_boundary_spec.rb`, replacing spec 019 AC-5.1).
-- [ ] **AC-3.2** Given `RulesEngine` When asked `respond_to?(:stand_in?)` Then it answers false.
+- [ ] **AC-3.1** Given every file under `app/`, `lib/`, `config/`, `db/` and `bin/` When scanned, case-sensitively, with the one pattern `/StandIn|stand_in|practice[-_]note/` Then none matches, and the scan includes `rules_engine.rb` (the guard's other scan skips it) (`spec/models/rules_engine_boundary_spec.rb`, replacing spec 019 AC-5.1). The pattern is deliberately not case-insensitive or hyphen-aware, so the unrelated "Stand-ins for the game and phase" comment in `app/helpers/styleguide_helper.rb` does not trip it. The hyphenated word in `rules_engine.rb`'s own comments goes with D1's deletion of those comments, and a second check of that one file for `/stand-in/i` proves it.
+- [ ] **AC-3.2** Given `RulesEngine` When asked `respond_to?(:stand_in?)` Then it answers false (`spec/models/rules_engine_adjudicate_spec.rb`).
 - [ ] **AC-3.3** Given a revealed phase When the seat page, the host page and both results pages are fetched Then none contains a `.practice-note` or the words "Practice results" (replacing spec 025 AC-7.1).
 - [ ] **AC-3.4** Given `/styleguide` When fetched Then its results section has no practice note (replacing the note's part of spec 025 AC-8.1).
-- [ ] **AC-3.5** Given the repository When `rules_engine_stand_in_spec.rb` is looked for Then it is gone, and no file under `spec/` defines a stand-in or a double of `RulesEngine.adjudicate` that returns a made-up result. (Spec files may still stub `RulesEngine` for error paths.)
+- [ ] **AC-3.5** Given the repository When `spec/models/rules_engine_stand_in_spec.rb` is looked for Then it is gone, and no file under `spec/` (the boundary spec itself excepted) matches `/StandIn/` or `/receive\(:adjudicate\)\.and_return/`: no stand-in, and no stub that answers `adjudicate` with a made-up result. Stubs that raise or wrap the real engine are allowed (D2). The check lives in `spec/models/rules_engine_boundary_spec.rb`.
 
 ### Story 4: Real results show correctly
 
 **As a** host **I want** the warnings to match what the engine found **So that** I settle by hand exactly the units that need it
 
-- [ ] **AC-4.1** Given the DATC 6.D.9 position adjudicated through `RulesEngine` and stored on a revealed phase When the host page and a seat page are fetched Then the host page has one `data-dislodged` banner, for Austria's army in TRI; the banner count equals the stored dislodged units and the Dislodged tag count; the dislodged row has no Held tag; and the unmatched support reads "Not used".
-- [ ] **AC-4.2** Given the DATC 6.F.14 position adjudicated through `RulesEngine` and revealed on a stored phase When the host page and a seat page are fetched Then each has exactly one `data-paradox` warning, the reveal completed, and the next phase is open.
-- [ ] **AC-4.3** Given any real result When `PhaseResults` reads it Then it needs no change: this feature edits neither `app/models/phase_results.rb` nor a results view other than D3's one line. If a spec in this feature shows that it does need one, this spec is amended with the reason before that code changes.
+- [ ] **AC-4.1** Given the DATC 6.D.9 position, its orders saved through the seats and the phase revealed (D4) When the host page and a seat page are fetched Then the host page has one `data-dislodged` banner, for Austria's army in TRI; the banner count equals the stored dislodged units and the Dislodged tag count; the dislodged row has no Held tag; and the unmatched support reads "Not used". The seat page shows the same Dislodged tag and the "Not used" tag, and no banner (banners are the host's).
+- [ ] **AC-4.2** Given the DATC 6.F.14 position, its orders saved through the seats and the phase revealed (D4) When the host page and a seat page are fetched Then each has exactly one `data-paradox` warning, the reveal completed, and the next phase is open.
+- [ ] **AC-4.3** Given any real result When `PhaseResults` reads it Then it needs no change: this feature edits neither `app/models/phase_results.rb` nor a results view other than D3's deleted partial and one line. If a spec in this feature shows that it does need one, this spec is amended with the reason before that code changes.
 
 ### Story 5: Earlier specs are brought up to date
 
 **As a** reader of specs 019, 022 and 025 **I want** them to say what changed **So that** no spec describes a stand-in that no longer exists
 
-- [ ] **AC-5.1** Given spec 019 When read Then its version moves to the next minor and a changelog row says that Story 3 and FR-3 (the stand-in) and AC-5.1's stand-in half are retired by spec 029, that `adjudicate` and `load_adjudication` call the gem, and that the stand-in has no test double.
-- [ ] **AC-5.2** Given spec 022 When read Then a changelog row says its Non-Goal and D-text that call adjudication a stand-in are read as the real engine, and that `next_movement_position` is unchanged.
-- [ ] **AC-5.3** Given spec 025 When read Then a changelog row says D6's stand-in note, Story 7's AC-7.1, AC-8.1's and AC-8.4's note, and the Known limits entries that mention fake results are retired by spec 029, and that the paradox warning and every other behavior stand.
-- [ ] **AC-5.4** Given those three specs When `spec/docs/spec_amendments_spec.rb` runs Then one example each checks the version line and the row, as for specs 024 and 025.
+- [ ] **AC-5.1** Given spec 019 (now 1.2.2) When read Then its version moves to 1.3.0 and a changelog row says that Story 3 and FR-3 (the stand-in) and AC-5.1's stand-in half are retired by spec 029, that `adjudicate` and `load_adjudication` call the gem, and that the stand-in has no test double.
+- [ ] **AC-5.2** Given spec 022 (now 1.5.0) When read Then its version moves to the next free minor (1.6.0, unless #27 or #105 has taken it first, in which case the next after that) and a changelog row says that its Non-Goal and text that call adjudication a stand-in (including AC-5.2's "stand-in's result" and the closing line that #29 "changes only `RulesEngine`") are read as the real engine, that #29 also edits the spec and views of D6, and that `next_movement_position` is unchanged.
+- [ ] **AC-5.3** Given spec 025 (now 1.0.0) When read Then its version moves to 1.1.0 and a changelog row says that D6's stand-in note, Story 7 (AC-7.1, and AC-7.3's wording about the note), AC-8.1's and AC-8.4's note, the Goal and Non-Goal lines and Known limits entries that mention fake results, and AC-7.2's "stand-in's loader" wording are retired or read as the real engine by spec 029, and that the paradox warning and every other behavior stand.
+- [ ] **AC-5.4** Given those three specs When `spec/docs/spec_amendments_spec.rb` runs Then one example each checks the version line and finds the row by its text "spec 029" (not by its version number, which a parallel amendment may shift), as for specs 024 and 025.
 
 ## Functional Requirements
 
@@ -160,6 +163,10 @@ The stale comment Issue #29's comment names ("two cases only" in the stand-in's 
 - While `paradox` is true the gem says every outcome and unit placement is unspecified until 0.3 (#39). The playtest's host settles such a phase by hand, as the warning says.
 - The gem has no retreat or build phase until 0.3, so the host still settles retreats and builds with the position editor (#27).
 - A convoy-disrupted fleet is shown "Convoy disrupted" and carries the Dislodged tag (spec 025 D6), which now happens for real.
+
+## Read first (the Issue's first "Done when" item)
+
+The gem's `CHANGELOG.md` at the tag was read: 0.2.0 adds `TA::Outcome`, `TA::Adjudication` and `TA.adjudicate` with convoys, leaving the twelve paradox cases to #39. `gh issue list --label interface` shows no open "Interface change" Issue, and #99 ruled that the `TA.adjudicate` wording fixes are clarifications (0.1.0 shipped no adjudication), as the Issue's comment says.
 
 ## Open Questions
 
