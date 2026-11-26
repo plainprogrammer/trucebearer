@@ -3,6 +3,16 @@
 <div class="stack">
   <h1>Trucebearer</h1>
   <p>Enter secret orders on your phone and have each turn adjudicated.</p>
+  <% if @games.any? %>
+    <section class="stack" aria-labelledby="your-games">
+      <h2 id="your-games">Your games</h2>
+      <ul class="game-cards">
+        <% @games.each do |entry| %>
+          <li><%= render "home/game_card", entry: entry %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
   <%= link_to "Create a game", new_game_path, class: "button" %>
   <%= link_to "Join a game", join_path, class: "button button--secondary" %>
 </div>
