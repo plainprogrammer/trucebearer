@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "web/**"
+      - "assets/icons/**"
       - ".ruby-version"
       - ".github/workflows/web.yml"
   push:
     branches: [main]
     paths:
       - "web/**"
+      - "assets/icons/**"
       - ".ruby-version"
       - ".github/workflows/web.yml"
 
