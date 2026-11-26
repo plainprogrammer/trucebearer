@@ -1,7 +1,7 @@
 # Feature 020: Mobile-first base stylesheet
 
 **Status:** Approved (2.0.x approved at Gate A on 2026-11-26; 1.2.1 was approved and shipped by #20)
-**Version:** 2.0.1
+**Version:** 2.0.2
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-26
 **Issue:** #20, amended by #81
@@ -19,6 +19,7 @@
 | 1.2.1 | 2026-11-25 | Approved at Gate A. While planning: AC-2.8 allows the single declaration `opacity: 1`, since Firefox dims placeholder text by default and no other way cancels it. The phone-pass Issue is #71 |
 | 2.0.0 | 2026-11-26 | Amended by Issue #81 (the Cold War re-theme), a MAJOR change because it replaces FR-9 and reverses two shipped rules (no web fonts, no icons).<br>• **Palette (FR-2, FR-3, AC-2.x):** the #20 palette is replaced by the fixed Cold War values of decision 41; `ice`, `ice-pale` and `steel` are added, and the new pairs are documented. `ice` may only be a background (AC-2.9), and `on-power` must stay equal to the artwork's white (AC-2.10).<br>• **Power colors (FR-4, FR-9, AC-4.4, AC-4.5, AC-4.6, AC-5.4):** the even-spread method is replaced by seven fixed values (decision 42) that no one tunes by eye. AC-4.2's 25-degree rule stays. Power colors may also appear in the unit-icon and supply-center rules, including as the text and border of the power-initial tag.<br>• **Fonts and icons (Non-goals, AC-6.2, AC-6.3, FR-1, FR-6):** system fonts, plus exactly one `@font-face` whose `url()` points to a font file this app serves, and no request to a third party. The only icons are the two helpers' inline drawings.<br>• **New:** Story 7 (unit and supply-center icons, FR-10), Story 8 (the monospace, FR-11) and Story 9 (the design-system document, FR-12).<br>• **Also changed, and not in the Issue's list:**<br>– AC-1.1 exempts the initial inside a unit icon's drawing at 20 to 48 pixels, because it cannot be 14 pixels inside a 12-unit tag.<br>– The Issue's pairs (`text` on `ice`, `focus` on `ice`, `steel` on `page`) imply a header on `ice` with a `steel` rule; FR-2 says so.<br>– AC-5.1 gains three style-guide sections and FR-7 the matching content; AC-7.3 also rejects a bad `size`; the NFR on performance allows one font request and a `swap` re-set of `.mono` text; the Verification rows move the layout checks onto the system specs of #73 and add rows for the new ACs.<br>– The Out of Scope line about a monospace token for join codes is replaced by the later-Issue list, and the line about automated geometry specs is dropped, since #73 shipped them.<br>– AC-2.9 and AC-2.10 are new checks (`ice` is background only; `on-power` is the artwork's white; every palette value is held exactly), and AC-6.2 declares the font for a weight range so no bold is faked.<br>• Reviewed by a read-only Fable pass at Gate A (round 1: no blocking findings; 17 non-blocking, applied) |
 | 2.0.1 | 2026-11-26 | Approved at Gate A. The rule for a visible name beside a unit icon under 24 pixels applies to this release's lists and screens only, and does not bind the future map (1.x), which settles its own labeling. Wording only (PATCH) |
+| 2.0.2 | 2026-11-26 | Cites Issue #86 (the root change that adds `assets/icons/**` to the web workflow's paths) in the Error Scenarios. Wording only (PATCH) |
 
 ## Problem Statement
 
@@ -544,7 +545,7 @@ When version 1.2.1 was approved the Gemfile had no browser-driving gem, so geome
 | `supply_center_icon` gets an unknown owner or a bad size | It raises `ArgumentError`. A `nil` owner is the unowned look, not an error |
 | A unit icon is shown at 20 pixels | The `-small` drawing is used, and the tag's initial is very small. The icon is still labelled, and in a list the power is named beside it |
 | The font file fails to load | `swap` keeps the fallback monospace on screen, and nothing else depends on the font. Icons and layout are unchanged |
-| A copy of a drawing no longer matches its master | The file spec fails and names the file. Note: `.github/workflows/web.yml` runs only on `web/**` changes, so a pull request that edits a master alone (a `repo` change) does not run it, and the failure shows on the next web pull request. Adding `assets/icons/**` to that workflow's paths is a root change for its own Issue, and is not made here || A request for `/styleguide` in production | 404 |
+| A copy of a drawing no longer matches its master | The file spec fails and names the file. Note: `.github/workflows/web.yml` runs only on `web/**` changes, so a pull request that edits a master alone (a `repo` change) does not run it, and the failure shows on the next web pull request. Adding `assets/icons/**` to that workflow's paths is a root change with its own Issue (#86), and is not made here || A request for `/styleguide` in production | 404 |
 | The stylesheet is blocked or fails to load | The page is still readable and usable as plain, unstyled HTML, since no content comes from CSS |
 
 ## Open Questions
