@@ -1,13 +1,13 @@
 # Plan 023: Enter movement orders with pickers
 
 **Spec:** `web/docs/specs/023-order-pickers/spec.md` v1.0.3 (Approved at Gate A; 1.0.3 is the three-key draft refinement the plan found)
-**Issue:** #23 · **Branch:** `web/23-order-pickers` · **Plan version:** 1.1.0 (after the first Opus review; see the changelog at the end)
+**Issue:** #23 · **Branch:** `web/23-order-pickers` · **Plan version:** 1.2.0 (after two Opus reviews; see the changelog at the end)
 
 ## Goal
 
 Replace spec 022's plain orders form with the order screen (a unit list and a submit bar) and the picker steps, as the spec says. Every choice comes from `RulesEngine.legal_orders`; every pick is one `PUT` to the existing endpoint (`Seat#save_orders!`). All work is under `web/`. Each phase is test first (RSpec), ends with its own specs green (the whole suite, not only the new examples), and is one commit. Commit messages are plain imperative sentences ending with the `Co-Authored-By:` line. Every gem call stays in `app/models/rules_engine.rb`.
 
-**The first test.** Before Phase 1, the brief's request spec (`spec/requests/order_screen_spec.rb`, 5a) is written and run once to see it fail. It stays uncommitted until Phase 5, which makes it pass, so every commit is green.
+**The first test.** Before Phase 1, the brief's request spec (`spec/requests/order_screen_spec.rb`, 5a) is written and run once to see it fail. It is kept in the scratchpad, outside `spec/`, until Phase 5 copies it in and makes it pass, so the whole suite is green in every commit and the first test is still the first one written.
 
 ## Decisions the plan adds (each traceable to the spec)
 
@@ -535,7 +535,7 @@ RSpec.describe "The picker steps", type: :request do
     body = page.at_css("body")
     expect(body.css("script")).to be_empty
     expect(phone.response.body).not_to match(/\sonclick=|\sonsubmit=|data-action=/)
-    expect(Rails.application.importmap.packages.keys).to match_array(%w[application @hotwired/turbo-rails @hotwired/stimulus @hotwired/stimulus-loading controllers])
+    expect(Rails.application.importmap.packages.keys).to match_array(%w[application @hotwired/turbo-rails @hotwired/stimulus @hotwired/stimulus-loading])
   end
 
   it "sends a draft that names no legal choice, or a whole order, back to step 1 and echoes nothing (AC-2.11)" do
@@ -569,6 +569,7 @@ RSpec.describe "The picker steps", type: :request do
     expect(phone.response.headers["Cache-Control"]).to include("no-store")
     expect(phone.response.headers["Referrer-Policy"]).to eq("no-referrer")
     expect(page.at_css("meta[name='turbo-cache-control'][content='no-cache']")).to be_present
+    expect(page.css("a[href]").map { |a| a["href"] }).to all(start_with("/")) # no link off the app
   end
 
   it "keeps a draft out of the logged request line, percent-encoded brackets included (AC-3.7)" do
@@ -622,6 +623,7 @@ it "shows England no order of France's on any picker page, nor a count of them (
   pages.each do |body|
     france_json.each { |text| expect(body).not_to include(text) }
     expect(body).not_to include("2 of 3 ordered")
+    expect(body).not_to include("Move to Burgundy (BUR)") # France's order in words
   end
 end
 ```
@@ -695,6 +697,8 @@ get "phases/:number/orders/:province", to: "order_pickers#show", as: :game_order
 # app/controllers/order_pickers_controller.rb
 # One picker step for one of the seat's units (spec 023 D1, D2, FR-2). A GET never writes: the last pick is a form that PUTs to the
 # orders endpoint.
+# The headers run before the unit check, so the stranger page of a wrong province carries them too; it shows every seat the same
+# thing, so nothing leaks.
 class OrderPickersController < ApplicationController
   include OrderScreen
   before_action :require_seat
@@ -740,7 +744,7 @@ end
         <% if choice.save %>
           <%= form_with url: game_seat_orders_path(@game.public_id, @phase.number), method: :put do %>
             <%= hidden_field_tag "orders[#{@province}]", choice.save, id: nil %>
-            <%= button_tag type: "submit", class: "list__row" do %><%= render "order_pickers/choice", choice: choice %><% end %>
+            <%= button_tag type: "submit", name: nil, class: "list__row" do %><%= render "order_pickers/choice", choice: choice %><% end %>
           <% end %>
         <% else %>
           <%= link_to game_order_picker_path(@game.public_id, @phase.number, @province, draft: choice.draft), class: "list__row" do %>
@@ -806,15 +810,15 @@ end
 
 **Implements:** FR-1, FR-4, FR-5, FR-6 (list parts), D4, D6, D9. **Satisfies:** AC-1.1 to AC-1.9, AC-3.2, AC-3.4, AC-4.1 to AC-4.6, AC-8.2.
 **Files:**
-- Create `spec/requests/order_screen_spec.rb` (the first test, 5a), `app/views/seat_orders/_unit_row.html.erb`, `app/views/seat_orders/_submit_bar.html.erb`.
+- Create `spec/requests/order_screen_spec.rb` (the first test, 5a, copied in from the scratchpad), `app/views/seat_orders/_unit_row.html.erb`, `app/views/seat_orders/_submit_bar.html.erb`.
 - Change `app/controllers/seat_orders_controller.rb`, `app/views/seat_orders/show.html.erb`, `app/helpers/order_label_helper.rb` (remove `order_label`), `spec/helpers/order_label_helper_spec.rb` (remove its `order_label` examples), `app/assets/stylesheets/components.css`.
 - Rewrite these existing specs, which assert what D4 removes (each rewrite is named; none is deleted without an equivalent, AC-8.2):
-  - `spec/requests/orders_spec.rb`: the "the page" describe (AC-2.11's selects) becomes examples on `.unit-row`s; lines 90-91 ("Orders saved." banner and "3 of 3 units ordered") become "no banner, `.save-status` reads Saved, the bar says 3 of 3 ordered"; line 123 (the flash holds only kind and text) moves to a submit (`submit: "1"`, banner "Submitted."); line 131 (`select` count after a 422) becomes `.unit-row` count and `.save-status` reading "Not saved".
+  - `spec/requests/orders_spec.rb`: the whole "the page" describe (the select and option examples, the `Fleet in EDI` label check, the line-65 "1 of 3 units ordered" check and the two-button D5 example at lines 68-75) becomes examples on `.unit-row`s and the submit bar, each with an equivalent; lines 90-91 ("Orders saved." banner and "3 of 3 units ordered") become "no banner, `.save-status` reads Saved, the bar says 3 of 3 ordered"; line 123 (the flash holds only kind and text) moves to a submit (`submit: "1"`, banner "Submitted."); line 134 (`select` count after a 422) becomes `.unit-row` count and `.save-status` reading "Not saved".
   - `spec/requests/reissue_clears_orders_spec.rb` lines 51-53 and 62: `select/option[selected]` becomes "every `.unit-row` reads holds" and "the bar says Not submitted and 0 of 3 ordered".
   - `spec/system/phase_screens_spec.rb`: the select and its two buttons (`select "Move to NTH"`, "Save and submit", the sticky buttons list) become the submit bar's single button ("Submit orders"); an order for the walk is saved by a direct `save_orders!` call in setup, since the picker's own walk is Phase 7's.
   - `spec/requests/order_secrecy_spec.rb`: `option[selected]` checks become "no `.unit-row__order` that reads an order" and the label checks use the new words ("Move to North Sea (NTH)", "3 of 3 ordered"); the host's no-order checks (`select, option` empty) stay.
 
-### 5a. The first test (written before Phase 1, red; committed here)
+### 5a. The first test (written before Phase 1 and run red, kept in the scratchpad until this phase; committed here)
 
 ```ruby
 # spec/requests/order_screen_spec.rb
@@ -895,7 +899,24 @@ RSpec.describe "The order screen", type: :request do
   end
 
   it "answers a stranger, a host cookie only, and another game's seat with the stranger response (AC-1.7)" do
-    open_session.tap { |session| session.get path }.then { |session| expect(session.response).to have_http_status(:not_found) }
+    host_only = open_session.tap { |session| session.get "/games/#{id}/host-link", params: { token: created.host_token } }
+    sessions = { "no cookie" => open_session, "the host cookie only" => host_only, "another game's seat" => create_game.session }
+    sessions.each do |name, session|
+      session.get path
+      expect(session.response).to have_http_status(:not_found), name
+    end
+  end
+
+  it "walks one order from the list with only the page's own links and forms, no script needed (AC-3.5)" do
+    phone.get path
+    phone.get page.at_css("a.unit-row[href$='/lon']")["href"]
+    phone.get page.css(".picker a.list__row").find { |a| a.text.squish == "Move" }["href"]
+    form = page.css(".picker form").find { |f| f.text.include?("North Sea") }
+    fields = form.css("input").to_h { |input| [ input["name"], input["value"] ] }
+    phone.post form["action"], params: fields # the form's own fields, _method and token included, as a browser would send them
+    expect(phone.response).to have_http_status(:see_other)
+    phone.follow_redirect!
+    expect(rows[1]).to eq("Fleet in London (LON) Move to North Sea (NTH)")
   end
 
   it "carries the phase header with the power badge and the no-store headers (AC-1.5)" do
@@ -1127,9 +1148,9 @@ RSpec.describe "Entering orders with the pickers", type: :system do
   end
 
   it "shows 'Saving…' while a form is being submitted and the resting text otherwise (AC-3.6)" do
-    start_game_with(RulesEngine.starting_position.units.select { |u| u.power == :england }.map { |u| [ :england, u.type, u.location.province ] })
+    started = start_game_with(RulesEngine.starting_position.units.select { |u| u.power == :england }.map { |u| [ :england, u.type, u.location.province ] })
     with_viewport(360) do
-      click_on "Enter orders" if page.has_link?("Enter orders")
+      visit "/games/#{started.game.public_id}/phases/1/orders"
       expect(page).to have_css(".save-status__rest", text: "Saved")
       execute_script("document.querySelector('.submit-bar form').setAttribute('aria-busy', 'true')")
       expect(page).to have_css(".save-status__saving", text: "Saving…", visible: :visible)
@@ -1175,5 +1196,6 @@ end
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2.0 | 2026-11-26 | After the second Opus review: the import-map test lists the four real pins; the first test waits in the scratchpad so the suite is green in every commit; AC-3.5 gets a walk from the list, AC-1.7 all three kinds of viewer, AC-5.3 England's pages checked for France's order words, AC-3.7 a no-link-off-the-app check; the button posts no stray field; the AC-3.6 spec visits the screen directly; the rewrite list names the remaining lines of `orders_spec` |
 | 1.1.0 | 2026-11-26 | After the first Opus review: picker pages moved before the screen and merged with their route classification so every commit is green; `order_label` is kept until Phase 5; the first test reads `.unit-row__body` (the icon's tag adds text); the walk's position is written as an object; the rewrites of the existing specs are listed by file and line; the style guide's "Saving…" sample uses a static modifier; the model's support and convoy steps, nil rules and back drafts are written out; a request-level crawler is added; the real single-branch positions replace the stubs; the AC-3.7 log test builds a request with the app's filter; the sweep test uses its own snapshot; the one-coast destination notes the coast; spec 1.0.3 records the three-key draft |
 | 1.0.0 | 2026-11-26 | First draft |
