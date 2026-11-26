@@ -143,7 +143,7 @@ RSpec.describe "Revealing a phase", type: :request do
     end
 
     it "answers the same redirect when the cable raises, and stores the reveal" do
-      allow(Turbo::StreamsChannel).to receive(:broadcast_refresh_to).and_raise(RuntimeError)
+      allow(Turbo::StreamsChannel).to receive(:broadcast_stream_to).and_raise(RuntimeError)
       host.post reveal_path
 
       expect(host.response).to have_http_status(:see_other)

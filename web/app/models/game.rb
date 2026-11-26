@@ -74,9 +74,14 @@ class Game < ApplicationRecord
   # and the pages' access checks decide what each phone then sees. Only Phase#reveal! calls it, and spec/models/status_broadcast_scan_spec.rb
   # enforces that. A failed cable call never fails a reveal that has already been stored.
   def broadcast_results_refresh
-    Turbo::StreamsChannel.broadcast_refresh_to(:results, public_id, request_id: nil)
+    Turbo::StreamsChannel.broadcast_stream_to(:results, public_id, content: results_refresh_message)
   rescue StandardError => error
     Rails.logger.warn("results broadcast failed: #{error.class}")
+  end
+
+  # The one refresh message: what a reveal broadcasts, and what ResultsChannel sends a page that missed it (spec 024 D10).
+  def results_refresh_message
+    Turbo::StreamsChannel.turbo_stream_refresh_tag(request_id: nil)
   end
 
   # The host's own seat: the lowest id. Game.start! makes it in the game's own transaction and no path deletes a seat (spec 026 D5).
