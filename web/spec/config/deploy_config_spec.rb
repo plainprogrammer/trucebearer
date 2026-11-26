@@ -26,6 +26,20 @@ RSpec.describe "The Kamal deploy configuration" do
     it "refuses to render without TRUCEBEARER_HOST, rather than serving every host name" do
       expect { DeployConfig.load({}) }.to raise_error(KeyError, /TRUCEBEARER_HOST/)
     end
+
+    it "refuses to render with a blank TRUCEBEARER_HOST too, which would leave kamal-proxy without a host" do
+      [ "", "  " ].each do |blank|
+        expect { DeployConfig.load("TRUCEBEARER_HOST" => blank) }.to raise_error(KeyError, /TRUCEBEARER_HOST is blank/)
+      end
+    end
+
+    it "trims stray spaces from TRUCEBEARER_HOST, which would make the app turn every page away" do
+      padded = DeployConfig.load("TRUCEBEARER_HOST" => " play.example.org\n")
+
+      expect(padded.dig("proxy", "host")).to eq("play.example.org")
+      expect(padded.dig("env", "clear", "TRUCEBEARER_HOST")).to eq("play.example.org")
+      expect(padded.dig("env", "clear", "TRUCEBEARER_CABLE_ORIGINS")).to eq("https://play.example.org")
+    end
   end
 
   describe "the container's environment" do
@@ -38,6 +52,12 @@ RSpec.describe "The Kamal deploy configuration" do
 
       overridden = DeployConfig.load(deploy_env.merge("TRUCEBEARER_CABLE_ORIGINS" => "https://a.example https://b.example"))
       expect(overridden.dig("env", "clear", "TRUCEBEARER_CABLE_ORIGINS")).to eq("https://a.example https://b.example")
+    end
+
+    it "treats a blank TRUCEBEARER_CABLE_ORIGINS as unset, so the default holds" do
+      blank = DeployConfig.load(deploy_env.merge("TRUCEBEARER_CABLE_ORIGINS" => " "))
+
+      expect(blank.dig("env", "clear", "TRUCEBEARER_CABLE_ORIGINS")).to eq("https://#{host}")
     end
 
     it "reads the time zone and the in-Puma job runner as clear settings" do

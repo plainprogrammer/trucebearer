@@ -30,7 +30,7 @@ This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare 
 
 **What you need**
 
-- A VM that you can reach over SSH as root (or as a user that can run Docker). If Docker is missing, `bin/kamal setup` installs it, which needs root and either `curl` or `wget`.
+- A VM that you can reach over SSH, as root unless you add `ssh: user:` to `config/deploy.yml`, with a CPU that matches `builder.arch` there (`amd64`). If Docker is missing, `bin/kamal setup` installs it, which needs root or passwordless sudo, and either `curl` or `wget`.
 - A deploy machine (your own computer) with this repository, its gems (`bundle install`), Docker, and `config/master.key` in place (`.kamal/secrets` reads it from there). Never commit that file.
 - A Cloudflare tunnel you control, with a public host name.
 - No registry account. `config/deploy.yml` uses `localhost:5555`: Kamal runs a small registry container on the deploy machine and forwards its port to the VM over SSH, so the image never leaves your two machines.
@@ -39,7 +39,7 @@ This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare 
 
 | Variable | Set where | Secret | What it does |
 |---|---|---|---|
-| `TRUCEBEARER_HOST` | Deploy machine's shell, required | No | The public host name the tunnel serves, with no scheme, such as `play.example.org`. It becomes kamal-proxy's `host` and is passed to the container, where `production.rb` allows only that host (and `/up`). Without it `bin/kamal` stops with a `KeyError`. In the app alone, unset means any host is allowed. |
+| `TRUCEBEARER_HOST` | Deploy machine's shell, required | No | The public host name the tunnel serves, with no scheme, such as `play.example.org`. It becomes kamal-proxy's `host` and is passed to the container, where `production.rb` allows only that host (and `/up`). Unset or blank, `bin/kamal` stops with a `KeyError`; stray spaces are trimmed. In the app alone, unset or blank means any host is allowed. |
 | `TRUCEBEARER_PASSPHRASE` | Deploy machine's shell, required to create games | Yes | The passphrase that lets a host create a game. See "Playtest access". |
 | `RAILS_MASTER_KEY` | Read from `config/master.key` by `.kamal/secrets` | Yes | Decrypts `config/credentials.yml.enc`. |
 | `TRUCEBEARER_CABLE_ORIGINS` | Deploy machine's shell, optional | No | Extra origins that may open the live-update socket. In `deploy.yml` it defaults to `https://` plus `TRUCEBEARER_HOST`. See "Live updates". |
@@ -47,7 +47,7 @@ This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare 
 
 Secrets are listed by name under `env.secret` in `config/deploy.yml` and their values come from `.kamal/secrets`, which holds no raw values and is safe to commit. Clear settings are in `env.clear`.
 
-**Point `deploy.yml` at your VM.** Change the address under `servers.web` (the file ships with the placeholder `192.168.0.1`).
+**Point `deploy.yml` at your VM.** Change the address under `servers.web` (the file ships with the placeholder `192.168.0.1`). Kamal reads the file from your working copy, so this edit can stay uncommitted.
 
 **The tunnel target.** In the tunnel's public host name settings, set the service to `http://<VM address>:80`, with the public host name equal to `TRUCEBEARER_HOST`. Port 80 is kamal-proxy, which answers only requests whose `Host` header matches `TRUCEBEARER_HOST`, so the tunnel must pass the public name on as the `Host` header (cloudflared does, unless you set an HTTP Host Header override).
 
@@ -64,7 +64,7 @@ bin/kamal setup    # installs Docker if needed, starts kamal-proxy, builds, push
 
 Later deploys: `bin/kamal deploy`, with the same variables exported. Handy aliases from `deploy.yml`: `bin/kamal logs`, `bin/kamal console`, `bin/kamal shell`.
 
-**Checking `/up`.** `/up` is Rails' health check and kamal-proxy's too. It answers 200 over plain http for any `Host` header, without the https redirect. Check it in two places, and expect `HTTP/1.1 200` both times:
+**Checking `/up`.** `/up` is Rails' health check and kamal-proxy's too. Rails answers it with 200 over plain http for any `Host` header, without the https redirect, but kamal-proxy on port 80 still passes on only requests whose `Host` matches `TRUCEBEARER_HOST`. Check it in two places, and expect status 200 both times (`HTTP/1.1 200` straight to the VM, and `HTTP/2 200` through the tunnel):
 
 ```sh
 curl -i -H 'Host: play.example.org' http://<VM address>/up   # straight to kamal-proxy on the VM

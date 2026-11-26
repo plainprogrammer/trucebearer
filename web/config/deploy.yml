@@ -7,7 +7,15 @@ image: web
 # This file is read through ERB with the environment of the machine that runs bin/kamal (Kamal does not load a .env file).
 # Export TRUCEBEARER_HOST there before any bin/kamal command. web/README.md, "Self-hosting on a home lab", has the steps.
 
-# Deploy to these servers: change the address to your VM's.
+# The two variables below are read once here, with stray spaces dropped. TRUCEBEARER_HOST must be set and not blank; a blank host
+# would leave kamal-proxy answering every request, and a stray space would make the app turn every page away.
+<%- host = ENV.fetch("TRUCEBEARER_HOST").strip -%>
+<%- raise KeyError, "TRUCEBEARER_HOST is blank" if host.empty? -%>
+<%- cable_origins = ENV["TRUCEBEARER_CABLE_ORIGINS"].to_s.strip -%>
+<%- cable_origins = "https://#{host}" if cable_origins.empty? -%>
+
+# Deploy to these servers: change the address to your VM's. This one edit can stay uncommitted: Kamal reads this file from your
+# working copy. builder.arch below must match the VM's CPU.
 servers:
   web:
     - 192.168.0.1
@@ -22,7 +30,7 @@ servers:
 # fails without it. The same variable is passed to the container below, where production.rb allows only that host.
 proxy:
   ssl: false
-  host: "<%= ENV.fetch("TRUCEBEARER_HOST") %>"
+  host: "<%= host %>"
   healthcheck:
     path: /up
 
@@ -46,12 +54,12 @@ env:
     - TRUCEBEARER_PASSPHRASE
   clear:
     # The public host name, the same value as proxy.host above. production.rb allows requests for this host only (and /up).
-    TRUCEBEARER_HOST: "<%= ENV.fetch("TRUCEBEARER_HOST") %>"
+    TRUCEBEARER_HOST: "<%= host %>"
 
     # Origins besides the app's own that may open the live-update socket, separated by commas or spaces.
     # Here it defaults to the host's own address; export TRUCEBEARER_CABLE_ORIGINS on the deploy machine to list others.
     # Unset in the app: only the address the app is served at; live updates stop working behind a proxy that changes the Host header.
-    TRUCEBEARER_CABLE_ORIGINS: "<%= ENV.fetch("TRUCEBEARER_CABLE_ORIGINS") { "https://#{ENV.fetch("TRUCEBEARER_HOST")}" } %>"
+    TRUCEBEARER_CABLE_ORIGINS: "<%= cable_origins %>"
 
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.

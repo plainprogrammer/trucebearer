@@ -86,7 +86,9 @@ Rails.application.configure do
 
   # Enable DNS rebinding protection and other `Host` header attacks. The public host name is one variable, TRUCEBEARER_HOST,
   # shared with kamal-proxy's host in config/deploy.yml (Issue #30). Unset keeps Rails' default, which allows every host.
-  config.hosts = [ ENV["TRUCEBEARER_HOST"] ] if ENV["TRUCEBEARER_HOST"].present?
+  # Stray spaces are dropped and a blank value counts as unset.
+  allowed_host = ENV["TRUCEBEARER_HOST"].to_s.strip.presence
+  config.hosts = [ allowed_host ] if allowed_host
 
   # Skip DNS rebinding protection for the default health check endpoint, which kamal-proxy calls on the container directly.
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
