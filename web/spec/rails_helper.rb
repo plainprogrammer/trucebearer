@@ -13,6 +13,9 @@ require 'rspec/rails'
 # System specs: the Capybara driver and the viewport helper, for every type: :system spec.
 require_relative "support/system"
 
+# Request-spec helpers for cookies and for comparing responses (spec 021).
+require_relative "support/responses"
+
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
 # run as spec files by default. This means that files in spec/support that end
