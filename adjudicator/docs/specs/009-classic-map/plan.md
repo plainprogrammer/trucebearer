@@ -83,7 +83,7 @@ RSpec.describe Trucebearer::Adjudicator::Map do
 end
 ```
 
-Run `bundle exec rspec spec/trucebearer/adjudicator/map_spec.rb`. Expected: 1 failure, `NameError: uninitialized constant Trucebearer::Adjudicator::Map`. That is the right failure, because the loader does not exist yet. Do not commit yet.
+Run `bundle exec rspec spec/trucebearer/adjudicator/map_spec.rb`. Expected: `An error occurred while loading ./spec/trucebearer/adjudicator/map_spec.rb` with `NameError: uninitialized constant Trucebearer::Adjudicator::Map`, and `0 examples, 0 failures, 1 error occurred outside of examples`. RSpec reads `RSpec.describe Trucebearer::Adjudicator::Map` while loading the file, so a missing class shows up as a load error and not as a failed example. That is the right failure, because the loader does not exist yet. Do not commit yet.
 
 ### Step 1.2: Write the remaining Phase 1 specs, and watch them fail
 
@@ -125,6 +125,11 @@ RSpec.describe Trucebearer::Adjudicator::Map do
       expect(described_class.classic).to be_a(described_class)
       expect(described_class.classic).to equal(described_class.classic)
       expect(map.id).to eq("classic")
+    end
+
+    it "offers no way to load another file or build another map" do
+      expect(described_class).not_to respond_to(:from_file)
+      expect(described_class).not_to respond_to(:new)
     end
 
     it "gives every thread the same object" do
@@ -299,7 +304,9 @@ end
 
 In Phase 1 the data file has no `armies`, `fleets` or `starting_units` keys yet, so `identifiers` would fail on `nil.flat_map`. Write it from the start with `raw.fetch("armies", {})`, `raw.fetch("fleets", {})` and `raw.fetch("starting_units", [])`, and tighten those three to `raw["..."]` in Phases 3 and 4 when the keys exist. (In the code above, use `fetch` in Phase 1.)
 
-Run `bundle exec rspec`. Expected: failures only, with `NameError: uninitialized constant Trucebearer::Adjudicator::Map` and `...::InvalidInput`, and `Errno::ENOENT` for the data file. The one existing version spec still passes.
+Run `bundle exec rspec spec/trucebearer/adjudicator/map_spec.rb spec/trucebearer/adjudicator/errors_spec.rb`. Expected: two load errors (`NameError: uninitialized constant Trucebearer::Adjudicator::Map`, and `...::InvalidInput`), and `0 examples`. A load error stops the whole run, so the version spec is not run either.
+
+Then run the raw-file spec on its own: `bundle exec rspec spec/trucebearer/adjudicator/map_data_spec.rb`. Expected: 3 failures. `File.file?` is false, the safe load raises `Errno::ENOENT`, and the gemspec's file list lacks `data/maps/classic.yml`.
 
 ### Step 1.3: Generate the Phase 1 data
 
@@ -389,19 +396,20 @@ module Trucebearer
       DATA_PATH = File.expand_path("../../../data/maps/classic.yml", __dir__)
 
       class << self
-        # The classic map. Takes no path: the gem has one map, built in.
+        # The classic map. Takes no path: the gem has one map, built in. The loader
+        # and the constructor are private, so there is no way to load another file.
         attr_reader :classic
+
+        private
 
         def from_file(path)
           raw = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
           new(
             id: raw["map"],
-            powers: raw["powers"].map { |p| Power.new(id: p["id"].to_sym, name: p["name"]).freeze },
+            powers: raw["powers"].map { |p| Power.new(id: p["id"].to_sym, name: p["name"]) },
             provinces: raw["provinces"].map { |p| build_province(p) }
           )
         end
-
-        private
 
         def build_province(entry)
           Province.new(
@@ -414,6 +422,8 @@ module Trucebearer
           ).freeze
         end
       end
+
+      private_class_method :new
 
       attr_reader :id, :powers, :provinces, :supply_centers
 
@@ -470,7 +480,7 @@ end
 
 (`location.rb` joins the requires in Phase 2.)
 
-`git rm data/maps/.gitkeep` (a no-op if the file is not tracked; check with `git ls-files data`).
+`git rm data/maps/.gitkeep` (the placeholder is tracked, so this works).
 
 ### Step 1.5: Run to green, then commit
 
@@ -478,7 +488,7 @@ Run `bundle exec rspec`. Expected: 0 failures, with every Phase 1 example passin
 
 Sanity check that the data matches the counts: `bundle exec ruby -Ilib -rtrucebearer/adjudicator -e 'm = Trucebearer::Adjudicator::Map.classic; p m.provinces.size, m.supply_centers.size, m.powers.sum { |x| m.home_centers(x.id).size }'`. Expected: `75`, `34`, `22`.
 
-Commit: "Load the classic map's provinces and powers from a data file". (Two commits are fine if you prefer one for the specs and one for the code: the first commit then fails its own specs, so use one.)
+Commit, as one commit with the specs and the code together, so that no commit fails its own specs: "Load the classic map's provinces and powers from a data file".
 
 ---
 
@@ -570,6 +580,9 @@ RSpec.describe Trucebearer::Adjudicator::Location do
     it "rejects provinces and coasts that cannot exist" do
       expect { L.from_h({ "province" => "xyz", "coast" => nil }) }.to raise_error(TA::InvalidInput, /xyz/)
       expect { L.from_h({ "province" => "par", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /nc/)
+      expect { L.from_h({ "province" => "spa", "coast" => "xx" }) }.to raise_error(TA::InvalidInput, /xx/)
+      expect { L.from_h({ "province" => "bul", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /nc/)
+      expect { L.from_h({ "province" => "spa", "coast" => "ec" }) }.to raise_error(TA::InvalidInput, /ec/)
     end
 
     it "rejects a missing key, an unknown key, symbol keys and a non-hash, naming the item" do
@@ -584,7 +597,7 @@ RSpec.describe Trucebearer::Adjudicator::Location do
 end
 ```
 
-Run `bundle exec rspec spec/trucebearer/adjudicator/location_spec.rb`. Expected: failures with `NameError: uninitialized constant Trucebearer::Adjudicator::Location`. (`TA` and `L` are defined with `unless defined?` guards because several spec files define them. Each file's guard keeps them from warning twice.)
+Run `bundle exec rspec spec/trucebearer/adjudicator/location_spec.rb`. Expected: an error while loading the file, `NameError: uninitialized constant Trucebearer::Adjudicator::Location`, and `0 examples`. (`TA` and `L` are defined with `unless defined?` guards because several spec files define them. Each file's guard keeps them from warning twice.)
 
 ### Step 2.2: Write `TA::Location`
 
@@ -859,13 +872,15 @@ Add to `map_spec.rb`, inside the `describe Map` block:
 
     describe "arguments that break the rules" do
       it "raises for an army location that names a coast, in from or in to" do
-        expect { map.adjacent?(:army, loc(:par), loc(:spa, :nc)) }.to raise_error(TA::InvalidInput, /spa/)
-        expect { map.adjacent?(:army, loc(:spa, :nc), loc(:par)) }.to raise_error(TA::InvalidInput, /spa/)
+        shown = Regexp.escape(loc(:spa, :nc).inspect)
+        expect { map.adjacent?(:army, loc(:par), loc(:spa, :nc)) }.to raise_error(TA::InvalidInput, /#{shown}/)
+        expect { map.adjacent?(:army, loc(:spa, :nc), loc(:par)) }.to raise_error(TA::InvalidInput, /#{shown}/)
       end
 
       it "raises for a fleet location on a split-coast province with no coast, in from or in to" do
-        expect { map.adjacent?(:fleet, loc(:mao), loc(:spa)) }.to raise_error(TA::InvalidInput, /spa/)
-        expect { map.adjacent?(:fleet, loc(:spa), loc(:mao)) }.to raise_error(TA::InvalidInput, /spa/)
+        shown = Regexp.escape(loc(:spa).inspect)
+        expect { map.adjacent?(:fleet, loc(:mao), loc(:spa)) }.to raise_error(TA::InvalidInput, /#{shown}/)
+        expect { map.adjacent?(:fleet, loc(:spa), loc(:mao)) }.to raise_error(TA::InvalidInput, /#{shown}/)
       end
 
       it "raises before working out an answer, even when the partner is far away" do
@@ -888,7 +903,7 @@ Add to `map_spec.rb`, inside the `describe Map` block:
   end
 ```
 
-Run `bundle exec rspec`. Expected failures: `adjacent?` examples fail with `NoMethodError: undefined method 'adjacent?'`; the raw-file adjacency examples fail with `NoMethodError` on `nil` (no `armies` key yet). The Phase 1 and 2 examples still pass.
+Run `bundle exec rspec`. Expected failures: `adjacent?` examples fail with `NoMethodError: undefined method 'adjacent?'`; the raw-file adjacency examples fail with `NoMethodError` on `nil` (no `armies` key yet). The remaining Phase 1 and 2 examples still pass, except the raw-file example "holds only strings where an identifier belongs": tightening `identifiers` to read `raw["armies"]` and `raw["fleets"]` makes it fail until the data has them, so this step's output shows it failing. (Step 4.1 does the same with `starting_units`, which the Phase 4 data adds.)
 
 ### Step 3.2: Extend the generator, and write the adjacency data
 
@@ -1063,7 +1078,7 @@ out << "\nfleets:\n"
 fleets.keys.sort.each { |from| out << %(  "#{from}": [#{fleets[from].to_a.sort.map { |t| %("#{t}") }.join(", ")}]\n) }
 ```
 
-Run the script again with `ruby <scratchpad>/gen_classic.rb`. Expected: `wrote 75 provinces`, no abort. The committed `classic.yml` now holds both tables in full, with each edge listed from both sides. From here on, edit the YAML by hand.
+Run the script again with `ruby <scratchpad>/gen_classic.rb`. Expected: `wrote 75 provinces`, no abort. `classic.yml` now holds both tables in full, with each edge listed from both sides, and it is committed with this phase. From here on, edit the YAML by hand.
 
 ### Step 3.3: Write `adjacent?`
 
@@ -1087,8 +1102,11 @@ module Trucebearer
       NO_NEIGHBORS = Set.new.freeze
 
       class << self
-        # The classic map. Takes no path: the gem has one map, built in.
+        # The classic map. Takes no path: the gem has one map, built in. The loader
+        # and the constructor are private, so there is no way to load another file.
         attr_reader :classic
+
+        private
 
         def from_file(path)
           raw = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
@@ -1100,8 +1118,6 @@ module Trucebearer
             fleets: raw["fleets"].to_h { |from, tos| [fleet_key(from), tos.map { |to| fleet_key(to) }.to_set.freeze] }.freeze
           )
         end
-
-        private
 
         def build_province(entry)
           Province.new(
@@ -1120,6 +1136,8 @@ module Trucebearer
           [province.to_sym, coast&.to_sym]
         end
       end
+
+      private_class_method :new
 
       attr_reader :id, :powers, :provinces, :supply_centers
 
@@ -1247,13 +1265,17 @@ Add to `map_spec.rb`:
       end
       expect(by_power).to eq(
         austria: [[:army, :bud, nil], [:fleet, :tri, nil], [:army, :vie, nil]],
-        england: [[:fleet, :edi, nil], [:army, :lvp, nil], [:fleet, :lon, nil]],
+        england: [[:fleet, :edi, nil], [:fleet, :lon, nil], [:army, :lvp, nil]],
         france: [[:fleet, :bre, nil], [:army, :mar, nil], [:army, :par, nil]],
         germany: [[:army, :ber, nil], [:fleet, :kie, nil], [:army, :mun, nil]],
         italy: [[:fleet, :nap, nil], [:army, :rom, nil], [:army, :ven, nil]],
         russia: [[:army, :mos, nil], [:fleet, :sev, nil], [:fleet, :stp, :sc], [:army, :war, nil]],
         turkey: [[:fleet, :ank, nil], [:army, :con, nil], [:army, :smy, nil]]
       )
+    end
+
+    it "puts no two units in one province" do
+      expect(units.map { |u| u[:location].province }.uniq.size).to eq(22)
     end
 
     it "puts each unit on a home center of its own power, one unit per home center" do
@@ -1366,17 +1388,32 @@ Commit: "Record the classic map in the changelog".
 
 From `adjudicator/`:
 
-| Check | Command | Expected |
-|---|---|---|
-| All specs | `bundle exec rspec` | `0 failures`, and no warnings from the code under test |
-| Default task | `bundle exec rake` | the same run, exit code 0 |
-| Counts | `bundle exec ruby -Ilib -rtrucebearer/adjudicator -e 'm = Trucebearer::Adjudicator::Map.classic; p [m.provinces.size, m.provinces.map(&:type).tally, m.supply_centers.size, m.powers.sum { \|x\| m.home_centers(x.id).size }]'` | `[75, {inland: 14, coastal: 42, sea: 19}, 34, 22]` |
-| Packaging | `gem build trucebearer-adjudicator.gemspec` then `tar -xOf trucebearer-adjudicator-0.0.0.gem data.tar.gz \| tar -tz \| grep classic` | `data/maps/classic.yml`; delete the built `.gem` afterwards |
-| Naming | `grep -rniE 'diplo\|\bdip' lib spec data docs/specs/009-classic-map CHANGELOG.md` | no match |
-| Scope | `git diff --stat origin/main...HEAD` | only files under `adjudicator/` |
-| Interface untouched | `git diff origin/main...HEAD -- docs/interface.md` | empty |
+| Check | Expected |
+|---|---|
+| `bundle exec rspec` | `0 failures`, and no warnings from the code under test |
+| `bundle exec rake` | the same run, exit code 0 |
+| Counts (command below) | `[75, {sea: 19, coastal: 42, inland: 14}, 34, 22]` (`tally` keeps first-seen order) |
+| Packaging (commands below) | `data/maps/classic.yml` is listed; delete the built `.gem` afterwards |
+| Naming (command below) | no output |
+| Scope (command below) | only paths beginning `adjudicator/` |
+| Interface untouched (command below) | empty |
 
-(`docs/interface.md` here means `adjudicator/docs/interface.md`.)
+```sh
+bundle exec ruby -Ilib -rtrucebearer/adjudicator -e '
+  m = Trucebearer::Adjudicator::Map.classic
+  p [m.provinces.size, m.provinces.map(&:type).tally, m.supply_centers.size,
+     m.powers.sum { |x| m.home_centers(x.id).size }]'
+
+gem build trucebearer-adjudicator.gemspec
+tar -xOf trucebearer-adjudicator-0.0.0.gem data.tar.gz | tar -tz | grep classic
+rm trucebearer-adjudicator-0.0.0.gem
+
+# The bracketed first letters keep the pattern from matching this plan's own text.
+grep -rniE '[d]iplo|\b[d]ip' lib spec data docs/specs/009-classic-map CHANGELOG.md
+
+git diff --stat origin/main...HEAD
+git diff origin/main...HEAD -- docs/interface.md
+```
 
 Map every acceptance criterion to its example in `map_spec.rb`, `map_data_spec.rb`, `location_spec.rb` or `errors_spec.rb`. The implementation review reads this table first.
 
