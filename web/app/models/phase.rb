@@ -40,7 +40,10 @@ class Phase < ApplicationRecord
       :revealed
     end
     reload
-    game.broadcast_seat_status if status == :revealed # the new phase has no submissions (spec 024 D3)
+    if status == :revealed
+      game.broadcast_seat_status # the new phase has no submissions (spec 024 D3)
+      game.broadcast_results_refresh # and every phone reloads (spec 025 D3)
+    end
     Reveal.new(status: status)
   end
 

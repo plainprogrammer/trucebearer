@@ -60,6 +60,16 @@ class Game < ApplicationRecord
     end
   end
 
+  # Tells every open seat page, host page, order screen and picker that a phase was revealed, so each reloads itself through its own
+  # authorized request (spec 025 D1, D3). The message is a refresh with no content and no request id: it carries nothing about any order,
+  # and the pages' access checks decide what each phone then sees. Only Phase#reveal! calls it, and spec/models/status_broadcast_scan_spec.rb
+  # enforces that. A failed cable call never fails a reveal that has already been stored.
+  def broadcast_results_refresh
+    Turbo::StreamsChannel.broadcast_refresh_to(:results, public_id, request_id: nil)
+  rescue StandardError => error
+    Rails.logger.warn("results broadcast failed: #{error.class}")
+  end
+
   # The host's own seat: the lowest id. Game.start! makes it in the game's own transaction and no path deletes a seat (spec 026 D5).
   def host_seat = seats.min_by(&:id)
 

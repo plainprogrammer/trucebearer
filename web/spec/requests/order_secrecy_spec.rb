@@ -272,23 +272,34 @@ RSpec.describe "Order secrecy", type: :request do
       end
     end
 
-    it "puts the signed stream name only on the pages of the viewers who may see the status (spec 024 AC-4.5)" do
+    it "puts a signed stream name only on the pages of the viewers who may see it, each name verified (spec 024 AC-4.5, spec 025 AC-3.4, AC-4.3)" do
       set_orders(:none)
       shot = snapshot
+      names = lambda do |body|
+        Nokogiri::HTML5(body).css("turbo-cable-stream-source").map { |source| Turbo.signed_stream_verifier.verified(source["signed-stream-name"]) }.sort
+      end
       carrying = shot.flat_map do |viewer, routes|
-        routes.select { |_key, (_status, body)| body.include?("signed-stream-name") }.keys.map { |key| [ viewer, key ] }
+        routes.filter_map { |key, (_status, body)| [ viewer, key, names.call(body) ] if body.include?("signed-stream-name") }
       end
       # Nor in a header or a cookie line, on any page.
-      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.include?("seat_status") }
+      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.match?(/seat_status|results:/) }
       expect(in_headers).to be_empty
 
+      both = [ "results:#{id}", "seat_status:#{id}" ]
+      results_only = [ "results:#{id}" ]
+      # The seat page holds both names, a seat's own order screen and picker the results name only, the host page both. The host (Germany) has
+      # no unit in LON or PAR, so both of its pickers are its stranger page; France's PAR picker is the one picker that carries a name.
+      # A stepped-in screen carries none, and a stranger's page none.
       expect(carrying).to match_array([
-        [ "another seat", "GET /games/:public_id" ],
-        [ "the host, with a seat of its own", "GET /games/:public_id" ],
-        [ "the host, with a seat of its own", "GET /games/:public_id/host" ],
-        [ "the host, with no seat", "GET /games/:public_id/host" ],
-        [ "the host, with France's seat cookie", "GET /games/:public_id/host" ],
-        [ "the host, stepped into France", "GET /games/:public_id/host" ]
+        [ "another seat", "GET /games/:public_id", both ],
+        [ "another seat", "GET /games/:public_id/phases/:number/orders", results_only ],
+        [ "another seat", "GET /games/:public_id/phases/:number/orders/:province [par]", results_only ],
+        [ "the host, with a seat of its own", "GET /games/:public_id", both ],
+        [ "the host, with a seat of its own", "GET /games/:public_id/host", both ],
+        [ "the host, with a seat of its own", "GET /games/:public_id/phases/:number/orders", results_only ],
+        [ "the host, with no seat", "GET /games/:public_id/host", both ],
+        [ "the host, with France's seat cookie", "GET /games/:public_id/host", both ],
+        [ "the host, stepped into France", "GET /games/:public_id/host", both ]
       ])
     end
 

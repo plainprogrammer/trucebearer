@@ -40,7 +40,7 @@ RSpec.describe "Live submission status", type: :system do
     with_viewport(360) do
       visit "/games/#{game.public_id}/host-link?token=#{started.host_token}"
       expect(page).to have_css("h1", text: "Your game")
-      expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all) # subscribed: Turbo sets this once the socket confirms
+      expect(page).to have_css("turbo-cable-stream-source[connected]", count: 2, visible: :all) # subscribed: Turbo sets this once the socket confirms
       expect(state_of("england")).to eq("Not submitted")
       measure("the host page")
       screenshot("01-host-before")
@@ -69,7 +69,7 @@ RSpec.describe "Live submission status", type: :system do
 
     with_viewport(360) do
       visit "/games/#{game.public_id}/seat-link?token=#{france.last}"
-      expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all)
+      expect(page).to have_css("turbo-cable-stream-source[connected]", count: 2, visible: :all)
       expect(state_of("england")).to eq("Not submitted")
       measure("the seat page")
       screenshot("03-seat-page")

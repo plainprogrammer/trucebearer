@@ -3,6 +3,7 @@
 <div class="stack">
   <h1>You hold <%= power_name(@seat.power) %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
+  <%= render "results/live", game: @game %>
   <%= render "results/section", results: @results, kind: :seat, game: @game, earlier: @earlier, banners: false, skip: true if @results %>
   <p><%= @ordered %> of <%= @units %> units ordered.</p>
   <%= render "step_ins/notices", seat: @seat, phase: @phase %>

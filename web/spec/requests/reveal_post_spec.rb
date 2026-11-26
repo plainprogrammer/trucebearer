@@ -132,6 +132,26 @@ RSpec.describe "Revealing a phase", type: :request do
     end
   end
 
+  describe "the refresh the reveal sends (spec 025 AC-4.2, AC-4.5)" do
+    it "sends one attribute although the reveal request carries a request id, and redirects as usual" do
+      host.post reveal_path, headers: { "X-Turbo-Request-Id" => "11111111-2222-3333-4444-555555555555" }
+
+      message = JSON.parse(ActionCable.server.pubsub.broadcasts("results:#{id}").first)
+      expect(Nokogiri::HTML5.fragment(message).children.first.attributes.keys).to eq([ "action" ])
+      expect(host.response).to have_http_status(:see_other)
+      expect(host.response.headers["Location"]).to end_with("/games/#{id}/host")
+    end
+
+    it "answers the same redirect when the cable raises, and stores the reveal" do
+      allow(Turbo::StreamsChannel).to receive(:broadcast_refresh_to).and_raise(RuntimeError)
+      host.post reveal_path
+
+      expect(host.response).to have_http_status(:see_other)
+      expect(host.response.headers["Location"]).to end_with("/games/#{id}/host")
+      expect(game.history.count).to eq(1)
+    end
+  end
+
   describe "no undo (AC-4.12)" do
     it "has no route that reopens, undoes or deletes a phase" do
       routes = Rails.application.routes.routes.map { |route| [ route.verb, route.path.spec.to_s.sub("(.:format)", "") ] }
