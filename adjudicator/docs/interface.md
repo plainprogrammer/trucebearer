@@ -277,6 +277,7 @@ Positions, units, orders and results are value objects. These rules hold for eve
 - **Round trip.** Converting an object with `to_h`, writing it as JSON, parsing that JSON and rebuilding it with `from_h` always gives an object equal to the original.
 - **`format`.** Storable objects (positions, orders, check results and adjudication results) carry a `"format"` key in their hash form. Its value is the integer `1`. There is one value for the whole gem, and it goes up whenever any hash form changes. A storable object's hash form is the same wherever it appears, so an order nested inside an outcome still carries `"format"`. A missing or unknown `format` raises `TA::InvalidInput`. Other value objects only ever appear nested, and carry no `format`.
 - **Canonical order.** List fields are put into a fixed order when the object is built, and then frozen (see [Canonical order](#canonical-order)).
+- **`Marshal`.** A `Marshal.dump` and `Marshal.load` round trip keeps all of these guarantees: it returns an equal, deeply frozen object, and a payload that describes an impossible object raises `TA::InvalidInput` on load, as `from_h` would. This matters for anything that caches values with `Marshal`, as Rails' default cache does.
 - **Validated on construction.** Every value object is checked against the classic map, whether it is built with `new` or with `from_h`. An object that can't exist on that map raises `TA::InvalidInput` (see [Impossible objects](#impossible-objects)). This will be revisited if other maps arrive.
 
 ```ruby
