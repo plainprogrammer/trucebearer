@@ -40,9 +40,8 @@ jobs:
         id: ruby
         run: echo "version=$(tr -d '[:space:]' < ../.ruby-version)" >> "$GITHUB_OUTPUT"
 
-      # Runs against the gem release pinned in web/Gemfile. The app does not
-      # depend on the gem yet (Issue #19 adds the pin), so today this runs the
-      # app's own specs.
+      # Installs the gem release pinned in web/Gemfile, so the specs run against
+      # that release.
       - name: Set up Ruby and install gems
         uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
         with:

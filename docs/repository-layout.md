@@ -79,8 +79,8 @@ Each pull request touches one side only. Root files change in pull requests of t
 ## CI
 
 - **Gem job.** In `.github/workflows/adjudicator.yml`. Runs when `adjudicator/**` or the root `.ruby-version` changes, and runs the gem's specs, using the Ruby version in the root `.ruby-version`.
-- **App job.** In `.github/workflows/web.yml`. Runs when `web/**` or the root `.ruby-version` changes, and runs the app's specs against the pinned gem release. The app doesn't depend on the gem yet (Issue #19 adds the pin), so for now it runs the app's own specs.
-- **Early warning job.** In `.github/workflows/early-warning.yml`. Runs when `adjudicator/**` changes in a pull request, when `adjudicator/**` or `web/**` changes on `main`, or when started by hand. It runs the app's specs against the gem's latest code. It never blocks a merge, and it must never be a required check. It warns that the next gem release will break the app. It sets `ADJUDICATOR_PATH` to the gem's folder. That takes effect once `web/Gemfile` honors it (Issue #19); until then the job runs the same specs as the app job.
+- **App job.** In `.github/workflows/web.yml`. Runs when `web/**` or the root `.ruby-version` changes, and runs the app's specs against the gem release pinned in `web/Gemfile`.
+- **Early warning job.** In `.github/workflows/early-warning.yml`. Runs when `adjudicator/**` changes in a pull request, when `adjudicator/**` or `web/**` changes on `main`, or when started by hand. It runs the app's specs against the gem's latest code. It never blocks a merge, and it must never be a required check. It warns that the next gem release will break the app. It sets `ADJUDICATOR_PATH` to the gem's folder, and `web/Gemfile` then uses that folder in place of the pinned release.
 
 ## Left for the builder
 
