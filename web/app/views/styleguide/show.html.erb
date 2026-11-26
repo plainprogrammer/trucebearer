@@ -1,0 +1,152 @@
+<% content_for :title, "Style guide" %>
+
+<% content_for :actions do %>
+  <button type="button" class="button button--secondary">Back</button>
+  <button type="button" class="button">Send</button>
+<% end %>
+
+<div class="stack">
+  <h1>Style guide</h1>
+  <p>The tokens and parts of the base stylesheet. Only available while developing. Change the stylesheet, then check this page at 360 and 768 pixels wide.</p>
+
+  <section data-component="heading-text" class="stack" aria-labelledby="sg-text">
+    <h2 id="sg-text">Headings and text</h2>
+    <h1 role="none">Heading one</h1>
+    <h2 role="none">Heading two</h2>
+    <h3 role="none">Heading three</h3>
+    <p>Body text is one rem. <span class="text-muted">Muted text is for hints.</span> <small>Small text is the smallest step.</small></p>
+    <ul class="sg-type">
+      <% StyleguideHelper::TYPE_STEPS.each do |step| %>
+        <li class="sg-type-step sg-type-step--<%= step %>">--text-<%= step %></li>
+      <% end %>
+    </ul>
+    <ul class="sg-space">
+      <% StyleguideHelper::SPACE_STEPS.each do |step| %>
+        <li class="sg-space-step"><span class="sg-space-bar sg-space-bar--<%= step %>"></span> --space-<%= step %></li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section data-component="link" class="stack" aria-labelledby="sg-link">
+    <h2 id="sg-link">Links</h2>
+    <p>A link in running text is <a href="#sg-link">underlined and colored</a>, and a visited one is <a href="/">colored differently</a>.</p>
+  </section>
+
+  <section data-component="button" class="stack" aria-labelledby="sg-button">
+    <h2 id="sg-button">Buttons</h2>
+    <div class="sg-row">
+      <button type="button" class="button">Primary</button>
+      <button type="button" class="button button--secondary">Secondary</button>
+      <button type="button" class="button button--danger">Danger</button>
+    </div>
+    <div class="sg-row">
+      <button type="button" class="button" disabled>Primary</button>
+      <button type="button" class="button button--secondary" disabled>Secondary</button>
+      <button type="button" class="button button--danger" disabled>Danger</button>
+    </div>
+    <div class="sg-row">
+      <a href="#sg-button" class="button">Link as button</a>
+      <a class="button button--secondary" role="link" aria-disabled="true">Disabled link</a>
+      <input type="submit" class="button" value="Submit input">
+    </div>
+  </section>
+
+  <section data-component="list" class="stack" aria-labelledby="sg-list">
+    <h2 id="sg-list">Lists</h2>
+    <ul class="list">
+      <li><a href="#sg-list" class="list__row">A row you can tap</a></li>
+      <li><a href="#sg-list" class="list__row">Another row you can tap</a></li>
+      <li><div class="list__row">A row with text only</div></li>
+    </ul>
+  </section>
+
+  <section data-component="field" class="stack" aria-labelledby="sg-field">
+    <h2 id="sg-field">Form fields</h2>
+    <div class="field">
+      <label class="field__label" for="sg-name">Name</label>
+      <input class="control" id="sg-name" type="text" autocomplete="off" aria-describedby="sg-name-hint">
+      <span class="field__hint" id="sg-name-hint">What the others at the table call you.</span>
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-email">Email</label>
+      <input class="control" id="sg-email" type="email" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-number">Number</label>
+      <input class="control" id="sg-number" type="number" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-search">Search</label>
+      <input class="control" id="sg-search" type="search">
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-power">Choose one</label>
+      <select class="control" id="sg-power">
+        <option>First</option>
+        <option>Second</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-note">Note</label>
+      <textarea class="control" id="sg-note"></textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-code">Code (required)</label>
+      <input class="control" id="sg-code" type="text" aria-invalid="true" aria-describedby="sg-code-error" required>
+      <p class="field__error" id="sg-code-error">Error: enter the code you were given.</p>
+    </div>
+    <div class="field">
+      <label class="field__label" for="sg-off">Not available</label>
+      <input class="control" id="sg-off" type="text" disabled value="Disabled">
+    </div>
+  </section>
+
+  <section data-component="choice" class="stack" aria-labelledby="sg-choice">
+    <h2 id="sg-choice">Choices</h2>
+    <fieldset class="choices">
+      <legend>Pick any</legend>
+      <label class="choice"><input type="checkbox"> First option</label>
+      <label class="choice"><input type="checkbox" checked> Second option</label>
+      <label class="choice choice--disabled"><input type="checkbox" disabled> Not available</label>
+    </fieldset>
+    <fieldset class="choices">
+      <legend>Pick one</legend>
+      <label class="choice"><input type="radio" name="sg-radio"> Left</label>
+      <label class="choice"><input type="radio" name="sg-radio" checked> Right</label>
+    </fieldset>
+  </section>
+
+  <section data-component="power-badge" class="stack" aria-labelledby="sg-power-badge">
+    <h2 id="sg-power-badge">Power badges</h2>
+    <p>A power's color always comes with its name.</p>
+    <ul class="sg-powers">
+      <% StyleguideHelper::POWER_IDS.each do |id| %>
+        <li class="sg-power"><%= power_badge(id) %> <code class="sg-power__token">--color-power-<%= id %></code></li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="sg-colors">
+    <h2 id="sg-colors">Colors</h2>
+    <ul class="sg-swatches">
+      <% StyleguideHelper::COLOR_TOKENS.each do |token| %>
+        <li class="sg-swatch"><span class="sg-chip sg-bg-<%= token %>"></span> <code class="sg-swatch__name">--color-<%= token %></code></li>
+      <% end %>
+    </ul>
+    <h3>Documented pairs</h3>
+    <p class="text-muted">Each sample shows the foreground on its background. The contrast spec measures every pair, power pairs included.</p>
+    <ul class="sg-samples">
+      <% StyleguideHelper::PAIRS.each do |fg, bg, min| %>
+        <% text_pair = min.to_f >= 4.5 %>
+        <li class="sg-sample sg-bg-<%= bg %><%= " sg-fg-#{fg}" if text_pair %>">
+          <% if text_pair %>
+            <span>Sample text</span>
+          <% else %>
+            <span class="sg-bar sg-bg-<%= fg %>"></span>
+          <% end %>
+          <span class="sg-sample__meta"><%= fg %> on <%= bg %> (min <%= min %>)</span>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+</div>

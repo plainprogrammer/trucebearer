@@ -5,6 +5,11 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Development and test only. See config.x.styleguide. Never linked from any page.
+  constraints(->(_request) { Rails.configuration.x.styleguide }) do
+    get "styleguide" => "styleguide#show"
+  end
+
   root "home#index"
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
