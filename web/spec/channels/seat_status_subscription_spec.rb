@@ -56,7 +56,8 @@ RSpec.describe SeatStatusChannel, type: :channel do
     "the results stream" => ->(game) { [ :results, game.public_id, 1 ] },
     "a game that does not exist" => ->(_game) { [ :seat_status, "AAAAAAAAAAAA" ] },
     "an id with a suffix" => ->(game) { [ :seat_status, "#{game.public_id}:x" ] },
-    "a short id" => ->(game) { [ :seat_status, game.public_id[0, 11] ] }
+    "a short id" => ->(game) { [ :seat_status, game.public_id[0, 11] ] },
+    "a long id" => ->(game) { [ :seat_status, "#{game.public_id}x" ] }
   }.each do |label, streamables|
     it "rejects a verified name for #{label}, and transmits nothing (AC-9.2)" do
       subscribe(signed_stream_name: signed(*streamables.call(game)))

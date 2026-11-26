@@ -63,6 +63,12 @@ RSpec.describe "Who writes and broadcasts the status" do
     channels.each { |path| expect(code.call(Rails.root.join(path).to_s).scan(/\btransmit\b/).size).to eq(1), path }
   end
 
+  it "starts a stream for a subscriber only in the two channels (AC-9.7)" do
+    stream = /\bstream_(?:from|for)\b|\bstream_or_reject_for\b/
+    expect(files.select { |f| code.call(f).match?(stream) }.map(&rel)).to match_array(channels)
+    expect("stream_from name").to match(stream) # control
+  end
+
   it "defines the two messages only in Game (AC-9.7)" do
     expect(named.call(/def (?:seat_status_message|results_refresh_message)\b/)).to eq([ "app/models/game.rb" ])
   end

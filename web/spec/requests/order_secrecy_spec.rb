@@ -527,6 +527,9 @@ RSpec.describe "Order secrecy", type: :request do
         expect(carrying.map(&:last).uniq - allowed).to be_empty
         expect(carrying.select { |viewer, _| viewer == "a stranger" }).to be_empty
         expect(shot.values.flat_map(&:values).flat_map { |_status, body| stream_names(body) }.uniq).to contain_exactly("seat_status:#{id}", "results:#{id}:2") # phase 2 is open: no page carries a revealed phase's number (spec 024 AC-9.5)
+        sources = shot.values.flat_map(&:values).flat_map { |_status, body| Nokogiri::HTML5(body).css("turbo-cable-stream-source").to_a }
+        expect(sources.map { |source| [ Turbo.signed_stream_verifier.verified(source["signed-stream-name"]).split(":").first, source["channel"] ] }.uniq)
+          .to contain_exactly([ "results", "ResultsChannel" ], [ "seat_status", "SeatStatusChannel" ])
       end
     end
 
