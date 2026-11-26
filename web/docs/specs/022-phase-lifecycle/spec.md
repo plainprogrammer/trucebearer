@@ -1,7 +1,7 @@
 # Feature 022: The phase lifecycle, open until the host reveals
 
 **Status:** Approved
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #22
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.1 | 2026-11-26 | Patch from the plan review: the `/cable` mount is an internal route entry (an empty verb), so the route table lists it; production logs at `info` by default because a debug-level SQL log writes bind values, a saved order's content included, and the model's own filter cannot hide those (FR-9). No behavior changes |
 | 1.2.0 | 2026-11-26 | Approved at Gate A (two Fable review rounds), with these rulings.<br>• **Stylesheet caps raised.** The total goes from 24 KB (24,576 bytes) to 32 KB (32,768 bytes), and `styleguide.css` from 4 KB (4,096) to 6 KB (6,144). Reason: the screen components the design-system catalog plans (#22 to #28), which spec 020 sized its 24 KB for before they were listed. The limits are enforced by `spec/styles/stylesheet_rules_spec.rb`, which changes with them. Specs 020 and 021 carry a changelog row for the new numbers; no Issue.<br>• **Reissue** (D9) is approved. Spec 021 is amended in this pull request (its changelog has a row).<br>• A host who reissues a seat and then enters orders on it is acting as that seat, unrecorded. That is #26's ground (D9). This feature does not solve it.<br>• The Gate A note for #27 (D3, "Handed to later issues") is posted on #27 after this pull request merges, and the note on unrecorded acting is posted on #26 |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• Reissuing a seat clears that seat's saved orders and submission for the open phase (D9, AC-7.10), because a reissue was a way for the host to read a seat's orders.<br>• D8 names the write lock as the arbiter and the conditional write as a backstop. The concurrency ACs are model-level specs with a forced interleaving.<br>• The orders table and model are `saved_orders` and `SavedOrder`, so the source scan has an unambiguous name. The scan, the route table (framework routes included) and the invariance sweep are defined exactly.<br>• Failure messages never carry an exception message. `.confirm` takes a danger variant. The seat page text changes (spec 021 AC-4.10). A stylesheet budget is stated. Smaller fixes to AC-2.x, 4.6, 4.10, 6.4 and 7.9 |
 | 1.0.0 | 2026-11-26 | First draft |
@@ -343,15 +344,17 @@ As in D3, built by `RulesEngine.next_movement_position(position)`: the position 
 | `GET` and `POST /games/:id/host/phases/:n/reveal` | No orders. The names of powers that have not submitted; after the reveal, that it happened |
 | Unknown route, stranger and rate-limit pages | No |
 | Framework routes: the Turbo historical-location routes; Action Mailbox ingress and conductor; Active Storage | No. They have no game data and no model that attaches to a game. They are classified by prefix in the route-table spec, with this reason, so the spec doesn't fail on day one and does fail if a game route is later added under one of those prefixes |
-| The `/cable` mount (not a route entry) | No channel exists yet. #24 adds the first stream and must classify it |
+| The `/cable` mount (an internal route entry with an empty verb) | No channel exists yet. #24 adds the first stream and must classify it |
 
 **How the list is shown to be complete** (D6): the route-table spec enumerates the app's routes and fails when one is unclassified; the invariance sweep (AC-7.2) then requests every readable route as each kind of viewer, so a route classified "No" that in fact depended on orders would show a difference; the source scan (AC-7.8) limits which code can name the saved-orders model and table. Logs are covered by the parameter and attribute filters (AC-7.7). What the checks cannot see (a live stream, an email) does not exist yet. Turbo Streams arrive with #24, which must classify them.
 
 **Must:**
 - Derive the sweep's list of readable routes (AC-7.2) from this classification, so a new `GET` is swept without anyone editing the sweep.
 - Show a seat's orders only to that seat, before and after the reveal, by this feature's pages.
-- Keep orders out of the flash, out of logs (the `orders` parameter and a saved order's `content` are filtered), out of error messages (AC-4.10), and out of cached pages: the orders page and its redirect carry `Cache-Control: no-store` (AC-7.6). The seat page shows no order content, so it needs no such header.
+- Keep orders out of the flash, out of logs (the `orders` parameter and a saved order's `content` are filtered), out of error messages (AC-4.10), and out of cached pages, and out of the production log at its default level (see the limit below): the orders page and its redirect carry `Cache-Control: no-store` (AC-7.6). The seat page shows no order content, so it needs no such header.
 - Store each order with its seat and phase, with no association from `Phase` to all its orders, and read all of a phase's orders only inside the reveal.
+
+**Known limit.** Rails writes SQL bind values to the log at the `debug` level through its own global filter, which a model's `filter_attributes` doesn't reach. A saved order's content can therefore appear in a debug-level SQL log (development, test, or production if `RAILS_LOG_LEVEL=debug` is set). Production logs at `info` by default, and a spec asserts that default. This is stated in the pull request.
 
 **Must not:**
 - Show the host, or any seat, another seat's orders, a count of its orders or a count of its ordered units before the reveal.
