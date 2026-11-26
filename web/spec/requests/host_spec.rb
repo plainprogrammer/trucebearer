@@ -79,6 +79,14 @@ RSpec.describe "The host page and host links", type: :request do
       expect(Nokogiri::HTML5(created.session.response.body).at_css(".host-section")).to be_present
     end
 
+    it "keeps the host page for an open game under 40,000 bytes (NFR)" do
+      created = create_game
+      created.session.get "/games/#{created.game.public_id}/host"
+
+      expect(created.session.response).to have_http_status(:ok)
+      expect(created.session.response.body.bytesize).to be < 40_000
+    end
+
     it "shows the stranger page without a cookie, with a cookie for another game and with only a seat cookie" do
       created = create_game
       path = "/games/#{created.game.public_id}/host"

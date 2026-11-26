@@ -10,7 +10,7 @@ Rails.application.routes.draw do
     get "styleguide" => "styleguide#show"
   end
 
-  # Games and joining (spec 021). Only GamesController exists so far; the rest arrive in later phases.
+  # Games and joining (spec 021).
   get "games/new", to: "games#new", as: :new_game
   post "games", to: "games#create"
 

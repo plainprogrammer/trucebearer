@@ -140,7 +140,7 @@ RSpec.describe "Joining a game by code or QR", type: :request do
       expect(game.seats.where(power: "france").count).to eq(1)
     end
 
-    it "answers a lost race as taken even when the page's own check let it through" do
+    it "answers as taken when the model raises SeatTaken, whatever the page's own check said (controller answer only)" do
       other = open_session
       allow_any_instance_of(Game).to receive(:take_seat!).and_raise(Game::SeatTaken)
 
@@ -208,7 +208,7 @@ RSpec.describe "Joining a game by code or QR", type: :request do
       expect(seat_cookie?(phone)).to be(false)
     end
 
-    it "answers a close that lands between the lookup and the seat as the closed answer" do
+    it "answers as the closed answer when the model raises NotOpen (controller answer only)" do
       allow_any_instance_of(Game).to receive(:take_seat!).and_raise(Game::NotOpen)
 
       phone = open_session

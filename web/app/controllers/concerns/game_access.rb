@@ -3,7 +3,6 @@ module GameAccess
   extend ActiveSupport::Concern
 
   KINDS = %i[host seat].freeze
-  TOO_MANY = "Too many tries. Wait a few minutes and try again."
   PUBLIC_ID_SHAPE = /\A[A-Za-z0-9]{12}\z/
 
   private
