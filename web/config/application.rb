@@ -38,5 +38,8 @@ module Web
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # The style guide page (spec 020) exists only where this is true: development and test.
+    config.x.styleguide = false
   end
 end
