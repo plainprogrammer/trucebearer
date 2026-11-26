@@ -76,7 +76,7 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
 
       page = Nokogiri::HTML5(created.session.response.body)
       expect(page.at_css(".phase-header__title").text).to eq("Fall 1901 · Movement")
-      history = page.at_css("[data-history]")
+      history = page.at_css("[data-seat-history]")
       expect(history.text).to include("Spring 1901 · Movement")
       expect(page.css(".host-section ul.list:not([data-step-in-entry]) > li").size).to eq(7)
       expect(page.text).not_to include("No phase has been revealed yet.")
