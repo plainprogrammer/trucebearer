@@ -905,7 +905,7 @@ result.paradox                           # => true
 
 ### The next position
 
-In 0.2, `position` is a snapshot taken after the moves. It has:
+In 0.2.0, `position` is a snapshot taken after the moves. It has:
 
 - the same season and year, with phase `:retreat`, whether or not any unit was dislodged;
 - in `units`, every unit that wasn't dislodged, at its location after the moves;
@@ -966,7 +966,7 @@ It is raised for:
 - from 0.2.0, one power giving two orders that name the same province, whether or not a unit stands there (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
 - from 0.2.0, adjudicating a position that isn't in the movement phase.
 
-Every message includes the offending key or value.
+Every message includes the offending key or value. The one exception, from 0.2.0, is three messages for impossible adjudication objects (a void order that is dislodged, a move that succeeded and was dislodged, and a submitted outcome after an implied hold). They name the rule that was broken, not a value.
 
 A rules failure is never an exception. A broken rule shows up as a rejection reason from `TA.check` (from 0.2.0, also as an outcome from `TA.adjudicate`). Once positions and orders have been built without raising, checking and listing legal orders raise nothing else, and from 0.2.0 neither does adjudicating.
 
