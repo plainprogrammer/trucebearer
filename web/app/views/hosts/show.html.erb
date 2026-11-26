@@ -1,0 +1,42 @@
+<% content_for :title, "Your game" %>
+<% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") if @host_token %>
+
+<div class="stack">
+  <h1>Your game</h1>
+
+  <% if @host_token %>
+    <div class="field">
+      <label class="field__label" for="host-link">Your host link</label>
+      <input class="control" id="host-link" type="text" readonly aria-describedby="host-link-hint" value="<%= game_host_link_url(@game.public_id, token: @host_token) %>">
+      <span class="field__hint" id="host-link-hint">Keep it private. Anyone who has it controls this game.</span>
+    </div>
+  <% end %>
+
+  <section class="host-section stack" aria-labelledby="host-heading">
+    <h2 id="host-heading">Host</h2>
+    <% if @game.open? %>
+      <% join_link = join_game_url(@game.join_code) %>
+      <%= qr_card(join_link, label: "QR code to join the game", caption: join_code_text(@game.join_code)) %>
+      <p>Joining is open. Players scan the code or type the join code at <strong><%= join_url %></strong>.</p>
+      <%= link_to "Close joining", game_close_path(@game.public_id), class: "button button--secondary" %>
+    <% else %>
+      <p>Joining is closed.</p>
+    <% end %>
+
+    <h3>Seats</h3>
+    <ul class="list">
+      <% RulesEngine.powers.each do |power| %>
+        <% id = power.id.to_s %>
+        <li>
+          <% if @seats[id] %>
+            <%= link_to safe_join([ power_badge(id), tag.span("Reissue seat") ]), game_reissue_path(@game.public_id, id), class: "list__row" %>
+          <% else %>
+            <div class="list__row"><%= power_badge(id) %> <span>Open</span></div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
+</div>

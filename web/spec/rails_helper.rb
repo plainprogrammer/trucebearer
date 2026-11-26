@@ -15,6 +15,7 @@ require_relative "support/system"
 
 # Request-spec helpers for cookies and for comparing responses (spec 021).
 require_relative "support/responses"
+require_relative "support/game_flow"
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
