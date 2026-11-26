@@ -13,6 +13,8 @@ class StepIn < ApplicationRecord
 
   def self.record!(phase:, seat:) = create!(phase: phase, seat: seat)
 
+  def kind = :step_in
+
   # Active while the phase is still open (read from the database, so a reveal ends it at once) and for LIFETIME after entering (D2).
   def active? = created_at > LIFETIME.ago && Phase.open?(phase_id)
 end

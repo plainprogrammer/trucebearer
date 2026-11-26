@@ -122,6 +122,32 @@ RSpec.describe Game do
       expect(game.reload.seat_for(started.seat_token)).to be_nil
       expect(game.seat_for(new_token)).to eq(seat)
     end
+
+    context "with a seat to reissue" do
+      let(:game) { described_class.start!(power: "germany").game }
+      let!(:france) { game.take_seat!("france").first }
+
+      it "writes one reissues row for the open phase and the seat, one for each reissue (AC-10.2)" do
+        game.reissue_seat!(france)
+        game.reissue_seat!(france)
+
+        expect(Reissue.where(seat: france, phase: game.current_phase).count).to eq(2)
+      end
+
+      it "writes a row for the host's own seat too (AC-10.3)" do
+        game.reissue_seat!(game.host_seat)
+
+        expect(Reissue.where(seat: game.host_seat).count).to eq(1)
+      end
+
+      it "leaves the old token and no row when the row can't be written (AC-10.2)" do
+        digest = france.token_digest
+        allow(Reissue).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)
+
+        expect { game.reissue_seat!(france) }.to raise_error(ActiveRecord::RecordInvalid)
+        expect(france.reload.token_digest).to eq(digest)
+      end
+    end
   end
 
   describe "#close_joining!" do
@@ -163,6 +189,23 @@ RSpec.describe Game do
       second = StepIn.record!(phase: game.current_phase, seat: game.seats.find_by(power: "england"))
 
       expect(game.step_in_history.to_a).to eq([ first, second ])
+    end
+
+    it "lists this game's reissues and no other game's, and merges them with the step-ins, oldest first, a reissue before a step-in at the same instant (D10)" do
+      game = described_class.start!(power: "germany").game
+      other = described_class.start!(power: "germany").game
+      england = game.take_seat!("england").first
+      other_england = other.take_seat!("england").first
+      step_in = reissue = later = nil
+      travel_to(Time.utc(2026, 11, 26, 20, 0)) do
+        step_in = StepIn.record!(phase: game.current_phase, seat: england)
+        reissue = Reissue.record!(phase: game.current_phase, seat: england)
+        Reissue.record!(phase: other.current_phase, seat: other_england)
+      end
+      travel_to(Time.utc(2026, 11, 26, 21, 0)) { later = Reissue.record!(phase: game.current_phase, seat: england) }
+
+      expect(game.reissue_history.to_a).to eq([ reissue, later ])
+      expect(game.seat_history).to eq([ reissue, step_in, later ])
     end
   end
 end

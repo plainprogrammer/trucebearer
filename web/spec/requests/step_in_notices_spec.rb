@@ -79,19 +79,19 @@ RSpec.describe "Step-in notices and history", type: :request do
     expect(notice(phone)).to be_empty
 
     host.get "/games/#{id}/host"
-    rows = page.css("[data-step-ins] li").map { |li| li.text.squish }
-    expect(rows).to eq([ "Spring 1901 · Movement France 8:42 PM UTC" ])
-    expect(page.at_css("[data-step-ins] .power-badge").text).to eq("France")
+    rows = page.css("[data-seat-history] li").map { |li| li.text.squish }
+    expect(rows).to eq([ "Spring 1901 · Movement France stepped in 8:42 PM UTC" ])
+    expect(page.at_css("[data-seat-history] .power-badge").text).to eq("France")
   end
 
   it "says so when there are none, and lists several oldest first (AC-6.4)" do
     host.get "/games/#{id}/host"
-    expect(page.at_css("[data-step-ins]").text).to include("The host has not stepped into a seat.")
+    expect(page.at_css("[data-seat-history]").text).to include("Nothing has happened to a seat yet.")
 
     confirm("england")
     confirm("france")
     host.get "/games/#{id}/host"
-    expect(page.css("[data-step-ins] .power-badge").map(&:text)).to eq([ "England", "France" ])
+    expect(page.css("[data-seat-history] .power-badge").map(&:text)).to eq([ "England", "France" ])
   end
 
   it "shows no order, count or submitted state in the history, and the host page stays free of them (AC-6.6)" do
@@ -99,7 +99,7 @@ RSpec.describe "Step-in notices and history", type: :request do
     confirm("england")
     host.get "/games/#{id}/host"
 
-    history = page.at_css("[data-step-ins]")
+    history = page.at_css("[data-seat-history]")
     expect(history.css("select, option")).to be_empty
     expect(history.text).not_to match(/ordered|Submitted|\d of \d|Hold/)
     expect(host.response.body).not_to match(/\bordered\b/)

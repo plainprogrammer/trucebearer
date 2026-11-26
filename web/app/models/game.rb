@@ -67,6 +67,14 @@ class Game < ApplicationRecord
   # association that reaches saved orders.
   def step_in_history = StepIn.joins(:phase).where(phases: { game_id: id }).includes(:phase, :seat).order(:id)
 
+  # Every reissue of this game, oldest first (spec 026 D10). Read through the phases, as the step-ins are.
+  def reissue_history = Reissue.joins(:phase).where(phases: { game_id: id }).includes(:phase, :seat).order(:id)
+
+  # The step-ins and the reissues together, oldest first; at the same instant a reissue comes before a step-in (D10).
+  def seat_history
+    (reissue_history.to_a + step_in_history.to_a).sort_by { |entry| [ entry.created_at, entry.kind == :reissue ? 0 : 1, entry.id ] }
+  end
+
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
   end
@@ -99,7 +107,9 @@ class Game < ApplicationRecord
     withdrew = transaction do
       phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
       seat.update!(token_digest: Token.digest(token))
-      seat.clear_orders!(phase)
+      withdrawn = seat.clear_orders!(phase)
+      Reissue.record!(phase: phase, seat: seat) # spec 026 D10: the reissue and its record stand or fall together
+      withdrawn # the block's value, as before: whether a submission was removed (spec 024 D3)
     end
     broadcast_seat_status if withdrew # the seat had submitted and no longer has (spec 024 D3)
     token
