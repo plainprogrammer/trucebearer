@@ -39,7 +39,9 @@ RSpec.describe "The step-in boundary" do
   it "holds no saved-orders association and no through association for reissues, and nothing else reads the table (AC-10.7)" do
     expect(File.read(File.join(root, "app/models/reissue.rb"))).not_to match(/saved_order|SavedOrder|orders_for/i)
     expect(File.read(File.join(root, "app/models/game.rb"))).not_to match(/through:\s*:?reissues/)
-    readers = Dir.glob(File.join(root, "app/{views,controllers,helpers}/**/*")).select { |path| File.file?(path) && File.read(path).match?(/\breissues\b/) }
+    readers = Dir.glob(File.join(root, "app/{views,controllers,helpers}/**/*")).select do |path|
+      File.file?(path) && File.read(path).match?(/\breissues\b|reissue_history|seat_history/) && !path.end_with?("app/views/step_ins/_history.html.erb")
+    end
 
     expect(readers).to be_empty, "reads the reissues table outside the boundary: #{readers.join(', ')}"
   end

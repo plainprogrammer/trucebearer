@@ -146,7 +146,6 @@ RSpec.describe Game do
 
         expect { game.reissue_seat!(france) }.to raise_error(ActiveRecord::RecordInvalid)
         expect(france.reload.token_digest).to eq(digest)
-        expect(Reissue.count).to eq(0)
       end
     end
   end

@@ -105,6 +105,7 @@ RSpec.describe "The reissue history", type: :request do
     phones.each do |phone|
       [ "/games/#{id}", "/games/#{id}/phases/1/orders" ].each do |path|
         phone.get path
+        expect(phone.response).to have_http_status(:ok), path
         doc = Nokogiri::HTML5(phone.response.body)
         expect(doc.css(".banner--warning").map(&:text).join).not_to match(/reissue/i), path
         expect(phone.response.body).not_to match(/reissued|Seat history/), path
