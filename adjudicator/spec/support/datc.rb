@@ -15,15 +15,17 @@ require_relative "board"
 # {power, type, at}), `dislodged` (each {power, type, at, from, by_convoy}) and `standoffs`.
 # A case with `after:` is adjudicated (spec/datc/datc_adjudicate_spec.rb). Every order of such
 # a case carries a `check:` and a `result:`, and the implied holds are worked out from the
-# checks, so the expectation doesn't depend on the engine.
+# checks, so the expectation doesn't depend on the engine. A case with `paradox: true` holds a
+# convoy paradox whose result is pending (#39): it has no `after:` and no `result:`, and is
+# only tested for the flag and a valid position.
 module Datc
   class FormatError < StandardError; end
 
-  Case = Data.define(:id, :departure, :position, :entries, :after)
+  Case = Data.define(:id, :departure, :position, :entries, :after, :paradox)
   Entry = Data.define(:order, :expected, :result, :dislodged)
 
   DIR = File.expand_path("../datc", __dir__)
-  TOP_KEYS = %w[case summary departure position orders after].freeze
+  TOP_KEYS = %w[case summary departure paradox position orders after].freeze
   TOP_REQUIRED = %w[case summary position orders].freeze
   POSITION_KEYS = %w[units phase].freeze
   UNIT_KEYS = %w[power type at].freeze
@@ -64,9 +66,12 @@ module Datc
     fail!(name, "\"departure\" must be true or false, got #{departure.inspect}") unless [true, false].include?(departure)
     position = build_position(data["position"], name)
     entries = Array(data["orders"]).map { |entry| build_entry(entry, name) }
+    paradox = data.fetch("paradox", false)
+    fail!(name, "\"paradox\" must be true when given, got #{paradox.inspect}") unless [true, false].include?(paradox) && (paradox || !data.key?("paradox"))
+    fail!(name, "a case with \"paradox\" has no \"after\", since its result is pending") if paradox && data.key?("after")
     after = data.key?("after") ? build_after(data["after"], position, entries, name) : nil
     fail!(name, "an order has a \"result\" but the case has no \"after\"") if after.nil? && entries.any?(&:result)
-    Case.new(id: name, departure: departure, position: position, entries: entries, after: after)
+    Case.new(id: name, departure: departure, position: position, entries: entries, after: after, paradox: paradox)
   end
 
   def build_position(data, name)

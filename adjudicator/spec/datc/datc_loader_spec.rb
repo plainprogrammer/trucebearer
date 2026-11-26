@@ -113,6 +113,18 @@ RSpec.describe Datc do
     end
   end
 
+  it "reads a paradox mark, and refuses one with an after or any value but true (AC-6.4 of spec 015)" do
+    pending_case = good.merge("paradox" => true)
+    expect(parse(pending_case).paradox).to be(true)
+    expect(parse(good).paradox).to be(false)
+    with_after = pending_case.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                    "after" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "lon" }] })
+    [with_after, good.merge("paradox" => false), good.merge("paradox" => "yes"),
+     pending_case.merge("orders" => [good["orders"][0].merge("result" => "held")])].each do |data|
+      expect { parse(data) }.to raise_error(Datc::FormatError, /6\.X\.1/)
+    end
+  end
+
   it "reads a real file with no classes and no aliases" do
     Dir.mktmpdir do |dir|
       path = File.join(dir, "6.X.1.yml")
