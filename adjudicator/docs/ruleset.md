@@ -4,7 +4,7 @@ The engine follows the current rulebook, with the DATC (Diplomacy Adjudicator Te
 
 Write every entry in your own words. Cite the DATC section and any rulebook section by number. Never quote either document.
 
-Citations refer to DATC v3.4.
+Citations refer to DATC v3.4. The repository keeps an unmodified copy for reading at `docs/reference/datc-v3.4.html`, relative to the gem folder (`adjudicator/`). Don't quote it here.
 
 ## Choices
 
