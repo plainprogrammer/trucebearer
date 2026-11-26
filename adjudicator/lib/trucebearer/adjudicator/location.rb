@@ -6,6 +6,8 @@ module Trucebearer
     # a coast. `new` takes symbols, `from_h` takes strings. Checked against the
     # classic map when built. It carries no format (it only appears nested).
     Location = Data.define(:province, :coast) do
+      include Shape::Marshalable
+
       def initialize(province:, coast: nil)
         raise InvalidInput, "province must be a Symbol, got #{province.inspect}" unless province.is_a?(Symbol)
         raise InvalidInput, "coast must be a Symbol or nil, got #{coast.inspect}" unless coast.nil? || coast.is_a?(Symbol)

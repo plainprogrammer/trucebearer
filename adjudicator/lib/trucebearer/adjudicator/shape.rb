@@ -15,6 +15,25 @@ module Trucebearer
       SUPPLY_CENTERS = Map.classic.supply_centers
       POWERS = Map.classic.powers.map(&:id).freeze
 
+      # Included by every value object, so `Marshal` keeps the guarantees of `new` and
+      # `from_h`. Left alone, `Marshal.load` skips `initialize` and brings back the raw
+      # fields: lists unfrozen and nothing checked. This writes the hash form instead, and
+      # reads it back through `from_h` (which checks it) and then `initialize` (which
+      # freezes and sorts). `Marshal.load` calls `marshal_load` on an unfrozen, allocated
+      # instance, so `initialize` can run once on it. The hooks are private: Marshal calls
+      # them anyway, and they stay out of the public interface. One limit: a payload built
+      # by hand in Ruby's plain struct format ("S") never reaches these hooks, because Ruby
+      # fills the fields in C. Nothing in Ruby code can intercept that.
+      module Marshalable
+        private
+
+        def marshal_dump = to_h
+
+        def marshal_load(hash)
+          initialize(**self.class.from_h(hash).deconstruct_keys(nil))
+        end
+      end
+
       module_function
 
       # `new` side: the value must be one of the allowed symbols.
