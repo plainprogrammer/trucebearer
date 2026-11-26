@@ -28,6 +28,15 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+# The rules engine, pinned to a released tag of this repository (docs/repository-layout.md).
+# ADJUDICATOR_PATH names a checked-out adjudicator/ folder to use instead, for the early-warning job only.
+# Upgrading the tag is its own pull request. Only app/models/rules_engine.rb requires the gem.
+if ENV["ADJUDICATOR_PATH"].to_s.empty?
+  gem "trucebearer-adjudicator", git: "https://github.com/plainprogrammer/trucebearer.git", tag: "adjudicator-v0.1.0", glob: "adjudicator/*.gemspec", require: false
+else
+  gem "trucebearer-adjudicator", path: ENV["ADJUDICATOR_PATH"], require: false
+end
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
