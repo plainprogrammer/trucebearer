@@ -1,0 +1,123 @@
+@layer reset, base, layout, components, styleguide;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  p,
+  ul,
+  ol,
+  fieldset,
+  figure {
+    margin: 0;
+  }
+
+  fieldset {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  ::placeholder {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-padding-bottom: var(--scroll-pad);
+  }
+
+  body {
+    background: var(--color-page);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: var(--weight-strong);
+    line-height: var(--leading-tight);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+  }
+
+  legend {
+    padding: 0;
+    font-weight: var(--weight-strong);
+  }
+
+  small,
+  .text-small,
+  code {
+    font-size: var(--text-sm);
+  }
+
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+
+  /* One vertical rhythm for stacked content */
+  .stack > * + * {
+    margin-block-start: var(--space-4);
+  }
+
+  a {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: var(--space-1);
+  }
+
+  a:visited {
+    color: var(--color-link-visited);
+  }
+
+  @media (hover: hover) {
+    a:hover {
+      text-decoration-thickness: var(--border-width);
+    }
+  }
+
+  ::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  :focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+}

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || "Trucebearer" %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Trucebearer">
     <meta name="mobile-web-app-capable" content="yes">
@@ -23,7 +23,23 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <%= yield %>
+  <body class="app">
+    <header class="app-header">
+      <div class="app-column">
+        <%= link_to "Trucebearer", root_path, class: "app-header__name" %>
+      </div>
+    </header>
+
+    <main class="app-main app-column">
+      <%= yield %>
+    </main>
+
+    <% if content_for?(:actions) %>
+      <div class="app-actions" role="group" aria-label="Actions">
+        <div class="app-actions__inner app-column">
+          <%= yield :actions %>
+        </div>
+      </div>
+    <% end %>
   </body>
 </html>
