@@ -1,7 +1,7 @@
 # Feature 022: The phase lifecycle, open until the host reveals
 
 **Status:** Approved
-**Version:** 1.2.1
+**Version:** 1.3.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #22
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.3.0 | 2026-11-26 | Amended by spec 023 (the order pickers, #23), which replaces the plain form this spec's Non-Goals named.<br>• D5 and FR-4 (the plain orders form) are replaced by spec 023's order screen and picker steps; the `PUT` endpoint, its partial-update meaning and every refusal are unchanged.<br>• AC-2.11 (a select for each unit) is replaced by spec 023 AC-1.1 to AC-1.9: a `.unit-row` for each unit.<br>• AC-2.1's "Orders saved." banner is replaced by `.save-status` reading "Saved" (spec 023 D4): a plain save sets no flash. The "Submitted." banner stays. The endpoint examples that read the old banner or flash, and the 422 example that counted selects, are rewritten.<br>• The "n of m units ordered" line leaves the orders page for the submit bar, and "Submitted" and "Not submitted" (AC-3.1, AC-3.2, AC-7.10) are read from the submit bar.<br>• Orders are worded with full province names and abbreviations (`OrderLabelHelper#order_words` replaces `order_label`).<br>• The orders page and the new picker route (`GET .../orders/:province`) are classified in the route table (FR-9) as showing the seat's own orders only. The seat page and every other criterion hold unchanged |
 | 1.2.1 | 2026-11-26 | Patch from the plan review: the `/cable` mount is an internal route entry (an empty verb), so the route table lists it; production logs at `info` by default because a debug-level SQL log writes bind values, a saved order's content included, and the model's own filter cannot hide those (FR-9). No behavior changes |
 | 1.2.0 | 2026-11-26 | Approved at Gate A (two Fable review rounds), with these rulings.<br>• **Stylesheet caps raised.** The total goes from 24 KB (24,576 bytes) to 32 KB (32,768 bytes), and `styleguide.css` from 4 KB (4,096) to 6 KB (6,144). Reason: the screen components the design-system catalog plans (#22 to #28), which spec 020 sized its 24 KB for before they were listed. The limits are enforced by `spec/styles/stylesheet_rules_spec.rb`, which changes with them. Specs 020 and 021 carry a changelog row for the new numbers; no Issue.<br>• **Reissue** (D9) is approved. Spec 021 is amended in this pull request (its changelog has a row).<br>• A host who reissues a seat and then enters orders on it is acting as that seat, unrecorded. That is #26's ground (D9). This feature does not solve it.<br>• The Gate A note for #27 (D3, "Handed to later issues") is posted on #27 after this pull request merges, and the note on unrecorded acting is posted on #26 |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• Reissuing a seat clears that seat's saved orders and submission for the open phase (D9, AC-7.10), because a reissue was a way for the host to read a seat's orders.<br>• D8 names the write lock as the arbiter and the conditional write as a backstop. The concurrency ACs are model-level specs with a forced interleaving.<br>• The orders table and model are `saved_orders` and `SavedOrder`, so the source scan has an unambiguous name. The scan, the route table (framework routes included) and the invariance sweep are defined exactly.<br>• Failure messages never carry an exception message. `.confirm` takes a danger variant. The seat page text changes (spec 021 AC-4.10). A stylesheet budget is stated. Smaller fixes to AC-2.x, 4.6, 4.10, 6.4 and 7.9 |
@@ -81,7 +82,7 @@ The next position is built by `RulesEngine.next_movement_position` from the posi
 
 On top of the check, the app refuses what the check cannot know: the order's `power` must be the seat's own power (a check passes for another power's order that names the right owner), the order must be for a unit of that power, and the key it was posted under must match the order's own province.
 
-**D5. The plain form (what #23 replaces).** One page per open phase, `/games/:public_id/phases/:number/orders`. For each unit the seat holds, one row with the unit's icon, a label naming the type and province, and a single `<select>`. Its first choice is "No order (holds)", with a blank value. The other choices are the unit's legal orders from `RulesEngine.legal_orders`, one per choice, in plain words with provinces by abbreviation ("Hold", "Move to BEL", "Move to SPA (north coast)", "Move to BEL by convoy", "Support hold in BER", "Support BUR to MUN", "Convoy LON to NWY"). The value of a choice is the order's hash form as JSON, so the server always re-checks. The page has two buttons: "Save orders" and "Save and submit". There is no picker, no step, no draft and no per-unit page. #23 replaces the page and keeps the endpoint: its `orders` parameter is a partial update, so a picker can save one unit at a time, and `submit` can be sent with no orders to submit alone.
+**D5. The plain form (what #23 replaces).** *Replaced by spec 023 (changelog 1.3.0).* One page per open phase, `/games/:public_id/phases/:number/orders`. For each unit the seat holds, one row with the unit's icon, a label naming the type and province, and a single `<select>`. Its first choice is "No order (holds)", with a blank value. The other choices are the unit's legal orders from `RulesEngine.legal_orders`, one per choice, in plain words with provinces by abbreviation ("Hold", "Move to BEL", "Move to SPA (north coast)", "Move to BEL by convoy", "Support hold in BER", "Support BUR to MUN", "Convoy LON to NWY"). The value of a choice is the order's hash form as JSON, so the server always re-checks. The page has two buttons: "Save orders" and "Save and submit". There is no picker, no step, no draft and no per-unit page. #23 replaces the page and keeps the endpoint: its `orders` parameter is a partial update, so a picker can save one unit at a time, and `submit` can be sent with no orders to submit alone.
 
 **D6. Secrecy is enforced by structure, and proved by a sweep.** Three checks, so the list of places orders could leak is shown to be complete and not only believed to be (FR-9): a route table the specs force to be classified (a new route fails the suite until someone classifies it), an invariance sweep (every readable page, for every kind of viewer, is the same before and after a seat changes its orders), and a source scan that limits which files may name the saved-orders model and table.
 
@@ -141,7 +142,7 @@ The number is matched strictly in the controller (digits only, no leading zero: 
 - [ ] **AC-2.8** Given a stored order for a unit When `PUT` sends a different legal order for it Then the unit still has exactly one stored order, the new one
 - [ ] **AC-2.9** Given stored orders for two units When `PUT` names only one of them Then the other is unchanged
 - [ ] **AC-2.10** Given a stored order When it is read back Then it equals the order that was saved, and the stored text is the order's hash form with its `format` (the `RulesObjectType` round trip)
-- [ ] **AC-2.11** Given England's seat When it opens the orders page of the open phase Then each of its units has one row with a select holding "No order (holds)" and its legal orders, the stored order is selected, and no unit of another power appears
+- [ ] **AC-2.11** *(replaced by spec 023 AC-1.1 to AC-1.9)* Given England's seat When it opens the orders page of the open phase Then each of its units has one row with a select holding "No order (holds)" and its legal orders, the stored order is selected, and no unit of another power appears
 - [ ] **AC-2.12** Given a phone with no seat cookie, or the host's phone with the host cookie only, or a seat cookie of another game When it sends `GET` or `PUT` to the orders URL Then it gets the stranger response and nothing is stored
 
 ### Story 3: A seat marks itself submitted, and can still change its mind
@@ -283,6 +284,8 @@ Each game has phases as in D2. `Game.start!` creates phase 1 from the starting p
 A submission is a row, per D2. Saving and submitting are the only things that touch it. It has no effect on what the reveal adjudicates (AC-4.7).
 
 ### FR-4: The orders page (the plain form)
+
+*Replaced by spec 023 (changelog 1.3.0).*
 
 As in D5. It is built from `RulesEngine.legal_orders` for each of the seat's units in the phase's position, and from the seat's stored orders, nothing else. It carries the phase number in its URL, so a stale page posts to the phase it was drawn for (D7).
 
