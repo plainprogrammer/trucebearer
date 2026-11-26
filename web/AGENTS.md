@@ -35,6 +35,7 @@ Native apps come later through Hotwire Native, so build for it from the start:
 - Never edit `adjudicator/`. If the app needs something the gem doesn't do, open an Issue with the "Adjudicator request" template. Give example input and the expected output as plain data, then carry on with other work.
 - Upgrading the pinned version is its own pull request. Read the gem's `CHANGELOG.md` and any open "Interface change" Issues first.
 - The gem's public interface is described in `adjudicator/docs/interface.md`. Use nothing beyond it.
+- Every call to the gem goes through `RulesEngine` (`app/models/rules_engine.rb`), the only file that requires it or names its constants; `spec/models/rules_engine_boundary_spec.rb` fails if any other code does. Stored columns use `RulesObjectType`. Until gem 0.2.0, `RulesEngine.adjudicate` is a stand-in whose outcomes are fake.
 - Store positions, orders, check results and adjudication results as the gem's hash form (`to_h`), saved as JSON, and load them back into gem objects with `from_h`, so any phase can be replayed. The hash form carries a `format` version. The map is queried, never stored. The contract is `adjudicator/docs/interface.md`.
 
 ## Scope for phase one
