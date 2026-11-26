@@ -5,7 +5,7 @@ require "rails_helper"
 # docs/specs/020-base-stylesheet/measure.md, which holds the hand-run version.
 RSpec.describe "Style guide layout", type: :system do
   # Elements that must be at least 44 by 44 CSS pixels (links in running text are exempt).
-  tappable = [ ".button", ".app-header__name", ".list__row", ".control", ".choice", ".power-tile:not(.power-tile--taken)" ]
+  tappable = [ ".button", ".app-header__name", ".list__row", ".control", ".choice", ".power-tile:not(.power-tile--taken)", ".segmented__label" ]
   # Things in the main column that a person can focus.
   focusable = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
   # Chrome reports sub-pixel sizes; measure.md allows half a pixel.
