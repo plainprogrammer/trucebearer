@@ -537,7 +537,7 @@ b.to_h["ownership"].keys                 # => ["bud", "stp"]
 
 ### Impossible objects
 
-Each object below can't exist on the classic map, so building it raises `TA::InvalidInput`. This holds whether it is built with `new` or with `from_h`. The examples reuse `army`, `fleet` and `spring` from [Canonical order](#canonical-order).
+Each object below can't exist on the classic map (or, from 0.2.0, can't be the result of an adjudication), so building it raises `TA::InvalidInput`. This holds whether it is built with `new` or with `from_h`. The examples reuse `army`, `fleet` and `spring` from [Canonical order](#canonical-order).
 
 ```ruby
 # Two units on the board in one province. (A dislodged unit doesn't count.)
@@ -581,6 +581,23 @@ TA::Position.new(**spring.merge(phase: :retreat, dislodged_units: [fleet, fleet]
 TA::CheckResult.new(legal: true, reasons: [:own_province])
 TA::CheckResult.new(legal: false, reasons: [])
 TA::CheckResult.new(legal: false, reasons: [:own_province, :not_reachable])
+
+# From 0.2.0: an outcome with a result its order class can't have, a void order that is dislodged,
+# a move that succeeded and was dislodged, or an implied hold that isn't a held Hold.
+hold = O::Hold.new(power: :england, at: :lon)
+TA::Outcome.new(order: hold, result: :bounced, submitted: true, dislodged: false)
+TA::Outcome.new(order: hold, result: :void, submitted: true, dislodged: true)
+TA::Outcome.new(order: hold, result: :void, submitted: false, dislodged: false)
+TA::Outcome.new(order: O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth)),
+                result: :succeeded, submitted: true, dislodged: true)   # a unit that moved isn't dislodged
+
+# From 0.2.0: an adjudication with a submitted outcome after an implied hold, with implied holds
+# that aren't in ascending order of province, or with two submitted outcomes for one power and
+# province (TA.adjudicate refuses such orders). Its position may be in any phase.
+held = ->(power, at, submitted) { TA::Outcome.new(order: O::Hold.new(power: power, at: at), result: :held, submitted: submitted, dislodged: false) }
+TA::Adjudication.new(outcomes: [held.(:france, :bre, false), held.(:england, :lon, true)], paradox: false, position: a)
+TA::Adjudication.new(outcomes: [held.(:france, :bre, false), held.(:england, :bel, false)], paradox: false, position: a)
+TA::Adjudication.new(outcomes: [held.(:england, :lon, true), held.(:england, :lon, true)], paradox: false, position: a)
 ```
 
 ## Checking an order

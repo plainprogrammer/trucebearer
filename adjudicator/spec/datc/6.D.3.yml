@@ -1,0 +1,27 @@
+case: "6.D.3"
+summary: A move into a supporter's province cuts its support, so the supported attack only equals the hold
+position:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: fleet, at: ion}
+orders:
+  - order: {type: support_move, power: austria, at: adr, from: tri, to: ven}
+    check: {legal: true}
+    result: cut
+  - order: {type: move, power: austria, at: tri, destination: ven}
+    check: {legal: true}
+    result: bounced
+  - order: {type: hold, power: italy, at: ven}
+    check: {legal: true}
+    result: held
+  - order: {type: move, power: italy, at: ion, destination: adr}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: fleet, at: ion}

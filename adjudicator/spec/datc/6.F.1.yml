@@ -1,0 +1,27 @@
+case: "6.F.1"
+summary: A fleet in a coastal province can't convoy, and no convoy chain exists, so every order is void
+position:
+  units:
+    - {power: turkey, type: army, at: gre}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: bla}
+orders:
+  - order: {type: move, power: turkey, at: gre, destination: sev}
+    check: {legal: false, reason: not_reachable}
+    result: void
+  - order: {type: convoy, power: turkey, at: aeg, from: gre, to: sev}
+    check: {legal: false, reason: not_on_chain}
+    result: void
+  - order: {type: convoy, power: turkey, at: con, from: gre, to: sev}
+    check: {legal: false, reason: not_fleet_at_sea}
+    result: void
+  - order: {type: convoy, power: turkey, at: bla, from: gre, to: sev}
+    check: {legal: false, reason: not_on_chain}
+    result: void
+after:
+  units:
+    - {power: turkey, type: army, at: gre}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: bla}

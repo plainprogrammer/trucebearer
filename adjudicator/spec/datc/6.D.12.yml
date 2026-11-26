@@ -1,0 +1,22 @@
+case: "6.D.12"
+summary: A support for a foreign attack on one's own unit adds nothing to the dislodging
+position:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+orders:
+  - order: {type: hold, power: austria, at: tri}
+    check: {legal: true}
+    result: held
+  - order: {type: support_move, power: austria, at: vie, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: ven, destination: tri}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}

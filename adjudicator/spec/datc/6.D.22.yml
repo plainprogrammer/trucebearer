@@ -1,0 +1,28 @@
+case: "6.D.22"
+summary: A fleet's move into an inland province is void and can't be supported
+position:
+  units:
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: bur}
+    - {power: russia, type: army, at: mun}
+    - {power: russia, type: army, at: ber}
+orders:
+  - order: {type: move, power: germany, at: kie, destination: mun}
+    check: {legal: false, reason: not_reachable}
+    result: void
+  - order: {type: support_move, power: germany, at: bur, from: kie, to: mun}
+    check: {legal: false, reason: move_impossible}
+    result: void
+  - order: {type: move, power: russia, at: mun, destination: kie}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: ber, from: mun, to: kie}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: germany, type: army, at: bur}
+    - {power: russia, type: army, at: kie}
+    - {power: russia, type: army, at: ber}
+  dislodged:
+    - {power: germany, type: fleet, at: kie, from: mun}

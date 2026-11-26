@@ -8,6 +8,8 @@ Releases are git tags named `adjudicator-vX.Y.Z`.
 
 ### Added
 
+- `TA::Outcome`, `TA::Adjudication` and `TA.adjudicate(position, orders)`: adjudicating a movement phase with no convoys, following the decision-based approach of Kruijswijk's "The Math of Adjudication". Every order gets an outcome; a unit with no legal order holds and can be supported; each dislodged unit records the province its attacker came from; and `position` is the retreat-phase snapshot of `docs/interface.md`. The DATC cases of 6.A to 6.E that need no convoy, and 6.F.1, are fixtures in `spec/datc/` with their results; every result is also checked against the DATC's conditions on seeded random boards. `docs/interface.md` now names the impossible `TA::Outcome` and `TA::Adjudication`. **Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`. (#14)
+
 ### Changed
 
 ### Fixed

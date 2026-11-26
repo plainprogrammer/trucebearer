@@ -10,11 +10,25 @@ position:
 orders:
   - order: {type: support_move, power: england, at: iri, from: nao, to: mao}
     check: {legal: true}
+    result: given
   - order: {type: move, power: england, at: nao, destination: mao}
     check: {legal: true}
+    result: succeeded
   - order: {type: support_hold, power: france, at: spa, target: mao}
     check: {legal: true}
+    result: cut
   - order: {type: hold, power: france, at: mao}
     check: {legal: true}
+    result: held
+    dislodged: true
   - order: {type: move, power: italy, at: gol, destination: "spa/sc"}
     check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: fleet, at: iri}
+    - {power: england, type: fleet, at: mao}
+    - {power: france, type: fleet, at: "spa/nc"}
+    - {power: italy, type: fleet, at: gol}
+  dislodged:
+    - {power: france, type: fleet, at: mao, from: nao}

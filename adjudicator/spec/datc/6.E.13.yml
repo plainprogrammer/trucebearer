@@ -1,0 +1,42 @@
+case: "6.E.13"
+summary: Three equal attacks on one unit all fail and nobody is dislodged
+position:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: yor}
+    - {power: france, type: fleet, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: fleet, at: nwy}
+orders:
+  - order: {type: support_move, power: england, at: edi, from: yor, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: yor, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: france, at: bel, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: eng, from: bel, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: hold, power: germany, at: nth}
+    check: {legal: true}
+    result: held
+  - order: {type: move, power: russia, at: nwg, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: nwy, from: nwg, to: nth}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: yor}
+    - {power: france, type: fleet, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: fleet, at: nwy}

@@ -7,5 +7,11 @@ position:
 orders:
   - order: {type: move, power: turkey, at: bul, destination: con}
     check: {legal: true}
+    result: bounced
   - order: {type: move, power: turkey, at: con, destination: "bul/ec"}
     check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: turkey, type: fleet, at: "bul/sc"}
+    - {power: turkey, type: fleet, at: con}

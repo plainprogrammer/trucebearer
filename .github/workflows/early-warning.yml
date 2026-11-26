@@ -31,10 +31,9 @@ jobs:
         working-directory: web
     env:
       # The override contract for the gem source: when this is set, web/Gemfile
-      # uses a path source at this folder instead of the pinned git tag.
-      # web/Gemfile does not honor it yet (Issue #19 adds the switch). Until
-      # then the variable has no effect and this job runs the same specs as
-      # the Web workflow.
+      # uses a path source at this folder instead of the pinned git tag. So this
+      # job runs the app's specs against the gem's code in this checkout, not
+      # the pinned release.
       ADJUDICATOR_PATH: ${{ github.workspace }}/adjudicator
       # Unfrozen for this job only, so a path source can resolve differently
       # from the committed Gemfile.lock.

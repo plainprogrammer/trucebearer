@@ -1,0 +1,34 @@
+case: "6.D.8"
+summary: An army that needs a convoy nobody ordered fails and can't be given a hold support, so it is dislodged
+position:
+  units:
+    - {power: austria, type: fleet, at: ion}
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: alb}
+    - {power: turkey, type: army, at: gre}
+    - {power: turkey, type: army, at: bul}
+orders:
+  - order: {type: hold, power: austria, at: ion}
+    check: {legal: true}
+    result: held
+  - order: {type: support_move, power: austria, at: ser, from: alb, to: gre}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: austria, at: alb, destination: gre}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: gre, destination: nap}
+    check: {legal: true}
+    result: no_route
+    dislodged: true
+  - order: {type: support_hold, power: turkey, at: bul, target: gre}
+    check: {legal: true}
+    result: unmatched
+after:
+  units:
+    - {power: austria, type: fleet, at: ion}
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: gre}
+    - {power: turkey, type: army, at: bul}
+  dislodged:
+    - {power: turkey, type: army, at: gre, from: alb}

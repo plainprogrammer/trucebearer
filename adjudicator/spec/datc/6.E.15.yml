@@ -1,0 +1,57 @@
+case: "6.E.15"
+summary: A head-to-head battle in which every unit is equally supported leaves everyone in place
+position:
+  units:
+    - {power: england, type: fleet, at: hol}
+    - {power: england, type: army, at: ruh}
+    - {power: france, type: army, at: kie}
+    - {power: france, type: army, at: mun}
+    - {power: france, type: army, at: sil}
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: den}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}
+orders:
+  - order: {type: support_move, power: england, at: hol, from: ruh, to: kie}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: ruh, destination: kie}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: france, at: kie, destination: ber}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: mun, from: kie, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: sil, from: kie, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: ber, destination: kie}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: den, from: ber, to: kie}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: hel, from: ber, to: kie}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: russia, at: bal, from: pru, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: pru, destination: ber}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: fleet, at: hol}
+    - {power: england, type: army, at: ruh}
+    - {power: france, type: army, at: kie}
+    - {power: france, type: army, at: mun}
+    - {power: france, type: army, at: sil}
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: den}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}

@@ -1,0 +1,29 @@
+case: "6.D.9"
+summary: A support for a move that its unit doesn't make is unmatched, and the holder is dislodged
+position:
+  units:
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+    - {power: austria, type: army, at: alb}
+    - {power: austria, type: army, at: tri}
+orders:
+  - order: {type: move, power: italy, at: ven, destination: tri}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: italy, at: tyr, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: austria, at: alb, from: tri, to: ser}
+    check: {legal: true}
+    result: unmatched
+  - order: {type: hold, power: austria, at: tri}
+    check: {legal: true}
+    result: held
+    dislodged: true
+after:
+  units:
+    - {power: italy, type: army, at: tri}
+    - {power: italy, type: army, at: tyr}
+    - {power: austria, type: army, at: alb}
+  dislodged:
+    - {power: austria, type: army, at: tri, from: ven}

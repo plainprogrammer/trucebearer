@@ -1,0 +1,42 @@
+case: "6.E.6"
+summary: A head-to-head loser that isn't dislodged, because the winner's support came from its own power, still keeps another unit out
+position:
+  units:
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: france, type: fleet, at: nth}
+    - {power: france, type: fleet, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: austria, type: army, at: kie}
+    - {power: austria, type: army, at: ruh}
+orders:
+  - order: {type: move, power: germany, at: hol, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: hel, from: hol, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: nth, destination: hol}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: bel, from: nth, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: eng, from: hol, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: austria, at: kie, from: ruh, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: austria, at: ruh, destination: hol}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: france, type: fleet, at: nth}
+    - {power: france, type: fleet, at: bel}
+    - {power: france, type: fleet, at: eng}
+    - {power: austria, type: army, at: kie}
+    - {power: austria, type: army, at: ruh}

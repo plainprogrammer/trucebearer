@@ -1,0 +1,29 @@
+case: "6.E.1"
+summary: A dislodged unit doesn't hold its attacker's old province, so another unit can follow in
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: sil}
+    - {power: russia, type: army, at: pru}
+orders:
+  - order: {type: move, power: germany, at: ber, destination: pru}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: germany, at: kie, destination: ber}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: germany, at: sil, from: ber, to: pru}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: pru, destination: ber}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+after:
+  units:
+    - {power: germany, type: army, at: pru}
+    - {power: germany, type: fleet, at: ber}
+    - {power: germany, type: army, at: sil}
+  dislodged:
+    - {power: russia, type: army, at: pru, from: ber}

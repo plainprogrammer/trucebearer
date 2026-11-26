@@ -1,0 +1,32 @@
+case: "6.E.12"
+summary: A support for an attack on one's own unit can still stop a third unit
+position:
+  units:
+    - {power: austria, type: army, at: bud}
+    - {power: austria, type: army, at: ser}
+    - {power: italy, type: army, at: vie}
+    - {power: russia, type: army, at: gal}
+    - {power: russia, type: army, at: rum}
+orders:
+  - order: {type: move, power: austria, at: bud, destination: rum}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: austria, at: ser, from: vie, to: bud}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: vie, destination: bud}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: russia, at: gal, destination: bud}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: rum, from: gal, to: bud}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: austria, type: army, at: bud}
+    - {power: austria, type: army, at: ser}
+    - {power: italy, type: army, at: vie}
+    - {power: russia, type: army, at: gal}
+    - {power: russia, type: army, at: rum}

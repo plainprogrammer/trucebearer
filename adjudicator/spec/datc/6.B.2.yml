@@ -7,3 +7,7 @@ position:
 orders:
   - order: {type: move, power: france, at: gas, destination: spa}
     check: {legal: false, reason: coast_required}
+    result: void
+after:
+  units:
+    - {power: france, type: fleet, at: gas}

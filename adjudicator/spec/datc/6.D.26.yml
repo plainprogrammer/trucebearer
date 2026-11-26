@@ -1,0 +1,27 @@
+case: "6.D.26"
+summary: An unmatched support for a move may itself be supported
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}
+orders:
+  - order: {type: support_move, power: germany, at: ber, from: pru, to: sil}
+    check: {legal: true}
+    result: unmatched
+  - order: {type: support_hold, power: germany, at: kie, target: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: russia, at: bal, from: pru, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: pru, destination: ber}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: army, at: pru}

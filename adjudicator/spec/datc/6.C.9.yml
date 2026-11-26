@@ -1,0 +1,32 @@
+case: "6.C.9"
+summary: A support from the power that owns the attacked fleet doesn't help the attack, so the blocked circle stays put
+position:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: smy}
+    - {power: russia, type: fleet, at: bla}
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: bul}
+orders:
+  - order: {type: move, power: turkey, at: con, destination: bla}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: turkey, at: smy, from: bul, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: bla, destination: "bul/ec"}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: austria, at: ser, destination: bul}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: austria, at: bul, destination: con}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: smy}
+    - {power: russia, type: fleet, at: bla}
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: bul}

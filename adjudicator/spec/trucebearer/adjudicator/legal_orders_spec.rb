@@ -218,11 +218,14 @@ RSpec.describe "TA.legal_orders" do
   end
 
   describe "the public surface (AC-7.5)" do
+    # #14 added adjudicate, Outcome and Adjudication (docs/specs/014-adjudicate-movement/spec.md).
     it "adds only legal_orders, and keeps the generator private" do
-      expect(TA.singleton_methods(false)).to contain_exactly(:check, :legal_orders)
-      expect(TA.constants).to contain_exactly(:CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map,
-                                              :Order, :Position, :Unit, :VERSION)
+      expect(TA.singleton_methods(false)).to contain_exactly(:check, :legal_orders, :adjudicate)
+      expect(TA.constants).to contain_exactly(:Adjudication, :CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map,
+                                              :Order, :Outcome, :Position, :Unit, :VERSION)
       expect { TA::LegalOrders }.to raise_error(NameError, /private constant/)
+      expect { TA::Adjudicate }.to raise_error(NameError, /private constant/)
+      expect { TA::Resolver }.to raise_error(NameError, /private constant/)
     end
   end
 end

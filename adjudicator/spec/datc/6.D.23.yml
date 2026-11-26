@@ -1,0 +1,28 @@
+case: "6.D.23"
+summary: A fleet's move out of the wrong coast is void and can't be supported
+position:
+  units:
+    - {power: italy, type: fleet, at: gol}
+    - {power: italy, type: fleet, at: wes}
+    - {power: france, type: fleet, at: "spa/nc"}
+    - {power: france, type: fleet, at: mar}
+orders:
+  - order: {type: move, power: italy, at: gol, destination: "spa/sc"}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: italy, at: wes, from: gol, to: spa}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: spa, destination: gol}
+    check: {legal: false, reason: not_reachable}
+    result: void
+  - order: {type: support_move, power: france, at: mar, from: spa, to: gol}
+    check: {legal: false, reason: move_impossible}
+    result: void
+after:
+  units:
+    - {power: italy, type: fleet, at: "spa/sc"}
+    - {power: italy, type: fleet, at: wes}
+    - {power: france, type: fleet, at: mar}
+  dislodged:
+    - {power: france, type: fleet, at: "spa/nc", from: gol}

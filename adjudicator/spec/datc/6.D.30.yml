@@ -1,0 +1,27 @@
+case: "6.D.30"
+summary: A move with no coast where one is needed is void, so the fleet holds and receives support
+position:
+  units:
+    - {power: italy, type: fleet, at: aeg}
+    - {power: russia, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: bla}
+    - {power: turkey, type: army, at: bul}
+orders:
+  - order: {type: support_hold, power: italy, at: aeg, target: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: con, destination: bul}
+    check: {legal: false, reason: coast_required}
+    result: void
+  - order: {type: move, power: turkey, at: bla, destination: con}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: turkey, at: bul, from: bla, to: con}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: italy, type: fleet, at: aeg}
+    - {power: russia, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: bla}
+    - {power: turkey, type: army, at: bul}

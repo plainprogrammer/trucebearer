@@ -11,13 +11,28 @@ position:
 orders:
   - order: {type: move, power: germany, at: ber, destination: pru}
     check: {legal: true}
+    result: succeeded
   - order: {type: support_move, power: germany, at: sil, from: ber, to: pru}
     check: {legal: true}
+    result: given
   - order: {type: support_move, power: germany, at: bal, from: ber, to: pru}
     check: {legal: true}
+    result: given
   - order: {type: support_move, power: russia, at: war, from: lvn, to: pru}
     check: {legal: true}
+    result: given
   - order: {type: move, power: russia, at: lvn, destination: pru}
     check: {legal: true}
+    result: bounced
   - order: {type: support_move, power: italy, at: pru, from: lvn, to: pru}
     check: {legal: false, reason: own_province}
+    result: void
+after:
+  units:
+    - {power: germany, type: army, at: pru}
+    - {power: germany, type: army, at: sil}
+    - {power: germany, type: fleet, at: bal}
+    - {power: russia, type: army, at: war}
+    - {power: russia, type: army, at: lvn}
+  dislodged:
+    - {power: italy, type: army, at: pru, from: ber}

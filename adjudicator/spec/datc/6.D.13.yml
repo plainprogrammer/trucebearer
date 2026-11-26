@@ -1,0 +1,28 @@
+case: "6.D.13"
+summary: The same, when the supporter's own unit tried to leave and failed
+position:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: fleet, at: apu}
+orders:
+  - order: {type: move, power: austria, at: tri, destination: adr}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: austria, at: vie, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: ven, destination: tri}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: italy, at: apu, destination: adr}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: fleet, at: apu}
+  standoffs: [adr]

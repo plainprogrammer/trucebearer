@@ -8,7 +8,16 @@ position:
 orders:
   - order: {type: move, power: italy, at: ven, destination: tri}
     check: {legal: true}
+    result: succeeded
   - order: {type: support_move, power: italy, at: tyr, from: ven, to: tri}
     check: {legal: true}
+    result: given
   - order: {type: support_hold, power: austria, at: tri, target: tri}
     check: {legal: false, reason: own_province}
+    result: void
+after:
+  units:
+    - {power: italy, type: army, at: tri}
+    - {power: italy, type: army, at: tyr}
+  dislodged:
+    - {power: austria, type: fleet, at: tri, from: ven}

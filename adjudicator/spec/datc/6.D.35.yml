@@ -1,0 +1,39 @@
+case: "6.D.35"
+summary: A dislodged supporter's support is cut, which lets another army's supported move succeed
+position:
+  units:
+    - {power: russia, type: fleet, at: bla}
+    - {power: russia, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: ank}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: army, at: arm}
+    - {power: turkey, type: army, at: smy}
+orders:
+  - order: {type: move, power: russia, at: bla, destination: ank}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: con, from: bla, to: ank}
+    check: {legal: true}
+    result: cut
+    dislodged: true
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: turkey, at: aeg, from: ank, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: arm, destination: ank}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: turkey, at: smy, from: arm, to: ank}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: russia, type: fleet, at: bla}
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: army, at: ank}
+    - {power: turkey, type: army, at: smy}
+  dislodged:
+    - {power: russia, type: fleet, at: con, from: ank}

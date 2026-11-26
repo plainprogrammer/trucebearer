@@ -1,0 +1,57 @@
+case: "6.E.4"
+summary: A head-to-head loser that isn't dislodged still keeps another unit out of the province it attacked
+position:
+  units:
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: france, type: fleet, at: nth}
+    - {power: france, type: fleet, at: bel}
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: yor}
+    - {power: england, type: fleet, at: nwg}
+    - {power: austria, type: army, at: kie}
+    - {power: austria, type: army, at: ruh}
+orders:
+  - order: {type: move, power: germany, at: hol, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: hel, from: hol, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: ska, from: hol, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: nth, destination: hol}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: bel, from: nth, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: edi, from: nwg, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: yor, from: nwg, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: nwg, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: austria, at: kie, from: ruh, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: austria, at: ruh, destination: hol}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: france, type: fleet, at: nth}
+    - {power: france, type: fleet, at: bel}
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: yor}
+    - {power: england, type: fleet, at: nwg}
+    - {power: austria, type: army, at: kie}
+    - {power: austria, type: army, at: ruh}
