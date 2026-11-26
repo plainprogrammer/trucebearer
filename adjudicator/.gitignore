@@ -5,5 +5,4 @@
 # Build output
 *.gem
 /pkg/
-/coverage/
 /tmp/
