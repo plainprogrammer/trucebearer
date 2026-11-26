@@ -185,7 +185,7 @@ A dislodged outcome shows the **Dislodged** tag first, in the danger tone, follo
 - [ ] **AC-6.1** Given two or more revealed phases When a seat opens its seat page Then under the latest results there is an "Earlier results" list with one link per earlier phase, newest first, each titled by the phase ("Spring 1901 · Movement") and leading to that phase's results page, which is 200; the host page has no such list, and its "History" holds one reveal row for each revealed phase, each a link to the host results page (AC-6.4, 1.2.0)
 - [ ] **AC-6.2** Given exactly one revealed phase Then the seat page has no "Earlier results" list
 - [ ] **AC-6.3** ~~Given the host page and Issue #104~~ Done in 1.2.0: #104 and this feature have both merged and #112 folds the lists (spec 026 D11). The review check is retired
-- [ ] **AC-6.4** *(1.2.0)* Given two revealed phases When the host opens the host page Then the page has no "Earlier results" heading and no `[data-history]`, the latest phase's results section is drawn, and the "History" list has a reveal row for each phase linking to its host results page (200). `hosts/show` passes the results section an empty `earlier` list, so the one partial still serves the seat page
+- [ ] **AC-6.4** *(1.2.0)* Given two revealed phases When the host opens the host page Then the page has no "Earlier results" heading and no `[data-history]`, the latest phase's results section is drawn, and the "History" list has a reveal row for each phase linking to its host results page (200). `hosts/show` passes the results section an empty `earlier` list, so the one partial still serves the seat page; `HostsController` no longer sets `@earlier`
 
 ### Story 7: Honest about practice results
 
