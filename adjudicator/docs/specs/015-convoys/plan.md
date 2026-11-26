@@ -784,6 +784,17 @@ RSpec.describe "TA.adjudicate: convoys" do
       expect(result.outcomes.size).to eq(6)
     end
 
+    it "flags a paradox beside a circle that holds a convoyed army, and still places every unit once" do
+      units = paradox_units + [u(:austria, :army, "tri"), u(:austria, :army, "ser"), u(:turkey, :army, "bul"),
+                               u(:turkey, :fleet, "aeg"), u(:turkey, :fleet, "ion"), u(:turkey, :fleet, "adr")]
+      orders = paradox_orders + [mv(:austria, :tri, "ser"), mv(:austria, :ser, "bul"), mv(:turkey, :bul, "tri"),
+                                 cv(:turkey, :aeg, :bul, :tri), cv(:turkey, :ion, :bul, :tri), cv(:turkey, :adr, :bul, :tri)]
+      result = run(units, orders)
+      expect(result.paradox).to be(true)
+      expect(result.position.units.size + result.position.dislodged_units.size).to eq(10)
+      expect(results(result, 10).last(6)).to eq(%i[succeeded succeeded succeeded given given given])
+    end
+
     it "does not flag a circle that holds a convoyed army (6.C.4)" do
       units = [u(:austria, :army, "tri"), u(:austria, :army, "ser"), u(:turkey, :army, "bul"), u(:turkey, :fleet, "aeg"),
                u(:turkey, :fleet, "ion"), u(:turkey, :fleet, "adr")]
@@ -1696,7 +1707,7 @@ N.times do |index|
     problems << "board #{index}: resolver flag #{adj.paradox}, reference solutions #{sols.size}"
     next
   end
-  stats[:swap_etc] += 1
+  stats[:flags_agree] += 1
   next if paradox
 
   want = Reference.results(ref, sols.first)
@@ -1728,7 +1739,7 @@ puts "PROBLEMS (#{problems.size}):", problems.first(15)
 Add these rows directly after the new `4.A.1` row (so the 4.A rows stay together), and one after the `4.A.3` row:
 
 ```markdown
-| 4.A.2 | When the orders hold no paradox, does a convoyed army cut the support of a unit that supports an attack on one of the fleets that carry it? | Yes, like any move that has a route. No paradox rule (the older rulebooks' or Szykman's) is applied | 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on this together with the "every route broken" option of 4.A.1: with both, each has exactly one consistent result, so the flag is clear. For #39: a Szykman-style or 2000-style rule leaves these unchanged; the 1982 rule would change 6.F.20, 6.F.21 and 6.F.29, and disrupting a convoy when any one route is broken (option a of 4.A.1) would change 6.F.19 and 6.F.20. A paradox rule added in #39 must keep all five clear of the flag |
+| 4.A.2 | When the orders hold no paradox, does a convoyed army cut the support of a unit that supports an attack on one of the fleets that carry it? | Yes, like any move that has a route. No paradox rule (the older rulebooks' or Szykman's) is applied | 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on this together with the "every route broken" option of 4.A.1: with both, each has exactly one consistent result, so the flag is clear. For #39: a Szykman-style or 2000-style rule leaves these unchanged; the 1982 rule would change 6.F.19, 6.F.20, 6.F.21 and 6.F.29 (and, by our reading of it, 6.F.25), and disrupting a convoy when any one route is broken (option a of 4.A.1) would change 6.F.19 and 6.F.20. A paradox rule added in #39 must keep all five clear of the flag |
 | 4.A.2 | What does the engine do with orders that hold a convoy paradox? | It sets `paradox` and returns a valid result: the moves still undecided after strengths and circular movement all fail, and every other decision stands. Outcomes and where units end up are unspecified until #39. Paradox resolution is not attempted | 6.F.14 to 6.F.18, 6.F.22 to 6.F.24, 6.F.26 to 6.F.28 and 6.G.11 are fixtures that check the flag and a valid position only |
 ```
 
@@ -1744,7 +1755,7 @@ Replace the second `5.B.9` row (the one that says "#15 decides what it becomes")
 | 5.B.9 | What if moves are still undecided when no rule applies? | They fail, and `paradox` is true: it is a convoy paradox (see 4.A.2). Without convoys it can't happen, which seeded random boards check | The DATC advises failing the non-hold orders of a cycle no rule decides |
 ```
 
-- [ ] **Step 2: `CHANGELOG.md`.** In the #14 entry under "Unreleased", "Added": change "adjudicating a movement phase with no convoys," to "adjudicating a movement phase,"; delete the sentence "The DATC cases of 6.A to 6.E that need no convoy, and 6.F.1, are fixtures in `spec/datc/` with their results; every result is also checked against the DATC's conditions on seeded random boards." only if it now reads wrongly (keep it: it is true); delete the bold sentence "**Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`." Add a new item below it:
+- [ ] **Step 2: `CHANGELOG.md`.** In the #14 entry under "Unreleased", "Added": change "adjudicating a movement phase with no convoys," to "adjudicating a movement phase,", and delete the bold sentence "**Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`." Keep the sentence about the DATC cases of 6.A to 6.E and 6.F.1, which is still true. Add a new item below it:
 
 ```markdown
 - Convoys in `TA.adjudicate`: a move that goes by convoy needs a route of the fleets that convoy it and fails only when every route is broken; a convoy order is `:given`, `:disrupted` or `:unmatched`; a unit dislodged by a convoyed army has `by_convoy: true`; a swap by convoy and a circle that holds a convoyed army move; and `paradox` is set when the orders hold a convoy paradox, whose outcomes stay unspecified until #39. The DATC cases of 6.B to 6.G that need a convoy are fixtures with their results (126 adjudicated fixtures in all), the twelve paradox cases wait for #39 as fixtures that check the flag and a valid position, and a slow reference written in the specs, with seeded random boards that hold convoys, confirms them. (#15)
