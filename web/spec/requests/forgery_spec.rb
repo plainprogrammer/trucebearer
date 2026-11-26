@@ -17,7 +17,7 @@ RSpec.describe "Forgery protection", type: :request do
 
   def state
     [ Game.count, Seat.count, game.reload.joining_closed_at, Seat.order(:id).pluck(:token_digest),
-      Phase.count, game.current_phase.revealed_at, SavedOrder.count, Submission.count, StepIn.count ]
+      Phase.count, game.current_phase.revealed_at, SavedOrder.count, Submission.count, StepIn.count, Reissue.count ]
   end
 
   # Posts without a token on a phone that holds every cookie the host has, and says what became of it.

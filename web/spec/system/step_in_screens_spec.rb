@@ -73,4 +73,24 @@ RSpec.describe "The step-in screens", type: :system do
       end
     end
   end
+
+  it "shows the seat history with a step-in row and a reissue row at 360 pixels (AC-9.1)" do
+    started = Game.start!(power: "germany")
+    game = started.game
+    id = game.public_id
+    france, = game.take_seat!("france")
+    StepIn.record!(phase: game.current_phase, seat: france)
+    game.reissue_seat!(france)
+
+    with_viewport(360) do
+      visit "/games/#{id}/host-link?token=#{started.host_token}"
+      visit "/games/#{id}/host"
+      expect(page).to have_css("[data-seat-history] li", count: 2)
+      expect(page).to have_css("[data-seat-history]", text: "seat reissued")
+      expect(page).to have_css("[data-seat-history]", text: "stepped in")
+      measure("the host page with the seat history")
+      execute_script("document.querySelector('[data-seat-history]').scrollIntoView({ block: 'center' })")
+      screenshot("06-seat-history")
+    end
+  end
 end

@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Approved
-**Version:** 1.3.1
+**Version:** 1.4.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -13,9 +13,10 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.4.0 | 2026-11-26 | Amended by spec 026 v1.1.0 (#104, record seat reissues). **MINOR**: Story 7 gains AC-7.11 and AC-7.12. Every reissue also writes one append-only `reissues` row (the phase, the seat and the time) in the same transaction as the new token, and the host page's history shows it (026 D10). Nothing else about a reissue changes: the same pages, the same redirect, the same cleared orders (022 D9) |
 | 1.3.1 | 2026-11-26 | Amended by spec 026 (the host stepping into another seat, #26): a request that holds a valid host cookie and presents the token of a seat other than the host's own is sent to that seat's step-in confirmation and no seat cookie is stored (026 D5). Every other seat link behaves as before |
 | 1.0.0 | 2026-11-26 | First draft |
-| 1.3.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A.<br>• **AC-4.10:** the player's page no longer says the host will start the game, because a phase is open from creation. It says "Keep this page. The host reveals each phase when the table is ready."<br>• **Reissue (Story 7):** reissuing a seat also deletes that seat's saved orders and submission for the open phase, in the same transaction as the new token, and the confirmation page says so (022 D9, AC-7.10, AC-7.11). Reason: otherwise the host could read a seat's orders through a reissue.<br>• **D7:** the close-joining and reissue pages now use the shared `.confirm` component (danger variant), built by #22.<br>• **FR-10:** the stylesheet caps of 24 KB and 4 KB are raised to 32 KB (32,768 bytes) and 6 KB (6,144 bytes), by 022 changelog 1.2.0 |
+| 1.3.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A.<br>• **AC-4.10:** the player's page no longer says the host will start the game, because a phase is open from creation. It says "Keep this page. The host reveals each phase when the table is ready."<br>• **Reissue (Story 7):** reissuing a seat also deletes that seat's saved orders and submission for the open phase, in the same transaction as the new token, and the confirmation page says so (022 D9, 022 AC-7.10 and AC-7.11). Reason: otherwise the host could read a seat's orders through a reissue.<br>• **D7:** the close-joining and reissue pages now use the shared `.confirm` component (danger variant), built by #22.<br>• **FR-10:** the stylesheet caps of 24 KB and 4 KB are raised to 32 KB (32,768 bytes) and 6 KB (6,144 bytes), by 022 changelog 1.2.0 |
 | 1.2.2 | 2026-11-26 | Patch: the maintainer approved `force_ssl`, so the "pending" marks are gone from AC-11.4 and FR-12 and the fallback sentence is dropped. The cookies' `secure` flag is also set from `Rails.env.production?`, so they are `Secure` in production whichever way `force_ssl` is set |
 | 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). The `force_ssl` half of AC-11.4 and FR-12 is marked pending the maintainer. The sameness ACs leave the session cookie out of the `Set-Cookie` comparison, because Rails sets it on every page that has a form token and its value differs each time |
 | 1.2.0 | 2026-11-26 | Changed after the second independent review.<br>• A stranger response deletes a presented cookie only when it fails to verify for that id (an unknown game counts as a failure). A valid cookie survives a wrong page or a bad link, so a bystander cannot strip the host's cookies. New AC.<br>• Sameness of stranger responses is tested on status, body and a named list of headers, pairwise between an existing and a missing game.<br>• The session cookie's `Secure` is covered by the production configuration (AC-11.4), not by the cookie spec.<br>• FR-4 says what `assume_ssl` really does (plain http is not redirected). The route takes a segment constraint and no format. The 429 sentence fits every window. `.kamal/secrets` gains the passphrase.<br>• AC-1.7 and AC-4.11 state what a spec can observe. The error table lists the seat POST. |
@@ -190,6 +191,8 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-7.8** Given a power with no seat, or a power name that is not one of the seven When its reissue page or reissue is requested Then the stranger page shows and nothing changes
 - [ ] **AC-7.9** Given a reissue request from a phone that is not the host When it is made Then the stranger page shows and the seat's digest is unchanged
 - [ ] **AC-7.10** Given the host's own seat When the host reissues it Then it works as for any other seat
+- [ ] **AC-7.11** *(added in 1.4.0)* Given a taken seat When the host posts its reissue Then one `reissues` row is written for the open phase and that seat, in the same transaction as the new digest, and the host page's history shows it. Spec 026 D10 and AC-10.1 to AC-10.3 own the behavior; a reissue that is refused (AC-7.8, AC-7.9) writes no row
+- [ ] **AC-7.12** *(added in 1.4.0)* Given a reissue Then the reissue page, the redirect, the QR page and the old token's behavior (AC-7.2 to AC-7.7) are unchanged, and no page shown to a seat mentions the reissue
 
 ### Story 8: Guessing is slowed down
 

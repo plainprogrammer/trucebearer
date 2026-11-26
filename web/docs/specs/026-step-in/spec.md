@@ -1,11 +1,11 @@
 # Feature 026: The host steps into another seat
 
 **Status:** Approved
-**Version:** 1.0.3
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
-**Issue:** #26
-**Branch:** `web/26-step-in`
+**Issue:** #26 (amended by #104)
+**Branch:** `web/26-step-in` (amendment: `web/104-reissue-history`)
 
 ---
 
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1.0 | 2026-11-26 | Amended by #104 (record seat reissues). **MINOR**: adds behavior; the approved acceptance criteria that change are only the ones that name the list (AC-6.4, AC-6.6, AC-8.5, AC-8.6, AC-9.1).<br>• **D10 (new):** every reissue writes one append-only row in a second table, `reissues` (`phase_id`, `seat_id`, `created_at`), in the same transaction as the new token. A separate table, not a `seat_events` table with a kind; `step_ins` and its behavior do not change.<br>• **D6 / AC-6.4:** the host page's "Step-ins" list becomes "Seat history": step-ins and reissues together, oldest first, each row the phase title, the power and the time, with the words "stepped in" or "seat reissued". Its empty text is "Nothing has happened to a seat yet." and its hook is `data-seat-history` (the existing list specs follow).<br>• **D5:** option (c) (record every reissue) is now built, by D10. The stated residual (a browser that never holds the host cookie) is still not blocked, but it now leaves a row.<br>• **Story 10 (new):** AC-10.1 to AC-10.8. **AC-8.5** adds the history; **AC-8.6** also scans the constant `Reissue`; **AC-9.1** also checks the history at 360 pixels.<br>• Found at the first Fable review: the write order must not change what `reissue_seat!` returns (spec 024 D3); the sweep's setup is named; the scan pattern is a constant use, not the word<br>• Out of Scope and Open Question 1 updated. Who sees the history stays with the maintainer: only the host, as before |
 | 1.0.3 | 2026-11-26 | Found while building, within what Gate A approved: the layout draws the bar and the page inside one `.stack` while stepped in (the bar sits under any flash banner), because `.banner` sets its own margin to 0 and no new CSS is allowed, so the bar and the page need a stack of their own to be spaced (D7); the resolver's redirect for a host browser that holds another seat's cookie is a 303, so a `PUT` never repeats as a `PUT` (D5); the 409 page is headed with the seat's name while stepped in; the entry list is in the Seats list's order |
 | 1.0.2 | 2026-11-26 | Approved at Gate A (the maintainer's delegate: the record, option (b) of D5, the cookie, and `TRUCEBEARER_TIME_ZONE` kept, also in `config/deploy.yml`; recording every reissue, option (c), is a follow-up Issue and not built here). Minor fixes from the second Fable review (approved with minor fixes): the resolver's redirect goes to the open phase's confirmation and deletes the foreign seat cookie (D5); Leave and the own-seat link fall back to the host page when the browser holds no seat of its own (D7, AC-3.9); a revealed number redirects, a later or unknown one is a stranger (AC-1.7); where the bar's flag is set is named (D7, AC-3.4); the scan looks for the constant `StepIn` (AC-8.6); a host-only browser that joins as another power is a Non-Goal; FR wording |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review: the rule that a host cookie plus another seat's cookie is not that seat moves from the seat link into the resolver (D5, AC-7.5, AC-8.2); D4 lists the real edits and the stepped-in screen says whose orders it shows (AC-4.6); Leave and switching are client-side and say so (D2); the bar is set by the controller and never on a stranger page (D7, AC-3.8); the confirmation is pinned to a phase number (D9); the time zone is read when the page is drawn, with no boot setting (D6); the owner's notice is one banner and not shown to the host (D6); the sweep's details are stated (Story 8); smaller wording fixes |
@@ -39,7 +40,7 @@ Spec 022 left one hole open on purpose (D9): a host who reissues a seat and open
 
 - Any new component or stylesheet. The page is `.confirm`, `.banner`, `.button`, `.list`, `.host-section`, `.stack` and the order screen of spec 023 (`web/docs/design-system.md`).
 - Live status (#24), results (#25), the position editor (#27).
-- Showing the step-in history to every seat. The owner is told about their own seat (Open Question 1); the full list is on the host page.
+- Showing the step-in history, or the reissues, to every seat. The owner is told about their own seat's step-ins (Open Question 1); the full list is on the host page.
 - Stopping a host who deliberately works round the app, for example by opening a reissued link in a browser that does not hold the host cookie (D5 says exactly what is and isn't covered).
 - A host-only browser (no seat cookie) that joins as an extra power through a join code. It holds a second seat of its own, which the resolver then treats as another seat's (a redirect to its confirmation). Joining does not check the host cookie today, and this feature does not change that.
 - Accounts: "who" is the host, the one person who holds the host link. Accounts replace that in 1.0.
@@ -54,7 +55,7 @@ Spec 022 left one hole open on purpose (D9): a host who reissues a seat and open
 
 ## Decisions
 
-Gate A asks about D1, D2, D4, D5 and D6.
+Gate A asks about D1, D2, D4, D5 and D6. The 1.1.0 amendment (D10) asks about the table choice.
 
 **D1. What is recorded: one row per confirmed entry, in a table `step_ins`.**
 
@@ -94,16 +95,16 @@ The three options, argued:
 
 - **(a) Refuse to reissue while a phase is open.** Rejected. A game always has an open phase, because the next one opens at the moment of the reveal (spec 022 D3). So (a) would mean a seat can never be reissued, which kills the one tool the host has for a dead phone.
 - **(b) Treat opening a reissued seat link on a phone that holds the host cookie as a step-in. Chosen.** Two rules, so the invariant holds whichever link or cookie came first. **At the link:** when a request for the seat link holds a valid host cookie and the token is for a seat other than the host's own, the app does not store a seat cookie. It verifies the token and sends the host to the step-in confirmation for that seat. **At the resolver:** a browser that holds a valid host cookie *and* a seat cookie for a seat other than the host's own is not that seat. On the seat page, the order screen, the picker and the orders endpoint it is sent to that seat's confirmation for the open phase (always the open phase, whatever number the request named), the foreign seat cookie is deleted in the same response, and nothing is shown or saved. The cookie goes because the step-in needs only the host cookie and the row, and it is the same reason the seat link never stores that seat's token on a host browser. This covers the other order of events (the seat link opened first in a clean browser, the host link opened there afterwards). The token is used to find the seat and is never stored. Confirming is a step-in: recorded, noticed, ended as D2 says. This also stops the link from silently replacing the host's own seat cookie, which it does today (one seat cookie per game). It closes exactly the gap the Issue comment names: reissue, open the link, act as that seat.
-- **(c) Also record every reissue** (a second kind of row and a second notice). Not chosen now. It would let a player whose seat was reissued see that it happened, but it adds a table column, a second notice wording and a second history entry for a path (b) already covers on the host's own phone. It is listed as a follow-up (Out of Scope).
+- **(c) Also record every reissue** (a second kind of row and a second notice). Not chosen in 1.0, **built in 1.1.0 (D10, Issue #104)** as a history record only, with no notice to the seat's owner.
 
-**What (b) covers and what it can't.** A request that carries the host cookie and either asks for another seat's orders, holds another seat's cookie or presents another seat's token ends at a recorded step-in or a redirect to the confirmation: no page shows another seat's orders to a browser that holds the host cookie without a record. What no design can cover while the host sees the new QR code is a browser that never holds the host cookie, such as a private window that opens only the reissued link. That browser is not the host's as far as the server can tell. The reissue cleared the seat's orders (spec 022 D9), so nothing secret was exposed, and the real player's old phone stops working at once, which is not quiet. The spec says so plainly instead of claiming more.
+**What (b) covers and what it can't.** A request that carries the host cookie and either asks for another seat's orders, holds another seat's cookie or presents another seat's token ends at a recorded step-in or a redirect to the confirmation: no page shows another seat's orders to a browser that holds the host cookie without a record. What no design can cover while the host sees the new QR code is a browser that never holds the host cookie, such as a private window that opens only the reissued link. That browser is not the host's as far as the server can tell. The reissue cleared the seat's orders (spec 022 D9), so nothing secret was exposed, and the real player's old phone stops working at once, which is not quiet. Since 1.1.0 it also leaves a row: the reissue was recorded when the host made it (D10), so the table can see that a seat was reissued, in which phase and when, even though the app can't tell who then opened the link. The spec says so plainly instead of claiming more.
 
 The host's own seat is needed to tell "the host reopening their own reissued seat" from "the host opening another seat". `Game#host_seat` is the seat with the lowest id: `Game.start!` creates it in the same transaction as the game, and no path deletes a seat. A spec pins it. A host who reissues their own seat and gives it to another player has handed the seat over: it stays the host's own seat in the app, so it can't be stepped into (a Non-Goal).
 
 **D6. The notice, the history, and the time.**
 
 - **The owner's notice** is one `.banner` (kind `warning`) on the seat page (`GET /games/:public_id`) and on the order screen, where it matters most because the orders may have changed under the player. It lists the open phase's step-ins into that seat: "The host entered your orders at 8:42 PM UTC." for one, "The host entered your orders at 8:42 PM UTC, 9:05 PM UTC." for more. It is not drawn for the stepped-in host on France's own order screen (the bar says it already). A new phase has no notices; the older ones stay in the history.
-- **The history** is a "Step-ins" list on the host page, under the revealed phases: one row for each, with the phase title, the power (badge and name) and the time. It sits in its own partial, so #24's changes to the host page don't touch it. No order, no count.
+- **The history** is a list on the host page, under the revealed phases: one row for each step-in, with the phase title, the power (badge and name) and the time. It sits in its own partial, so #24's changes to the host page don't touch it. No order, no count. **Since 1.1.0 (D10) the list is headed "Seat history" and also holds the reissues.**
 - **Time format:** the 12-hour clock with minutes, a space, AM or PM, a space, and the zone abbreviation, from `%-l:%M %p %Z`: "8:42 PM UTC". The Issue's "8:42" has no AM or PM and a table session runs into the night, so the notice carries both. The time is written inside `<time datetime="…Z">` so a later change can show the viewer's local time without touching the markup.
 - **Time zone:** the app has no time zone setting. Rows are stored in UTC (the Rails default, unchanged). A small helper turns a time into text in the zone named by the environment variable `TRUCEBEARER_TIME_ZONE` (a Rails zone name such as `America/New_York`), read each time a page is drawn, looked up with `ActiveSupport::TimeZone[]`, and `UTC` when it is unset or unknown. `config.time_zone` does not change, so nothing else in the app moves. The abbreviation is always shown, so an unset zone reads honestly ("8:42 PM UTC") and never looks like local time. A zone with no abbreviation shows a numeric offset ("-03"). The variable is listed in the README with the other one, and set in `config/deploy.yml` as a clear env value (a zone name is not a secret). The choice for Gate A: this (a notice at the table's own time) or UTC only with no variable (the smallest, and the notice at 1:42 AM for a table sitting at 8:42 PM is the cost). Rejected: guessing the zone from the browser (it needs a script and a cookie, neither of which the app has).
 
@@ -118,6 +119,22 @@ The host's own seat is needed to tell "the host reopening their own reissued sea
 **D8. Where the host starts a step-in.** A "Step into a seat" list in the `.host-section` of the host page (its own partial): one `.list__row` for each held seat that is not the host's own, with the power badge and the words "Step in". The link goes to the confirmation page. No order, count or submitted state is shown there.
 
 **D9. The confirmation page** is the `.confirm` partial, danger variant: heading "Step into France's seat", a body in plain words ("You will be able to see and change France's orders for Spring 1901 · Movement. This is recorded. France will see: The host entered your orders at <time>. It ends when you tap Leave, when you reveal the phase, or after 30 minutes."), the confirm button "Step into France" and a "Back" link to the host page. The page shows no order. It names the phase it was drawn for, and its address carries that phase's number (spec 022 D7). If the number is no longer the open phase, the page and the confirmation redirect to the confirmation for the open phase with a banner, and nothing is written.
+
+**D10. Reissues are recorded too, in their own table, and the host page's history shows both (added in 1.1.0, Issue #104).**
+
+- **What is recorded: one row per completed reissue, in a table `reissues`.**
+
+| Table | Columns | Keys and checks |
+|---|---|---|
+| `reissues` (model `Reissue`) | `phase_id`, `seat_id`, `created_at` | Both ids are foreign keys, indexed. No `updated_at`. A row never changes and is never deleted (the model refuses both, as `StepIn` does). The seat belongs to the phase's game (a validation, as in `StepIn`) |
+
+- **One table or two. Chosen: two, a separate `reissues` table next to `step_ins`.** The other option was one `seat_events` table with a `kind`. Why separate: (1) `step_ins` is untouched, so its rows, its cookie (which names a `step_ins` row id, D2), its `active?` rule and the owner's notice keep working with no migration or backfill. In a shared table the cookie's lookup (`StepIn.find_by(id:)`) and every reader would need a kind filter, or a reissue row's id could satisfy `active?` and open a seat's orders; keeping the two tables apart makes that mistake impossible. A shared `seat_events` table would either rewrite `step_ins` or leave two sources anyway, and the cheaper variant (a `kind` column on `step_ins`) has the same filter problem and would also make `StepIn` hold a row with no cookie. (2) The two rows mean different things: a step-in has a lifetime, an `active?` rule and a cookie; a reissue has none of these. A `kind` column would hold one rule for each kind, which is a table doing two jobs. (3) It matches the Rails default and the fewest moving parts: one more small table and model of the same shape as `StepIn`, and no enum. The cost is two reads that the history merges (below). If a third kind of seat event ever arrives, one table can replace both then.
+- **Written in the same transaction as the reissue.** `Game#reissue_seat!` writes the row inside its existing transaction, after the new token and the cleared orders, for the phase it holds the lock on. **The block still returns what `clear_orders!` returned** (whether a submission was withdrawn), so the status broadcast of spec 024 D3 is sent only when the submitted set changed, as before. If the row can't be written, the whole reissue rolls back: the token isn't replaced and no row exists. A reissue that is refused or fails (a stranger, a seat that is not held, a phone that is not the host's, a missing form token) writes nothing. **Every** reissue is recorded, the host's own seat included (spec 021 AC-7.10).
+- **Which phase** is the open phase the reissue ran in (the one locked in the transaction), as with a step-in. **When** is `created_at`, in UTC. **Who** is the host, as in D1, so no actor column.
+- **Reads.** `Game#reissue_history` is every `reissues` row whose phase belongs to the game (read through the game's phases, with no `through:` association, as `Game#step_in_history` is, D1), and `Game#seat_history` merges it with `step_in_history` into one list, each entry answering `kind` (`:step_in` or `:reissue`; each model defines it) so the partial names neither constant. Nothing else reads the table. The table holds no order, no count of orders and no token, digest or link.
+- **The history on the host page** (the partial `step_ins/_history`, D6) is headed "Seat history" and lists the game's step-ins and reissues together, **oldest first by time** (ties broken by kind, a reissue before a step-in, then by id, so the order is stable: a reissue, the link and the step-in are the causal order). Each row: the phase title, the power's badge, the words "seat reissued" or "stepped in", and the time from the helper of D6 (`TRUCEBEARER_TIME_ZONE`, in `<time datetime>`). So a reissue reads, for France: "Spring 1901 · Movement [France] seat reissued 8:40 PM UTC". With no rows the list says "Nothing has happened to a seat yet." (this replaces the empty text of 1.0.x, and the section's hook is `data-seat-history`) The merge is done in Ruby over the two relations and is a small list for one game.
+- **Who sees it: only the host, on the host page**, as the step-in list is today. No notice is added to the seat's owner. Whether every seat should see the history is Open Question 1, and the maintainer decides it.
+- **Boundary.** No route, controller or reissue behavior changes. The reissue still deletes the seat's orders (spec 022 D9) and the QR page is unchanged. The `step_ins` table, model, cookie, notice and the step-in behavior of 1.0.x do not change.
 
 ## URLs
 
@@ -226,9 +243,9 @@ A power that is not one of the seven, one nobody holds, or the host's own is the
 - [ ] **AC-6.1** Given a step-in into France in the open phase When France's phone opens its seat page Then one `.banner` reads "The host entered your orders at 8:42 PM UTC." with the time in `<time datetime>`; with two step-ins it lists both times in the one banner
 - [ ] **AC-6.2** Given the same When France's phone opens its order screen Then the same banner shows there
 - [ ] **AC-6.3** Given a step-in into France Then the stepped-in host's own view of France's order screen has no such banner, England's seat page and order screen show no such banner, and nobody's page shows which seats the host has entered
-- [ ] **AC-6.4** Given a step-in made in an earlier phase Then France's pages don't show it, and the host page's "Step-ins" list does (phase title, power badge and name, time), oldest first
+- [ ] **AC-6.4** Given a step-in made in an earlier phase Then France's pages don't show it, and the host page's "Seat history" list does (phase title, power badge and name, the words "stepped in", time), oldest first, together with any reissues (D10, changed in 1.1.0)
 - [ ] **AC-6.5** Given the time zone Then (a helper spec sets the variable around the call, as the passphrase specs do) a row made at 20:42 UTC reads "8:42 PM UTC" with no zone set, and "3:42 PM EST" with `TRUCEBEARER_TIME_ZONE=America/New_York` in November; an unknown zone name falls back to UTC
-- [ ] **AC-6.6** Given the host page's history list Then it shows no order, count or submitted state, and it is its own partial
+- [ ] **AC-6.6** Given the host page's history list Then it shows no order, count or submitted state, and it is its own partial (a step-in row and a reissue row alike, AC-10.6)
 
 ### Story 7: The reissue gap is closed
 
@@ -258,8 +275,8 @@ A power that is not one of the seven, one nobody holds, or the host's own is the
 - [ ] **AC-8.2** *(invariance sweep)* Given England's orders go through none, some, all and different, and the viewers are another seat, the host with a seat of its own, the host with no seat, a stranger, the host with France's seat cookie, and the host stepped into France (each its own session, the step-in made when the viewers are set up and before the baseline, so its banner is the same in every snapshot) Then every readable route, including the two stepped-in GET routes swept for England and for France (a Hash of paths, as spec 023 does), answers each of these viewers identically whatever England has ordered; in particular the host **without** a step-in gets the stranger response on England's stepped-in URLs, the host with France's seat cookie is redirected on the own-seat routes, and the host stepped into France gets the stranger response on England's. The seat-link entry stays `fresh`, so its host-cookie branch is covered by AC-7.1, not the sweep
 - [ ] **AC-8.3** Given the host stepped into England Then the host sees only England's orders: England's stepped-in screen shows England's orders (a positive control that the sweep isn't comparing four copies of one page), France's stepped-in URLs give the stranger response, and no other page for the host (own seat, host page, reveal page) changes with England's orders
 - [ ] **AC-8.4** Given a request log of the three steps (open the confirmation, confirm, open the screen) Then the confirmation page and the stepped-in URLs before confirming show no order, and the first request that shows France's order is made after a `StepIn` row exists for it
-- [ ] **AC-8.5** Given the host page, the reveal page and the confirmation page Then none carries an order, a count, an ordered unit or a submitted state of any seat other than what spec 022 AC-4.1 already allows (the powers that have not submitted)
-- [ ] **AC-8.6** Given the source Then the stepped-in order screen and picker carry `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and the Turbo no-cache meta (spec 022 AC-7.6); the constant `StepIn` is named only by its model, `Game`, `Seat`, the step-in controller, the access concern, the seat link controller, the step-in partials and helper, and the migration and schema (a scan spec); and the saved-orders boundary spec of spec 022 is unchanged and passes
+- [ ] **AC-8.5** Given the host page, the reveal page and the confirmation page Then none carries an order, a count, an ordered unit or a submitted state of any seat other than what spec 022 AC-4.1 already allows (the powers that have not submitted), and the same holds for the host page's history with reissue rows in it (AC-10.6)
+- [ ] **AC-8.6** Given the source Then the stepped-in order screen and picker carry `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and the Turbo no-cache meta (spec 022 AC-7.6); the constant `StepIn` is named only by its model, `Game`, `Seat`, the step-in controller, the access concern, the seat link controller, the step-in partials and helper, and the migration and schema (a scan spec); a use of the constant `Reissue` appears only in its model, `Game`, and the migration and schema (the same scan spec, AC-10.7); and the saved-orders boundary spec of spec 022 is unchanged and passes
 - [ ] **AC-8.7** Given forgery protection on When a step-in is confirmed or left without a token Then it is refused and nothing changes
 - [ ] **AC-8.8** Given the stranger comparison of spec 021 (`comparable` in `spec/support/responses.rb`) Then it also compares any `step_in_` cookie line, so a stranger page that set or deleted one would fail
 
@@ -271,13 +288,30 @@ A power that is not one of the seven, one nobody holds, or the host's own is the
 
 **Acceptance criteria:**
 
-- [ ] **AC-9.1** *(system spec)* Given a viewport 360 pixels wide When the host opens the confirmation page, the stepped-in order screen with the bar, the host page with the step-in list, and France's seat page with the notice Then none scrolls sideways, every button and link is at least 44 pixels high, and the bar's Leave button is visible without scrolling on the stepped-in order screen
+- [ ] **AC-9.1** *(system spec)* Given a viewport 360 pixels wide When the host opens the confirmation page, the stepped-in order screen with the bar, the host page with the seat history (a step-in row and a reissue row in it), and France's seat page with the notice Then none scrolls sideways, every button and link is at least 44 pixels high, and the bar's Leave button is visible without scrolling on the stepped-in order screen
 - [ ] **AC-9.2** Given those four pages Then screenshots at 360 pixels are saved to `web/docs/specs/026-step-in/screens/`, and the pull request shows them
+
+### Story 10: The game's history records every reissue (added in 1.1.0, Issue #104)
+
+**As a** table
+**I want** the host page to show every reissue next to the step-ins
+**So that** a seat that changed hands leaves a trace, even when nobody stepped in
+
+**Acceptance criteria:**
+
+- [ ] **AC-10.1** *(the first test)* Given a game in which the host holds a seat and France holds a seat When the host reissues France's seat and opens the host page Then the page's history has one row for France, whose text says "seat reissued" with the open phase's title and a time in `<time datetime>`, and no order text appears anywhere in the history
+- [ ] **AC-10.2** Given a reissue Then exactly one `reissues` row exists for that phase and seat, written in the same transaction as the new token and the cleared orders; a second reissue of the same seat writes a second row; a reissue that is refused (a stranger, a seat that is not held, a phone that is not the host's, a missing form token) writes none; a reissue whose row can't be written leaves the old token in place; and a reissue of a seat with no submission still sends no status broadcast, while one that withdrew a submission sends one, as before (spec 024 D3)
+- [ ] **AC-10.3** Given the host's own seat When the host reissues it Then a row is written for it as for any seat (spec 021 AC-7.10)
+- [ ] **AC-10.4** Given a step-in and two reissues made at known times in one phase and a later phase Then the history lists all three rows in time order, oldest first, with the phase of each, and a row in an earlier phase stays after that phase is revealed
+- [ ] **AC-10.5** Given a `Reissue` row Then updating or destroying it raises (append-only, as `StepIn`), and its seat must belong to its phase's game
+- [ ] **AC-10.6** Given the host page's history with a reissue row and a step-in row in it Then it carries no order, count, ordered unit, token, link or submitted state, whatever the seats had ordered, and the invariance sweep of Story 8 is run with a reissue row and a step-in row in the history before its baseline: England is reissued once, before any session opens and before England's orders vary, and England's viewer uses the new token (so no viewer's cookie or link is invalidated by it)
+- [ ] **AC-10.7** *(source scan, in the step-in boundary spec)* Given the source Then a use of the constant `Reissue` (`Reissue.`, `Reissue::`, `Reissue <`, matched as a constant, never the word in text) appears only in its model and `Game`, plus the migration and schema; `Game` has no `through: :reissues` association; `reissue.rb` names no `saved_order` or `orders_for`; no view or controller reads `reissues`; and `reissues` has no column that could hold an order
+- [ ] **AC-10.8** Given France's phone and England's phone after a reissue of France Then neither seat's page nor order screen shows the history or any new banner (no notice is added), and the stranger response and every existing step-in behavior are unchanged
 
 ## Functional Requirements
 
 ### FR-1: The record
-`StepIn` belongs to a phase and a seat and is append-only (D1). `StepIn.record!(phase:, seat:)` writes a row. A step-in is **active** under the rules of D2, in one place (`StepIn#active?`, read against the database so a reveal ends it at once).
+`StepIn` belongs to a phase and a seat and is append-only (D1). `StepIn.record!(phase:, seat:)` writes a row. A step-in is **active** under the rules of D2, in one place (`StepIn#active?`, read against the database so a reveal ends it at once). `Reissue` (D10) belongs to a phase and a seat and is append-only; `Game#reissue_seat!` writes it in its own transaction.
 
 ### FR-2: Who is acting
 A single access helper decides who acts on a seat-scoped URL: the host, with a valid host cookie, whose step-in cookie names an active row for that seat. It sets `@seat` and `@step_in` for the shared order controllers (D4) and gives the stranger response otherwise. A seat's own URLs never consult the step-in cookie.
@@ -322,13 +356,13 @@ Every new route is classified. The sweep and the scans are updated (Story 8). Th
 
 ## Open Questions
 
-1. **Should every seat see the list of step-ins, not only the one entered?** This spec tells the owner and keeps the list on the host page, as the Issue asks. A list on every phone would be a stronger deterrent and costs one partial; it would also tell the table which seats the host entered. Handed to the maintainer. It is not needed to close this Issue.
+1. **Should every seat see the history (step-ins, and since 1.1.0 reissues), not only the one entered?** This spec tells the owner and keeps the list on the host page, as the Issue asks. A list on every phone would be a stronger deterrent and costs one partial; it would also tell the table which seats the host entered. Handed to the maintainer. It is not needed to close this Issue.
 2. **A time zone setting for the game.** `TRUCEBEARER_TIME_ZONE` is per instance. A game-level or viewer-local zone needs a setting or a script (D6) and is left to a later Issue.
 
 ## Out of Scope (Future Considerations)
 
-- **Recording every reissue** (option (c) of D5), so a player whose seat was reissued can see that it happened. A follow-up Issue if the maintainer wants a detection signal for the browser-without-the-host-cookie case.
-- **Showing the step-in history to every phone**, and in the results of #25.
+- ~~Recording every reissue~~ Done in 1.1.0 (D10, Issue #104) as a host-page history record. **Still out of scope:** telling a seat's owner that their seat was reissued (a notice like D6's), which only the maintainer can ask for.
+- **Showing the step-in and reissue history to every phone**, and in the results of #25.
 - **#24** (live status) and **#25** (results) must classify their routes in the table; neither shows a step-in.
 - **#27** (the position editor) clears orders it invalidates; a step-in sees what is left.
 - A game-level time zone and a viewer-local time (D6).
