@@ -1,7 +1,7 @@
 # Feature 010: Value objects for positions, units and orders
 
 **Status:** Draft
-**Version:** 1.0.1
+**Version:** 1.1.0
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #10
@@ -15,6 +15,7 @@
 |---------|------|--------|
 | 1.0.0 | 2026-11-25 | Initial draft |
 | 1.0.1 | 2026-11-25 | Recorded James's two decisions (keep `ArgumentError` for a missing keyword, with AC-1.10; reject duplicate standoff provinces) |
+| 1.1.0 | 2026-11-25 | Folded in the first independent review (round 1: changes required, nothing blocking).<br>• Messages are pinned: `inspect` form, and which value per case.<br>• `map` string is copied and frozen.<br>• Nested `from_h` strictness is listed case by case, including `nil` ownership and `Move#destination`.<br>• All keywords of `new` are required, with `ArgumentError` cases.<br>• `with` has a valid-path criterion, and every Must item has a criterion.<br>• Key order, `hash`/`eql?` and all six split coasts are asserted.<br>• Every example in the interface that only needs these objects builds.<br>• The stale #9 changelog sentence is trimmed.<br>• Two-dislodged-units reasoning recorded, and the follow-up owed to the maintainer is named |
 
 ## Problem Statement
 
@@ -67,6 +68,8 @@
 
 Every acceptance criterion is verified by a passing spec in this pull request unless it says otherwise. "Valid objects" in a round trip means built with `new` from valid parts.
 
+**Error messages.** Wherever a criterion says the message includes the offending value or key, it means the value or key in `inspect` form (`:xyz`, `"spa"`, `nil`, `"format"`), as in #9. Where a fault involves several values, the criterion names the one the message must include.
+
 ### Story 1: Describe a unit, and a dislodged unit
 
 **As an** app developer
@@ -78,13 +81,13 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 - [ ] **AC-1.1** Given a power, a unit type and a `TA::Location` When `TA::Unit.new(power:, type:, location:)` is called Then it returns a frozen object with those three fields, and two units with the same contents are equal and have the same `hash`
 - [ ] **AC-1.2** Given a unit When `to_h` is called Then the result is `{"power" => ..., "type" => ..., "location" => {"province" => ..., "coast" => ...}}` with string keys and string or `nil` values only, and no `"format"` key, as in the interface example for Russia's fleet on the south coast of St Petersburg
 - [ ] **AC-1.3** Given every valid unit on the classic map, that is each of the 7 powers with an army in each of the 56 non-sea provinces and a fleet in each of the 64 fleet locations When it is converted with `to_h`, written with `JSON.generate`, read with `JSON.parse` and passed to `TA::Unit.from_h` Then the result equals the original, for all 840 units
-- [ ] **AC-1.4** Given `new` called with a power or type that is not a symbol, an unknown power (`:atlantis`), an unknown type (`:ship`), or a `location` that is not a `TA::Location` (a `Hash`, a `Symbol`, `nil`) Then it raises `TA::InvalidInput`, and the message includes the offending value
-- [ ] **AC-1.5** Given `TA::Unit.from_h` called with a symbol where a string is required, an unknown power or type, a `"location"` that is not a valid location hash, a missing key, an unknown key, symbol keys, or an argument that is not a hash Then it raises `TA::InvalidInput`, and the message includes the offending key or value
+- [ ] **AC-1.4** Given a power or type that is not a symbol, an unknown power (`:atlantis`), an unknown type (`:ship`), or a `location` that is not a `TA::Location` (a `Hash`, a `Symbol`, `nil`) When `TA::Unit.new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value
+- [ ] **AC-1.5** Given a hash with a symbol where a string is required, an unknown power or type, a `"location"` that is not a valid location hash (including one with a `"format"` key), a missing key, an unknown key, symbol keys, or an argument that is not a hash When it is passed to `TA::Unit.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending key or value
 - [ ] **AC-1.6** Given a unit, a province with no coast and `by_convoy` of `true` or `false` When `TA::DislodgedUnit.new(unit:, attacker_from:, by_convoy:)` is called Then it returns a frozen object with those fields, equal to another built from the same contents, and `to_h` gives exactly the hash in the interface example (an Austrian army dislodged from `ser` by an attack from `bul`), with no `"format"` key
 - [ ] **AC-1.7** Given dislodged units with `by_convoy` `true` and `false`, and attackers from every one of the 75 provinces When each is converted with `to_h`, written as JSON, parsed and passed to `TA::DislodgedUnit.from_h` Then the result equals the original
-- [ ] **AC-1.8** Given `TA::DislodgedUnit.new` called with a `unit` that is not a `TA::Unit`, an `attacker_from` that is a string, a `TA::Location`, `nil` or an unknown province, or a `by_convoy` that is not `true` or `false` (`nil`, `"false"`, `0`) Then it raises `TA::InvalidInput`, and the message includes the offending value
-- [ ] **AC-1.9** Given `TA::DislodgedUnit.from_h` called with an `"attacker_from"` that is a symbol, or a location hash with a coast (`{"province" => "spa", "coast" => "nc"}`), a `"by_convoy"` that is a string, a missing key, an unknown key or a non-hash Then it raises `TA::InvalidInput`, and the message includes the offending key or value
-- [ ] **AC-1.10** Given `new` of any class built here, and `TA::Location.new`, called with a missing required keyword (`TA::Unit.new(power: :france, type: :army)`) or an unknown keyword Then it raises Ruby's `ArgumentError`, not `TA::InvalidInput`. This pins the decision of Open Question 1, and the #9 specs for `TA::Location` are unchanged
+- [ ] **AC-1.8** Given a `unit` that is not a `TA::Unit`, an `attacker_from` that is a string, a `TA::Location`, `nil` or an unknown province, or a `by_convoy` that is not `true` or `false` (`nil`, `"false"`, `0`) When `TA::DislodgedUnit.new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value
+- [ ] **AC-1.9** Given a hash with an `"attacker_from"` that is a symbol, or a location hash with a coast (`{"province" => "spa", "coast" => "nc"}`), a `"by_convoy"` that is a string, a nested unit hash that is malformed, a missing key, an unknown key, or an argument that is not a hash When it is passed to `TA::DislodgedUnit.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending key or value
+- [ ] **AC-1.10** Given `new` of any class built here, and `TA::Location.new`, When it is called with a missing required keyword or an unknown keyword Then it raises Ruby's `ArgumentError`, not `TA::InvalidInput`. The cases include `TA::Unit.new(power: :france, type: :army)`, `TA::Position.new` without `standoffs:` (or without `dislodged_units:`), an order without its `at:`, and `TA::Location.new` with no keywords. Every keyword of every class built here is required: the only default in the interface is `Location#coast`, and none is added. This pins the decision of Open Question 1, and the #9 specs for `TA::Location` are unchanged
 
 ### Story 2: Describe a position
 
@@ -94,15 +97,24 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 
 **Acceptance criteria:**
 
-- [ ] **AC-2.1** Given a map, season, year, phase, units, ownership, dislodged units and standoffs When `TA::Position.new(...)` is called with keywords Then it returns a frozen object with those eight fields, and `units`, `dislodged_units`, `standoffs` and `ownership` are each frozen. The caller's own arrays and hash are neither frozen nor changed
-- [ ] **AC-2.2** Given the position in the interface example (Austria's army in `bud`, Russia's fleet in `stp` on `:sc`, with `bud` owned by Austria and `stp` by Russia) When `to_h` is called Then the result equals the hash in the interface example exactly, and `TA::Position.from_h(JSON.parse(JSON.generate(position.to_h))) == position`
-- [ ] **AC-2.3** Given the `army`, `fleet` and `spring` objects of the interface "Canonical order" example When two positions are built from the same contents with `units` and `ownership` given in different orders Then they are equal, their `to_h` are equal, `b.units.map { _1.location.province }` is `[:bud, :stp]` and `b.to_h["ownership"].keys` is `["bud", "stp"]`
+- [ ] **AC-2.1** Given a map, season, year, phase, units, ownership, dislodged units and standoffs When `TA::Position.new(...)` is called with keywords Then it returns a frozen object with those eight fields, and `map`, `units`, `dislodged_units`, `standoffs` and `ownership` are each frozen. The caller's own arrays, hash and `map` string are neither frozen nor changed, and changing them afterwards (appending to the array, adding a key, appending to the string) leaves the position unchanged
+- [ ] **AC-2.2** Given the position in the interface example (Austria's army in `bud`, Russia's fleet in `stp` on `:sc`, with `bud` owned by Austria and `stp` by Russia) When `to_h` is called Then the result equals the hash in the interface example, its keys are in the example's order (`format`, `map`, `season`, `year`, `phase`, `units`, `ownership`, `dislodged_units`, `standoffs`), and `TA::Position.from_h(JSON.parse(JSON.generate(position.to_h))) == position`
+- [ ] **AC-2.3** Given the `army`, `fleet` and `spring` objects of the interface "Canonical order" example When two positions are built from the same contents with `units` and `ownership` given in different orders Then they are equal (`==`, `eql?` and the same `hash`), their `to_h` are equal, `b.units.map { _1.location.province }` is `[:bud, :stp]`, `b.ownership.keys` is `[:bud, :stp]` and `b.to_h["ownership"].keys` is `["bud", "stp"]`
 - [ ] **AC-2.4** Given units, dislodged units and standoffs given out of order When a position is built Then `units` and `dislodged_units` are sorted by the unit's province, `standoffs` are sorted by identifier, and the same holds after `from_h`. Sorting uses the province identifier alone, so a unit on `stp/sc` and a unit on `spa` sort by `:spa`, then `:stp`
 - [ ] **AC-2.5** Given valid positions in each phase: the starting position, a retreat-phase position with two dislodged units (one by convoy, one not) and two standoffs, and an adjustment-phase position in fall 1901 with fewer units than centers, and a position with no units at all When each is converted with `to_h`, written as JSON, parsed and passed to `TA::Position.from_h` Then the result equals the original
-- [ ] **AC-2.6** Given `new` called with a map that is not the `String` `"classic"` (including `:classic` and `"modern"`), a season other than `:spring` or `:fall` (including `"spring"`), a phase other than `:movement`, `:retreat` or `:adjustment`, a year that is not an `Integer` (`"1901"`, `1901.0`, `nil`), a list field that is not an `Array`, an element of `units` that is not a `TA::Unit`, an element of `dislodged_units` that is not a `TA::DislodgedUnit`, a standoff that is a string or an unknown province, or an `ownership` that is not a `Hash` Then it raises `TA::InvalidInput`, and the message includes the offending value
-- [ ] **AC-2.7** Given `new` called with ownership whose key is a string, whose key is an unknown province, whose value is a string, or whose value is an unknown power Then it raises `TA::InvalidInput`, and the message includes the offending value
-- [ ] **AC-2.8** Given `TA::Position.from_h` called with a symbol where a string is required, an `"ownership"` value that is not a string, an `"ownership"` that is not a hash, a `"units"` that is not an array, a `"year"` that is a string or a float, a missing key, an unknown key, symbol keys, or an argument that is not a hash Then it raises `TA::InvalidInput`, and the message includes the offending key or value. This includes the interface error example `TA::Position.from_h(start.to_h.merge("year" => "1901"))`
-- [ ] **AC-2.9** Given any position hash handed to `from_h`, whether it is accepted or refused When the call returns or raises Then the hash handed in, and every hash and array inside it, is unchanged, and a frozen hash is accepted
+- [ ] **AC-2.6** Given a map that is not the `String` `"classic"` (including `:classic` and `"modern"`), a season other than `:spring` or `:fall` (including `"spring"`), a phase other than `:movement`, `:retreat` or `:adjustment`, a year that is not an `Integer` (`"1901"`, `1901.0`, `nil`), a list field that is not an `Array`, an element of `units` that is not a `TA::Unit`, an element of `dislodged_units` that is not a `TA::DislodgedUnit`, a standoff that is a string or an unknown province, or an `ownership` that is not a `Hash` When `TA::Position.new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value
+- [ ] **AC-2.7** Given ownership whose key is a string, whose key is an unknown province, whose value is a string, whose value is `nil` (`{bel: nil}`; an unowned center is absent, never `nil`), or whose value is an unknown power When `TA::Position.new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value
+- [ ] **AC-2.8** Given a hash with any of these faults When it is passed to `TA::Position.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending key or value:
+  - a symbol where a string is required, symbol keys, a missing key, an unknown key, or an argument that is not a hash;
+  - a `"year"` that is a string or a float;
+  - `"units"`, `"dislodged_units"` or `"standoffs"` that is not an array;
+  - an element of `"units"` or `"dislodged_units"` that is not a hash, or a nested unit or location hash that has a missing or extra key, including one carrying `"format" => 1`;
+  - an element of `"standoffs"` that is a symbol or a non-string;
+  - an `"ownership"` that is not a hash, a key that is not a string, or a value that is not a string, including `nil` (`{"bel" => nil}`).
+
+  This includes the interface error example `TA::Position.from_h(start.to_h.merge("year" => "1901"))`
+- [ ] **AC-2.9** Given any position, unit or order hash handed to `from_h`, whether it is accepted or refused When the call returns or raises Then the hash handed in, and every hash and array inside it, is unchanged, a frozen hash (frozen all the way down) is accepted, and changing the hash afterwards leaves the object built from it unchanged
+- [ ] **AC-2.10** Given a position built from ownership given out of order When `position.ownership` is read Then its keys are in province-identifier order, as `to_h` writes them
 
 ### Story 3: Describe an order
 
@@ -112,23 +124,24 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 
 **Acceptance criteria:**
 
-- [ ] **AC-3.1** Given the six order classes When each is built with the keywords of its interface example and converted with `to_h` Then the result equals the hash in that example exactly:
+- [ ] **AC-3.1** Given the six order classes When each is built with the keywords of its interface example and converted with `to_h` Then the result equals the hash in that example, with its keys in the example's order (`format`, `type`, `power`, `at`, then the class's own fields):
   - `Hold(power, at)`, type `"hold"`;
   - `Move(power, at, destination)`, type `"move"`, where `destination` is a `TA::Location` and appears in the hash as a location hash;
   - `MoveViaConvoy(power, at, to)`, type `"move_via_convoy"`;
   - `SupportHold(power, at, target)`, type `"support_hold"`;
   - `SupportMove(power, at, from, to)`, type `"support_move"`;
   - `Convoy(power, at, from, to)`, type `"convoy"`
-- [ ] **AC-3.2** Given any order Then it is frozen, its fields are exactly the ones listed in AC-3.1 and no others, and two orders of the same class with the same contents are equal and have the same `hash`, while the same fields in two different classes are not equal
+- [ ] **AC-3.2** Given any order When it is inspected Then it is frozen, its fields (`members`) are exactly the ones listed in AC-3.1 and no others, and two orders of the same class with the same contents are equal and have the same `hash`, while two orders of different classes with the same field values (`SupportMove` and `Convoy`) are not equal
 - [ ] **AC-3.3** Given a hash with `"type"` of each of the six values When `TA::Order.from_h` is called Then it returns an instance of the matching class, equal to the order the hash came from. The interface example `O.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"})` gives `O::Hold.new(power: :england, at: :lon)`
-- [ ] **AC-3.4** Given `TA::Order.from_h` called with an unknown `"type"` (`"teleport"`, `"Hold"`), a `"type"` that is not a string (`:hold`, `nil`, `1`), no `"type"` key, or an argument that is not a hash Then it raises `TA::InvalidInput`, and the message includes the offending key or value
-- [ ] **AC-3.5** Given the valid hash of each order class When it is passed to the `from_h` of each of the other five classes Then every one of those thirty calls raises `TA::InvalidInput`. The interface example `O::Move.from_h({... "type" => "hold" ...})` is one of them
+- [ ] **AC-3.4** Given an unknown `"type"` (`"teleport"`, `"Hold"`), a `"type"` that is not a string (`:hold`, `nil`, `1`), no `"type"` key, or an argument that is not a hash When it is passed to `TA::Order.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending key or value
+- [ ] **AC-3.5** Given the valid hash of each order class When it is passed to the `from_h` of each of the other five classes Then every one of those thirty calls raises `TA::InvalidInput`, and the message includes the hash's `"type"` value. The interface example `O::Move.from_h({... "type" => "hold" ...})` is one of them
 - [ ] **AC-3.6** Given a province field (`at`, `target`, `from` or `to`) in a hash that holds a location hash with a coast (`{"province" => "spa", "coast" => "nc"}`), one without a coast, a symbol, `nil` or an unknown province When `from_h` is called, for each field of each class that has it Then it raises `TA::InvalidInput`, and the message includes the offending value. The interface example for a coast in `"at"` is one of them
-- [ ] **AC-3.7** Given `new` called with a `TA::Location` or a string in a province field, a symbol or `nil` for `Move#destination`, or a `Location` field that is not a `TA::Location` Then it raises `TA::InvalidInput`, and the message includes the offending value. A `Move` whose `destination` is a split-coast location with a coast is valid
+- [ ] **AC-3.7** Given a `TA::Location` or a string in a province field, or a symbol, a hash or `nil` for `Move#destination` When `new` is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value. A `Move` whose `destination` is a split-coast location with a coast is valid
 - [ ] **AC-3.8** Given orders that break a rule of the game but are well formed (a `Move` to the unit's own province, a fleet's `Move` to an inland province, a `Convoy` from an inland province to itself, a `SupportMove` with the same origin and destination, an order for a province where no unit stands) When they are built with `new` or with `from_h` Then they are built, with no error. Judging them is for checking (#11)
 - [ ] **AC-3.9** Given every one of the 81 locations as a `Move` destination, and each of the 75 provinces in each province field of each class When each order is converted with `to_h`, written as JSON, parsed and passed to its class's `from_h` and to `TA::Order.from_h` Then both results equal the original
-- [ ] **AC-3.10** Given `new` called with a `power` that is not a symbol or is unknown, or an `at` that is an unknown province Then it raises `TA::InvalidInput`, and the message includes the offending value
-- [ ] **AC-3.11** Given `from_h` of any order class called with a missing key (each key of each class in turn), an unknown extra key, symbol keys, a symbol where a string is required, or an argument that is not a hash Then it raises `TA::InvalidInput`, and the message includes the offending key or value
+- [ ] **AC-3.10** Given a `power` that is not a symbol or is unknown, or an `at` that is an unknown province When `new` of any order class is called with it Then it raises `TA::InvalidInput`, and the message includes the offending value
+- [ ] **AC-3.11** Given a hash with a missing key (each key of each class in turn), an unknown extra key, symbol keys, a symbol where a string is required, or an argument that is not a hash When it is passed to the `from_h` of any order class Then it raises `TA::InvalidInput`, and the message includes the offending key or value
+- [ ] **AC-3.12** Given a `Move` hash whose `"destination"` is a plain string (`"spa"`), `nil`, a symbol, a location hash with a missing or extra key, or a location hash with an impossible coast (`{"province" => "par", "coast" => "nc"}`) When it is passed to `TA::Order::Move.from_h` or `TA::Order.from_h` Then it raises `TA::InvalidInput`, and the message includes the offending value. The only accepted form is a location hash with exactly `"province"` and `"coast"`
 
 ### Story 4: Store and replay with a format version
 
@@ -138,11 +151,12 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 
 **Acceptance criteria:**
 
-- [ ] **AC-4.1** Given a position and each of the six orders When `to_h` is called Then the hash has `"format"` with the `Integer` `1`. The hash form of a unit, a dislodged unit and a location has no `"format"`, including when nested inside a position or an order. An order inside any other hash form would carry its own `"format"` too, since a storable object's hash form is the same wherever it appears
+- [ ] **AC-4.1** Given a position and each of the six orders When `to_h` is called Then the hash has `"format"` with the `Integer` `1`. The hash form of a unit, a dislodged unit and a location has no `"format"`, including when nested inside a position or an order. (That an order nested in an outcome keeps its `"format"` can only be shown once `TA::Outcome` exists, in #14.)
 - [ ] **AC-4.2** Given a hash with no `"format"` key, or with a `"format"` of `2`, `0`, `"1"`, `1.0` or `nil` When it is passed to `TA::Position.from_h`, to `TA::Order.from_h`, or to the `from_h` of each order class Then it raises `TA::InvalidInput`, and the message includes `"format"` (when missing) or the offending value (when unknown). The two interface examples (missing `"format"`, and `"format" => 2`) are among them
 - [ ] **AC-4.3** Given a position and each order When `to_h` is walked all the way down Then every key is a `String`, and every value is a `String`, an `Integer`, `true`, `false`, `nil`, an `Array` or a `Hash`, so `JSON.generate` writes it with no custom handling
 - [ ] **AC-4.4** Given the gem's code When it is read Then the format value is written in one place only, and `Position` and every order class read it from there [verified in review]
 - [ ] **AC-4.5** Given a hash with a `"format"` of `1` and one other fault When `from_h` is called Then it raises `TA::InvalidInput`. A hash is never accepted because its `"format"` is right
+- [ ] **AC-4.6** Given `from_h` Then no text from the caller becomes a `Symbol` before it has been checked against the map's identifiers, so a message shows the caller's own string and an unknown identifier is never turned into a symbol [verified in review]
 
 ### Story 5: Impossible objects can't be built
 
@@ -152,19 +166,20 @@ Every acceptance criterion is verified by a passing spec in this pull request un
 
 **Acceptance criteria:**
 
-Each criterion holds whether the object is built with `new`, with `from_h`, or by changing a field of a valid object with `with`. In every case the error is `TA::InvalidInput` and its message includes the offending value.
+Each criterion holds whether the object is built with `new`, with `from_h`, or by changing a field of a valid object with `with`. In every case the error is `TA::InvalidInput` and its message includes the offending value. Where a criterion names the value, that is the one the message must include.
 
-- [ ] **AC-5.1** Given two units on the board in one province When a position is built Then it raises. This covers two armies in `bur`, and an army in `stp` with a fleet on `stp/sc`. A unit that is dislodged does not count: a position with a board unit and a dislodged unit in the same province is valid
+- [ ] **AC-5.1** Given two units on the board in one province When a position is built Then it raises. This covers two armies in `bur`, and an army in `stp` with a fleet on `stp/sc`. The message includes the shared province. A unit that is dislodged does not count: a position with a board unit and a dislodged unit in the same province is valid
 - [ ] **AC-5.2** Given a fleet in an inland province, or an army in a sea province When a unit is built Then it raises. This is checked for each of the 14 inland provinces with a fleet, and each of the 19 sea provinces with an army
-- [ ] **AC-5.3** Given an army with a coast (`spa/nc`) When a unit is built Then it raises
+- [ ] **AC-5.3** Given an army with a coast, for each of the six split coasts (`bul/ec`, `bul/sc`, `spa/nc`, `spa/sc`, `stp/nc`, `stp/sc`) When a unit is built Then it raises
 - [ ] **AC-5.4** Given a fleet in each of the three split-coast provinces `bul`, `spa` and `stp`, with no coast When a unit is built Then it raises. A fleet in each of the six split coasts is valid, and so is a fleet in a coastal province with no split
 - [ ] **AC-5.5** Given a coast the province doesn't have (`par` with `:nc`, `bul` with `:nc`), an unknown identifier (`:xyz`) or a map other than `"classic"` (`"modern"`, from `new` and from `from_h`) When a location, unit or position is built Then it raises
-- [ ] **AC-5.6** Given ownership of a province that is not a supply center When a position is built Then it raises. This is checked for each of the 41 provinces that are not supply centers (`bur` is the interface example), and each of the 34 supply centers is accepted as an owned province
-- [ ] **AC-5.7** Given a position in the movement phase with a standoff province, or with a dislodged unit When it is built Then it raises, both interface examples. A position in the retreat or the adjustment phase with standoffs or dislodged units is valid
+- [ ] **AC-5.6** Given ownership of a province that is not a supply center When a position is built Then it raises. This is checked for each of the 41 provinces that are not supply centers (`bur` is the interface example), and the message includes the province. Each of the 34 supply centers is accepted as an owned province
+- [ ] **AC-5.7** Given a position in the movement phase with a standoff province, or with a dislodged unit When it is built Then it raises, both interface examples, and the message includes the phase (`:movement`). A position in the retreat or the adjustment phase with standoffs or dislodged units is valid
 - [ ] **AC-5.8** Given an unknown identifier anywhere an identifier is accepted (a power in a unit, an order or ownership; a province in a standoff, an `attacker_from`, an order field or an ownership key) When the object is built Then it raises
-- [ ] **AC-5.9** Given the same province twice in `standoffs`, or two dislodged units whose units stand in the same province When a position is built Then it raises. A list never holds the same standoff twice, and one province never holds two dislodged units
+- [ ] **AC-5.9** Given the same province twice in `standoffs`, or two dislodged units whose units stand in the same province When a position is built Then it raises, and the message includes the repeated province. A list never holds the same standoff twice, and one province never holds two dislodged units
 - [ ] **AC-5.10** Given each impossible Position, Unit, DislodgedUnit and order of AC-5.1 to AC-5.9, written as the hash form it would have if it could exist When it is passed to the matching `from_h` Then it raises. The interface example `TA::Position.from_h(JSON.parse(JSON.generate(a.to_h)).merge("map" => "modern"))` is one of them
-- [ ] **AC-5.11** Given a valid unit or position When `with` is called to change a field to a value that would make an impossible object (a unit's `type` to `:fleet` in an inland province; a position's `phase` to `:movement` when it holds standoffs) Then it raises. No call can make an object that `new` would refuse
+- [ ] **AC-5.11** Given a valid unit or position When `with` is called to change a field to a value that would make an impossible object (a unit's `type` to `:fleet` in an inland province; a position's `phase` to `:movement` when it holds standoffs) Then it raises. Neither `new`, `from_h` nor `with` can make an object that `new` would refuse
+- [ ] **AC-5.12** Given a valid position When `position.with(units: [fleet, army])` is called with units out of order Then it returns a frozen position equal to the one built with `new` from the same contents, with `units` in canonical order, and the caller's array is neither frozen nor changed
 
 ### Story 6: Start from the 1901 position
 
@@ -178,10 +193,11 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 - [ ] **AC-6.2** Given the starting position When its `units` are read Then there are 22, sorted by province, each equal to the `TA::Unit` for the matching entry of `Map#starting_units`, and they are exactly the units listed per power in the #9 spec (AC-4.2 there), including Russia's fleet on `stp/sc`
 - [ ] **AC-6.3** Given the starting position When its `ownership` is read Then it has 22 entries, each home center of each of the seven powers is owned by that power, `ownership[:lon]` is `:england`, `ownership.key?(:bel)` is `false`, and none of the 12 neutral supply centers is present
 - [ ] **AC-6.4** Given the starting position When `dislodged_units` and `standoffs` are read Then both are empty
-- [ ] **AC-6.5** Given the starting position When it is converted with `to_h`, written as JSON, parsed and passed to `TA::Position.from_h` Then the result equals the original, and it holds 22 units and 22 owned centers. This is the first spec written, and it fails until `TA::Position` exists
+- [ ] **AC-6.5** Given the starting position When it is converted with `to_h`, written as JSON, parsed and passed to `TA::Position.from_h` Then the result equals the original, and it holds 22 units and 22 owned centers
 - [ ] **AC-6.6** Given the data file read with the standard library's safe YAML loader, without `TA::Map` When its `starting_units` are compared with the starting position Then they agree in power, type, province and coast for all 22 units, and each unit's province is owned by its power in the position. The units come from the map data, and no unit is written down in Ruby code [the second half verified in review]
 - [ ] **AC-6.7** Given the classic map When `starting_position` is called twice Then the two results are equal and each is a valid, frozen position
 - [ ] **AC-6.8** Given `docs/interface.md` When it is read Then it does not mention `starting_units`, and the code still marks `Map#starting_units` internal [verified in review]
+- [ ] **AC-6.9** Given the work on this feature When its commits are read Then the spec of AC-6.5 is the first spec written, and it fails until `TA::Position` exists [verified in review]
 
 ### Story 7: The interface examples run
 
@@ -193,8 +209,9 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 
 - [ ] **AC-7.1** Given every Ruby example in `docs/interface.md` under `## Value objects` for `TA::Location`, `TA::Unit`, `TA::DislodgedUnit`, `TA::Position`, `TA::Order` and its six classes, under "Canonical order", under "Impossible objects", and the two `format` examples at the head of the section When each is run as a spec Then it gives the value or raises the error that the example's comment says
 - [ ] **AC-7.2** Given the `starting_position` examples under `## Map` (the overview block and the `Map#starting_position` subsection) and the `from_h` examples under `## Errors` When each is run as a spec Then it gives the value or raises the error its comment says
-- [ ] **AC-7.3** Given the examples this feature does not cover Then the spec for this feature says exactly which they are, and the specs name them as excluded: the `TA::CheckResult` example and the three `CheckResult` lines at the end of "Impossible objects" (#11), the `TA::Outcome` and `TA::Adjudication` examples (#14), and the examples under checking, legal orders and adjudication
+- [ ] **AC-7.3** Given the examples this feature does not cover When the specs are read Then the specs name exactly these as excluded [verified in review]: both `TA::CheckResult` examples (the `to_h` pair under `### TA::CheckResult`) and the three `CheckResult` lines at the end of "Impossible objects" (#11); the `TA::Outcome` and `TA::Adjudication` examples (#14); and the calls to `TA.check`, `TA.legal_orders` and `TA.adjudicate` in the sections on checking, legal orders and adjudication
 - [ ] **AC-7.4** Given the specs for AC-7.1 and AC-7.2 When they build their inputs Then they build them as the examples do (with the same `army`, `fleet`, `spring` and `a` objects) and do not substitute simpler ones
+- [ ] **AC-7.5** Given the position and order constructions in the excluded sections that need only the objects built here: `start`, `retreat` (from `start.to_h.merge("phase" => "retreat")`), `at_sea`, `ln`, `pos`, `vienna`, `paradox_pos`, and the orders and units used with them When each is built Then it builds without raising, so #11 and #14 can use the examples as they stand
 
 ### Story 8: The change is recorded and the old line is updated
 
@@ -204,11 +221,12 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 
 **Acceptance criteria:**
 
-- [ ] **AC-8.1** Given this pull request When `adjudicator/CHANGELOG.md` is read Then "Unreleased" → "Added" has an entry for the unit, dislodged unit, position and order value objects, `TA::Order.from_h` and `Map#starting_position`, citing #10, and it says `TA::CheckResult` arrives with #11, and `TA::Outcome` and `TA::Adjudication` with #14 [verified in review]
+- [ ] **AC-8.1** Given this pull request When `adjudicator/CHANGELOG.md` is read Then "Unreleased" → "Added" has an entry for the unit, dislodged unit, position and order value objects, `TA::Order.from_h` and `Map#starting_position`, citing #10, and it says `TA::CheckResult` arrives with #11, and `TA::Outcome` and `TA::Adjudication` with #14. The #9 entry's sentence "`Map#starting_position` arrives with #10; until then the starting units are available through an internal reader." is trimmed so that it no longer says the method is still to come [verified in review]
 - [ ] **AC-8.2** Given `spec/trucebearer/adjudicator/map_spec.rb` When it is read Then no example says `starting_position` is not built. The example that checks `starting_units` is not in the interface now says only that, and the part that asserted `not_to respond_to(:starting_position)` is gone
 - [ ] **AC-8.3** Given this pull request When `bundle exec rspec` and `bundle exec rake` are run from `adjudicator/` Then both pass, with no spec skipped or marked pending [verified by the commands, in the pull request]
 - [ ] **AC-8.4** Given this pull request When `git diff --name-only main...HEAD` is run Then every path starts with `adjudicator/`, and `adjudicator/docs/interface.md` is not among them [verified by the command, in the pull request]
 - [ ] **AC-8.5** Given the gem's code When it is read Then it defines no `TA::CheckResult`, `TA::Outcome` or `TA::Adjudication`, and does not require the existing #9 specs to change, other than AC-8.2 [verified in review]
+- [ ] **AC-8.6** Given `lib/trucebearer/adjudicator/map.rb` When the comment on `Map#starting_units` is read Then it says `starting_position` uses it, not that `starting_position` is still to come [verified in review]
 
 ## Functional Requirements
 
@@ -221,6 +239,7 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 - `DislodgedUnit`: `unit` (a `TA::Unit`, at the location it was dislodged from), `attacker_from` (a province identifier, no coast) and `by_convoy` (`true` or `false`).
 - `to_h` gives string keys all the way down, with a unit's `location` as a location hash and a dislodged unit's `unit` as a unit hash. This replaces the symbol-keyed `to_h` that `Data` provides.
 - `from_h` takes exactly that shape, with strings for identifiers, and nothing else.
+- Require every keyword in `new`. A missing or unknown keyword raises Ruby's `ArgumentError` (Open Question 1).
 
 **Must not:**
 - Carry `format`.
@@ -233,7 +252,8 @@ A `Data` class with eight fields in the order the interface gives them: `map`, `
 **Must:**
 - `map` is the `String` `"classic"`. `season` is `:spring` or `:fall`. `phase` is `:movement`, `:retreat` or `:adjustment`. `year` is an `Integer`.
 - Put the list fields into canonical order and freeze them when the object is built: `units` and `dislodged_units` by the unit's province, `standoffs` by identifier, and `ownership` by province identifier, which is also the order `to_h` writes it in.
-- Copy the lists and the ownership hash it is given, so that the caller's own are never frozen or changed.
+- Copy the lists, the ownership hash and the `map` string it is given, so that the caller's own are never frozen or changed, and the position holds no reference to them.
+- Require all eight keywords. No field has a default.
 - Carry `"format"` in `to_h`, with the value `1`, and refuse a missing or unknown `"format"` in `from_h`.
 - Raise `TA::InvalidInput` for each impossible position in Story 5.
 
@@ -250,6 +270,7 @@ A `Data` class with eight fields in the order the interface gives them: `map`, `
 - `to_h` gives `"format"`, `"type"`, `"power"`, `"at"` and the class's own fields, in that hash form, with `destination` as a location hash.
 - `TA::Order.from_h` reads `"type"`, builds the matching class, and raises `TA::InvalidInput` for any other `"type"`. Each class's own `from_h` raises for a hash of another type.
 - A coast in a province field raises, in `new` and in `from_h`.
+- Require every keyword in `new`. A missing or unknown keyword raises Ruby's `ArgumentError`.
 
 **Must not:**
 - Check an order against a position, or against the rules. Any well formed order can be built.
@@ -301,7 +322,8 @@ Returns the position the game starts from, a `TA::Position`, as `docs/interface.
 **Must:**
 - Add "Unreleased" → "Added" to `adjudicator/CHANGELOG.md`, as in AC-8.1.
 - Update the `starting_units` example in `map_spec.rb` as in AC-8.2.
-- Update the comment on `Map#starting_units` so that it no longer says `starting_position` is still to come.
+- Update the comment on `Map#starting_units` so that it no longer says `starting_position` is still to come (AC-8.6).
+- Trim the stale sentence in the #9 changelog entry (AC-8.1).
 - Leave `docs/interface.md` unchanged.
 
 **Must not:**
@@ -321,7 +343,7 @@ Returns the position the game starts from, a `TA::Position`, as `docs/interface.
 
 ### Reliability
 
-- Objects are immutable. There is no way to build or derive an object that `new` would refuse (AC-5.11).
+- Objects are immutable. `new`, `from_h` and `with` cannot make an object that `new` would refuse (AC-5.11).
 - Round trips are exact: two objects with the same contents are equal and have equal hash forms, whatever order their lists were given in.
 
 ## Error Scenarios
@@ -345,7 +367,9 @@ Returns the position the game starts from, a `TA::Position`, as `docs/interface.
 None blocking. Points 1 and 2 were put to James and are decided. The rest are decisions made in this spec, put to the reviewer at Gate A so that approval settles them.
 
 1. **A missing keyword in `new` (the #9 nit). Decided by James on 2026-11-25.** `TA::Location.new(province: nil)` raises `TA::InvalidInput`, but `TA::Location.new` with no keywords raises Ruby's `ArgumentError`. **Decision: keep Ruby's `ArgumentError`, for every class.** A missing or unknown keyword is a coding mistake in the code that calls `new`, not bad input, and `ArgumentError` is Ruby's own signal for that. `TA::InvalidInput` stays for bad values, and `from_h` still raises it for a missing key, so an app that rescues it around `from_h` catches everything a stored hash can do wrong. `docs/interface.md` doesn't promise either, so nothing changes for the app. #9's specs stay as they are, and this feature adds a spec that pins the behavior (AC-1.10).
-2. **Duplicate standoff provinces (AC-5.9). Decided by James on 2026-11-25.** The interface lists no impossible object for the same standoff province twice. **Decision: it raises `TA::InvalidInput`, with a spec.** A standoff list is a set, and a list with a duplicate would give two objects for one situation, which breaks "same contents, same hash form" unless the duplicate were quietly dropped, and quiet correction is forbidden. This is a stricter validation within the existing promise that an impossible object raises (`docs/interface.md` `## Value objects`, "Validated on construction"). It is not an interface change, so `docs/interface.md` is unchanged and no Interface change Issue is needed. **Not yet decided:** the same stricter rule for two dislodged units in one province, which this spec also includes in AC-5.9 because a province held one unit. It is put to the reviewer at Gate A. If it is dropped, only that clause of AC-5.9 and FR-2 go.
+2. **Duplicate standoff provinces (AC-5.9). Decided by James on 2026-11-25.** The interface lists no impossible object for the same standoff province twice. **Decision: it raises `TA::InvalidInput`, with a spec.** A standoff list is a set, and a list with a duplicate would give two objects for one situation, which breaks "same contents, same hash form" unless the duplicate were quietly dropped, and quiet correction is forbidden. This is a stricter validation within the existing promise that an impossible object raises (`docs/interface.md` `## Value objects`, "Validated on construction"). It is not an interface change, so `docs/interface.md` is unchanged and no Interface change Issue is needed. **Decided here, for approval at Gate A:** the same stricter rule for two dislodged units in one province, which this spec also includes in AC-5.9 because a province held one unit. The reviewer's view (round 1) is to keep it: without it, "sorted by the unit's province" would not be a total order for `dislodged_units`, so two orderings of the same contents could give different hash forms, and the only alternatives are an invented tie-break or quiet correction. **Decision: keep it.** If the maintainer would rather drop it, only that clause of AC-5.9 goes.
+
+   **Owed to the maintainer:** `docs/interface.md` stays unchanged here, so neither stricter rule is documented in its "Impossible objects" list. A follow-up change adding both under "Added" is owed, and is named in the pull request description. Additions need no Interface change Issue (`adjudicator/AGENTS.md`).
 3. **Not checked: standoffs, ownership and units against each other.** A standoff province that has a unit on it, an owned center with no unit, and a dislodged unit that no unit attacked from a neighbor are all valid objects here. The interface lists none of them as impossible, and whether they make sense depends on rules that belong to adjudication. They are left to #14 and later.
 4. **Any `Integer` is a valid `year`.** The interface says `Integer`, such as `1901`, and names no range, so none is imposed.
 5. **The #9 spec and plan documents are not edited.** They record what #9 decided. Only `map_spec.rb`, the executable spec that asserted `starting_position` was missing, changes (AC-8.2).
