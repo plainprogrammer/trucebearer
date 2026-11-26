@@ -164,6 +164,37 @@
     <p class="mono">JOIN 4F7-K2Q &middot; PAR &middot; SPRING 1901</p>
   </section>
 
+  <section data-component="join-code" class="stack" aria-labelledby="sg-join-code">
+    <h2 id="sg-join-code">Join code</h2>
+    <p>Six characters in two groups of three, in mono type.</p>
+    <%= join_code_text("ACDEFG") %>
+  </section>
+
+  <section data-component="qr-card" class="stack" aria-labelledby="sg-qr-card">
+    <h2 id="sg-qr-card">QR card</h2>
+    <p>The code on white, with a caption under it. For a game the caption is its join code; for a seat it is the power's badge.</p>
+    <%= qr_card("https://example.org/join/ACDEFG", label: "Example QR code", caption: join_code_text("ACDEFG")) %>
+    <%= qr_card("https://example.org/games/abc/seat-link?token=example", label: "Example seat QR code", caption: power_badge(:italy)) %>
+  </section>
+
+  <section data-component="power-tile" class="stack" aria-labelledby="sg-power-tile">
+    <h2 id="sg-power-tile">Power tiles</h2>
+    <p>An open tile is a button. A taken tile says "Taken" and is not a control.</p>
+    <%= power_tiles(taken: %w[austria italy]) %>
+  </section>
+
+  <section data-component="host-section" class="stack" aria-labelledby="sg-host-section">
+    <h2 id="sg-host-section">Host section</h2>
+    <div class="host-section stack">
+      <h3>Host</h3>
+      <p>The host's controls sit on a pale ground, apart from a player's own screen.</p>
+      <a class="button" href="#sg-host-section">A host action</a>
+      <a class="button button--secondary" href="#sg-host-section">Another action</a>
+      <a class="button button--danger" href="#sg-host-section">A destructive action</a>
+      <p><a href="#sg-host-section">A link on the ground</a></p>
+    </div>
+  </section>
+
   <section class="stack" aria-labelledby="sg-colors">
     <h2 id="sg-colors">Colors</h2>
     <ul class="sg-swatches">

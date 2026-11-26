@@ -131,7 +131,10 @@ module Contrast
     [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
     [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ], [ "focus", "ice", 3.0 ],
     [ "steel", "page", 3.0 ], [ "steel", "surface", 3.0 ],
-    [ "disabled-text", "disabled-fill", 3.0 ]
+    [ "disabled-text", "disabled-fill", 3.0 ],
+    [ "primary", "ice-pale", 3.0 ], [ "primary-pressed", "ice-pale", 3.0 ], [ "border", "ice-pale", 3.0 ],
+    [ "danger", "ice-pale", 3.0 ], [ "danger-pressed", "ice-pale", 3.0 ], [ "focus", "ice-pale", 3.0 ],
+    [ "link", "ice-pale", 4.5 ], [ "link-visited", "ice-pale", 4.5 ]
   ].freeze
 
   module_function

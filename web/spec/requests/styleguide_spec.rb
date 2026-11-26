@@ -2,8 +2,9 @@ require "rails_helper"
 require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
-  components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text]
-  # The documented pairs other than the power pairs (spec FR-3): 31 of them.
+  components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
+                join-code qr-card power-tile host-section]
+  # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
   def flag = Rails.configuration.x.styleguide
@@ -68,7 +69,7 @@ RSpec.describe "Style guide", type: :request do
     end
 
     it "shows seven power badges, each with its name and token name beside it (AC-4.5)" do
-      badges = page.css(".power-badge")
+      badges = page.css("section[data-component=power-badge] .power-badge")
       expect(badges.map(&:text)).to match_array(%w[Austria England France Germany Italy Russia Turkey])
       expect(page.css(".sg-power__token").map(&:text)).to match_array(
         %w[austria england france germany italy russia turkey].map { |id| "--color-power-#{id}" }
@@ -88,6 +89,31 @@ RSpec.describe "Style guide", type: :request do
         expect(classes.size).to eq(1)
         expect(row.at_css(".sg-unit__name").text.downcase).to eq(classes.first)
       end
+    end
+
+    it "shows the join code, two QR cards and the host section on their own (AC-9.1)" do
+      expect(page.css("section[data-component=join-code] .join-code.mono").map { |e| e.text.strip }).to eq([ "ACD EFG" ])
+      cards = page.css("section[data-component=qr-card] .qr-card")
+      expect(cards.size).to eq(2)
+      expect(cards.map { |c| c.at_css("svg.qr-card__code")["aria-label"] }).to all(be_present)
+      expect(cards.map { |c| c.at_css(".qr-card__link").text }).to all(start_with("https://"))
+      host = page.css("section[data-component=host-section] .host-section")
+      expect(host.size).to eq(1)
+      expect(host.first.css(".button, a").size).to be >= 4
+    end
+
+    it "shows open power tiles as buttons and taken ones as plain text, each with a power name (AC-9.3)" do
+      names = %w[Austria England France Germany Italy Russia Turkey]
+      section = page.at_css("section[data-component=power-tile]")
+      open = section.css("button.power-tile")
+      taken = section.css(".power-tile--taken")
+      expect(open.size + taken.size).to eq(7)
+      expect(taken.size).to eq(2)
+      expect((open + taken).flat_map { |t| t.css(".power-badge").map(&:text) }).to match_array(names)
+      expect(taken.map(&:name)).to all(eq("div"))
+      expect(taken.map { |t| t.text }).to all(include("Taken"))
+      expect(taken.flat_map { |t| t.css("button, a, input").to_a }).to be_empty
+      expect(open.map { |t| t.text }).to all(satisfy { |text| names.any? { |n| text.include?(n) } && !text.include?("Taken") })
     end
 
     it "shows each owner and the unowned look, named beside each (AC-7.10)" do

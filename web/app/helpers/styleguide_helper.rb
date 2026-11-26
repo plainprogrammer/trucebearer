@@ -20,7 +20,10 @@ module StyleguideHelper
     [ "danger-pressed", "page", "3" ], [ "danger-pressed", "surface", "3" ],
     [ "focus", "page", "3" ], [ "focus", "surface", "3" ], [ "focus", "ice", "3" ],
     [ "steel", "page", "3" ], [ "steel", "surface", "3" ],
-    [ "disabled-text", "disabled-fill", "3" ]
+    [ "disabled-text", "disabled-fill", "3" ],
+    [ "primary", "ice-pale", "3" ], [ "primary-pressed", "ice-pale", "3" ], [ "border", "ice-pale", "3" ],
+    [ "danger", "ice-pale", "3" ], [ "danger-pressed", "ice-pale", "3" ], [ "focus", "ice-pale", "3" ],
+    [ "link", "ice-pale", "4.5" ], [ "link-visited", "ice-pale", "4.5" ]
   ].freeze
 
   UNIT_SIZES = [ 20, 32, 48 ].freeze
