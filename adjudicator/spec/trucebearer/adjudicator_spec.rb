@@ -4,6 +4,6 @@ require "trucebearer/adjudicator"
 
 RSpec.describe Trucebearer::Adjudicator do
   it "has a version number" do
-    expect(Trucebearer::Adjudicator::VERSION).to eq("0.0.0")
+    expect(Trucebearer::Adjudicator::VERSION).to match(/\A\d+\.\d+\.\d+\z/)
   end
 end
