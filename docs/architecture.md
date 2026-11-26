@@ -34,7 +34,7 @@ Neither target includes the phase clock, the shared display or backups. Also out
 - The instance runs on a VM in a home lab and is deployed with Kamal.
 - A Cloudflare tunnel sits in front of it and terminates TLS. So Rails sets `config.assume_ssl = true`, and kamal-proxy runs with `ssl: false`.
 - The allowed Action Cable origins (`TRUCEBEARER_CABLE_ORIGINS`) and the passkey origin come from environment variables, not from code.
-- The app reads these environment variables. `web/README.md` has the details of each:
+- The app's own settings come from these environment variables, besides the standard Rails and Kamal ones. `web/README.md` has the details of each:
   - `TRUCEBEARER_PASSPHRASE`: a secret. When it is unset or blank, creating a game is refused, and joining or playing an existing game still works.
   - `TRUCEBEARER_CABLE_ORIGINS`: not a secret. When it is unset, Rails allows live-update sockets only from the app's own address.
   - `TRUCEBEARER_TIME_ZONE`: not a secret. When it is unset or unknown, step-in notices use UTC.
