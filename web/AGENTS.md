@@ -2,7 +2,7 @@
 
 You are working on the Rails app that hosts and players use at the table. Read the root `AGENTS.md` too; its shared rules apply here.
 
-The Rails app has not been generated yet. When it is, run `rails new` into this folder. Then delete the `.ruby-version` it creates (the root one applies) and move any generated `.github/` workflow into the root `.github/workflows/`, because GitHub only reads workflows from the root.
+Don't keep a `.ruby-version` or a `.github/` in this folder. The root `.ruby-version` applies, and GitHub reads workflows only from the root `.github/` (root CI is its own Issue). If a generator creates either one, delete it. Don't move it.
 
 ## Stack
 
@@ -27,7 +27,7 @@ Native apps come later through Hotwire Native, so build for it from the start:
 - Never edit `adjudicator/`. If the app needs something the gem doesn't do, open an Issue with the "Adjudicator request" template. Give example input and the expected output as plain data, then carry on with other work.
 - Upgrading the pinned version is its own pull request. Read the gem's `CHANGELOG.md` and any open "Interface change" Issues first.
 - The gem's public interface is described in `adjudicator/docs/interface.md`. Use nothing beyond it.
-- Store positions, orders and results as the plain data the gem returns, so any game can be replayed.
+- Store positions, orders, check results and adjudication results as the gem's hash form (`to_h`), saved as JSON, and load them back into gem objects with `from_h`, so any phase can be replayed. The hash form carries a `format` version. The map is queried, never stored. The contract is `adjudicator/docs/interface.md`.
 
 ## Scope for phase one
 
