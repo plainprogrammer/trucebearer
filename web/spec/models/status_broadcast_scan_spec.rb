@@ -42,13 +42,22 @@ RSpec.describe "Who writes and broadcasts the status" do
     expect(calls).to eq("app/models/phase.rb" => 1, "app/models/game.rb" => 1) # the call, and the definition
   end
 
-  it "names the cable and any other broadcast only inside the two broadcast methods of Game (AC-2.7c, spec 025 AC-4.6)" do
+  it "names the cable only in Game's message and broadcast methods and in the status channel, which sends a subscriber the same message (AC-2.7c, AC-9.7, spec 025 AC-4.6)" do
     cable = /Turbo::StreamsChannel|Turbo::Broadcastable|ActionCable|\bbroadcasts\w*|\.broadcast\b|\bbroadcast_(?!seat_status\b|results_refresh\b)\w+/
     naming = files.select { |f| code.call(f).match?(cable) }.map(&rel)
-    outside = code.call(Rails.root.join("app/models/game.rb").to_s).sub(/def broadcast_seat_status.*?\n  end\n/m, "").sub(/def broadcast_results_refresh.*?\n  end\n/m, "")
+    outside = code.call(Rails.root.join("app/models/game.rb").to_s).sub(/def broadcast_seat_status.*?\n  end\n/m, "").sub(/def seat_status_message.*?\n  end\n/m, "")
+                  .sub(/def broadcast_results_refresh.*?\n  end\n/m, "")
+    channel = code.call(Rails.root.join("app/channels/seat_status_channel.rb").to_s)
 
-    expect(naming).to eq([ "app/models/game.rb" ])
+    expect(naming).to match_array(%w[app/models/game.rb app/channels/seat_status_channel.rb])
     expect(outside).not_to match(cable)
+    expect(channel.sub("< Turbo::StreamsChannel", "")).not_to match(cable) # the parent class is the only mention
+    expect(channel).not_to match(/\brender\b|\bbroadcast\w*|Submission|\bsubmissions\b|SavedOrder|saved_orders?|orders_for/)
+  end
+
+  it "sends to a subscriber (transmit) only from the status channel, once (AC-9.7)" do
+    expect(files.select { |f| code.call(f).match?(/\btransmit\b/) }.map(&rel)).to eq([ "app/channels/seat_status_channel.rb" ])
+    expect(code.call(Rails.root.join("app/channels/seat_status_channel.rb").to_s).scan(/\btransmit\b/).size).to eq(1)
   end
 
   it "control: the patterns do catch the macros and writes they are there to stop" do

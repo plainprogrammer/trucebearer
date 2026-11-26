@@ -1,4 +1,7 @@
 class Game < ApplicationRecord
+  # The shape of a public id, as Game.start! generates it with SecureRandom.alphanumeric(12). The channels parse stream names with it (spec 024 D10).
+  PUBLIC_ID_PATTERN = /[A-Za-z0-9]{12}/
+
   has_many :seats, dependent: :destroy
   # Declared after seats. No destroy path for a game exists today, and a game with a revealed phase could not be
   # destroyed anyway: a saved order of a revealed phase refuses to be destroyed (spec 022 AC-6.5).
@@ -47,18 +50,23 @@ class Game < ApplicationRecord
 
   # Tells every open seat page and host page which seats have submitted. One snapshot of the seven states, rendered from
   # Phase#seat_statuses and nothing else, on a stream of its own that only the seat and host pages subscribe to (spec 024
-  # D1, D2, D4). With broadcast_results_refresh below, it is one of the only two places the app talks to the cable;
-  # spec/models/status_broadcast_scan_spec.rb enforces that. The
-  # render is outside the rescue so a broken template raises everywhere; the cable call is inside it so a stored save is
-  # never answered with an error (D7).
+  # D1, D2, D4). The message is built by seat_status_message, which SeatStatusChannel also sends to a subscriber as it arrives
+  # (D10), so a broadcast and a catch-up cannot differ. With broadcast_results_refresh below, it is one of the only two places the
+  # app sends to the cable; spec/models/status_broadcast_scan_spec.rb enforces that. The render is outside the rescue so a broken
+  # template raises everywhere; the cable call is inside it so a stored save is never answered with an error (D7).
   def broadcast_seat_status
-    html = ApplicationController.render(partial: "shared/seat_status", locals: { statuses: current_phase.seat_statuses })
+    message = seat_status_message
     begin
-      Turbo::StreamsChannel.broadcast_update_to(:seat_status, public_id, target: "seat-status", content: html,
-                                                attributes: { method: :morph })
+      Turbo::StreamsChannel.broadcast_stream_to(:seat_status, public_id, content: message)
     rescue StandardError => error
       Rails.logger.warn("seat status broadcast failed: #{error.class}")
     end
+  end
+
+  # The one status message: a single morph of the seven rows into the page's live list (spec 024 D2, D10).
+  def seat_status_message
+    html = ApplicationController.render(partial: "shared/seat_status", locals: { statuses: current_phase.seat_statuses })
+    Turbo::StreamsChannel.turbo_stream_action_tag(:update, target: "seat-status", template: html, method: :morph)
   end
 
   # Tells every open seat page, host page, order screen and picker that a phase was revealed, so each reloads itself through its own

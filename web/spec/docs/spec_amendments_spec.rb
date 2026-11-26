@@ -32,8 +32,7 @@ RSpec.describe "Spec amendments" do
     spec = File.read(File.expand_path("../../docs/specs/024-live-status/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| 1.1.0 |") }
 
-    expect(spec).to include("**Version:** 1.1.0")
-    expect(row).not_to be_nil
+    expect(row).not_to be_nil # the version line moves on with later amendments (1.2.0, spec 024 itself); the row stays
     expect(row).to include("AC-2.7").and include("AC-4.1").and include("AC-4.5").and include("half stale").and include("spec 025")
   end
 end
