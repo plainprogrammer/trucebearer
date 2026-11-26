@@ -1,0 +1,244 @@
+# The classic map: provinces, coasts, adjacency, supply centers, home centers
+# and the starting units for spring 1901.
+#
+# Written independently from public geographic knowledge and the game's terms
+# of art. It is not derived from a scan or image of any board, and not copied
+# from any other engine's data files.
+#
+# Every identifier is a quoted string, so YAML never reads one as a boolean or
+# a number. The loader reads this file with the safe loader only.
+map: "classic"
+
+powers:
+  - { id: "austria", name: "Austria" }
+  - { id: "england", name: "England" }
+  - { id: "france", name: "France" }
+  - { id: "germany", name: "Germany" }
+  - { id: "italy", name: "Italy" }
+  - { id: "russia", name: "Russia" }
+  - { id: "turkey", name: "Turkey" }
+
+provinces:
+  - { id: "adr", name: "Adriatic Sea", type: "sea" }
+  - { id: "aeg", name: "Aegean Sea", type: "sea" }
+  - { id: "alb", name: "Albania", type: "coastal" }
+  - { id: "ank", name: "Ankara", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "apu", name: "Apulia", type: "coastal" }
+  - { id: "arm", name: "Armenia", type: "coastal" }
+  - { id: "bal", name: "Baltic Sea", type: "sea" }
+  - { id: "bar", name: "Barents Sea", type: "sea" }
+  - { id: "bel", name: "Belgium", type: "coastal", supply_center: true }
+  - { id: "ber", name: "Berlin", type: "coastal", supply_center: true, home: "germany" }
+  - { id: "bla", name: "Black Sea", type: "sea" }
+  - { id: "boh", name: "Bohemia", type: "inland" }
+  - { id: "bot", name: "Gulf of Bothnia", type: "sea" }
+  - { id: "bre", name: "Brest", type: "coastal", supply_center: true, home: "france" }
+  - { id: "bud", name: "Budapest", type: "inland", supply_center: true, home: "austria" }
+  - { id: "bul", name: "Bulgaria", type: "coastal", supply_center: true, coasts: ["ec", "sc"] }
+  - { id: "bur", name: "Burgundy", type: "inland" }
+  - { id: "cly", name: "Clyde", type: "coastal" }
+  - { id: "con", name: "Constantinople", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "den", name: "Denmark", type: "coastal", supply_center: true }
+  - { id: "eas", name: "Eastern Mediterranean", type: "sea" }
+  - { id: "edi", name: "Edinburgh", type: "coastal", supply_center: true, home: "england" }
+  - { id: "eng", name: "English Channel", type: "sea" }
+  - { id: "fin", name: "Finland", type: "coastal" }
+  - { id: "gal", name: "Galicia", type: "inland" }
+  - { id: "gas", name: "Gascony", type: "coastal" }
+  - { id: "gol", name: "Gulf of Lyon", type: "sea" }
+  - { id: "gre", name: "Greece", type: "coastal", supply_center: true }
+  - { id: "hel", name: "Helgoland Bight", type: "sea" }
+  - { id: "hol", name: "Holland", type: "coastal", supply_center: true }
+  - { id: "ion", name: "Ionian Sea", type: "sea" }
+  - { id: "iri", name: "Irish Sea", type: "sea" }
+  - { id: "kie", name: "Kiel", type: "coastal", supply_center: true, home: "germany" }
+  - { id: "lon", name: "London", type: "coastal", supply_center: true, home: "england" }
+  - { id: "lvn", name: "Livonia", type: "coastal" }
+  - { id: "lvp", name: "Liverpool", type: "coastal", supply_center: true, home: "england" }
+  - { id: "mao", name: "Mid-Atlantic Ocean", type: "sea" }
+  - { id: "mar", name: "Marseilles", type: "coastal", supply_center: true, home: "france" }
+  - { id: "mos", name: "Moscow", type: "inland", supply_center: true, home: "russia" }
+  - { id: "mun", name: "Munich", type: "inland", supply_center: true, home: "germany" }
+  - { id: "naf", name: "North Africa", type: "coastal" }
+  - { id: "nao", name: "North Atlantic Ocean", type: "sea" }
+  - { id: "nap", name: "Naples", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "nth", name: "North Sea", type: "sea" }
+  - { id: "nwg", name: "Norwegian Sea", type: "sea" }
+  - { id: "nwy", name: "Norway", type: "coastal", supply_center: true }
+  - { id: "par", name: "Paris", type: "inland", supply_center: true, home: "france" }
+  - { id: "pic", name: "Picardy", type: "coastal" }
+  - { id: "pie", name: "Piedmont", type: "coastal" }
+  - { id: "por", name: "Portugal", type: "coastal", supply_center: true }
+  - { id: "pru", name: "Prussia", type: "coastal" }
+  - { id: "rom", name: "Rome", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "ruh", name: "Ruhr", type: "inland" }
+  - { id: "rum", name: "Rumania", type: "coastal", supply_center: true }
+  - { id: "ser", name: "Serbia", type: "inland", supply_center: true }
+  - { id: "sev", name: "Sevastopol", type: "coastal", supply_center: true, home: "russia" }
+  - { id: "sil", name: "Silesia", type: "inland" }
+  - { id: "ska", name: "Skagerrak", type: "sea" }
+  - { id: "smy", name: "Smyrna", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "spa", name: "Spain", type: "coastal", supply_center: true, coasts: ["nc", "sc"] }
+  - { id: "stp", name: "St Petersburg", type: "coastal", supply_center: true, home: "russia", coasts: ["nc", "sc"] }
+  - { id: "swe", name: "Sweden", type: "coastal", supply_center: true }
+  - { id: "syr", name: "Syria", type: "coastal" }
+  - { id: "tri", name: "Trieste", type: "coastal", supply_center: true, home: "austria" }
+  - { id: "tun", name: "Tunis", type: "coastal", supply_center: true }
+  - { id: "tus", name: "Tuscany", type: "coastal" }
+  - { id: "tyr", name: "Tyrolia", type: "inland" }
+  - { id: "tys", name: "Tyrrhenian Sea", type: "sea" }
+  - { id: "ukr", name: "Ukraine", type: "inland" }
+  - { id: "ven", name: "Venice", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "vie", name: "Vienna", type: "inland", supply_center: true, home: "austria" }
+  - { id: "wal", name: "Wales", type: "coastal" }
+  - { id: "war", name: "Warsaw", type: "inland", supply_center: true, home: "russia" }
+  - { id: "wes", name: "Western Mediterranean", type: "sea" }
+  - { id: "yor", name: "Yorkshire", type: "coastal" }
+
+armies:
+  "alb": ["gre", "ser", "tri"]
+  "ank": ["arm", "con", "smy"]
+  "apu": ["nap", "rom", "ven"]
+  "arm": ["ank", "sev", "smy", "syr"]
+  "bel": ["bur", "hol", "pic", "ruh"]
+  "ber": ["kie", "mun", "pru", "sil"]
+  "boh": ["gal", "mun", "sil", "tyr", "vie"]
+  "bre": ["gas", "par", "pic"]
+  "bud": ["gal", "rum", "ser", "tri", "vie"]
+  "bul": ["con", "gre", "rum", "ser"]
+  "bur": ["bel", "gas", "mar", "mun", "par", "pic", "ruh"]
+  "cly": ["edi", "lvp"]
+  "con": ["ank", "bul", "smy"]
+  "den": ["kie", "swe"]
+  "edi": ["cly", "lvp", "yor"]
+  "fin": ["nwy", "stp", "swe"]
+  "gal": ["boh", "bud", "rum", "sil", "ukr", "vie", "war"]
+  "gas": ["bre", "bur", "mar", "par", "spa"]
+  "gre": ["alb", "bul", "ser"]
+  "hol": ["bel", "kie", "ruh"]
+  "kie": ["ber", "den", "hol", "mun", "ruh"]
+  "lon": ["wal", "yor"]
+  "lvn": ["mos", "pru", "stp", "war"]
+  "lvp": ["cly", "edi", "wal", "yor"]
+  "mar": ["bur", "gas", "pie", "spa"]
+  "mos": ["lvn", "sev", "stp", "ukr", "war"]
+  "mun": ["ber", "boh", "bur", "kie", "ruh", "sil", "tyr"]
+  "naf": ["tun"]
+  "nap": ["apu", "rom"]
+  "nwy": ["fin", "stp", "swe"]
+  "par": ["bre", "bur", "gas", "pic"]
+  "pic": ["bel", "bre", "bur", "par"]
+  "pie": ["mar", "tus", "tyr", "ven"]
+  "por": ["spa"]
+  "pru": ["ber", "lvn", "sil", "war"]
+  "rom": ["apu", "nap", "tus", "ven"]
+  "ruh": ["bel", "bur", "hol", "kie", "mun"]
+  "rum": ["bud", "bul", "gal", "ser", "sev", "ukr"]
+  "ser": ["alb", "bud", "bul", "gre", "rum", "tri"]
+  "sev": ["arm", "mos", "rum", "ukr"]
+  "sil": ["ber", "boh", "gal", "mun", "pru", "war"]
+  "smy": ["ank", "arm", "con", "syr"]
+  "spa": ["gas", "mar", "por"]
+  "stp": ["fin", "lvn", "mos", "nwy"]
+  "swe": ["den", "fin", "nwy"]
+  "syr": ["arm", "smy"]
+  "tri": ["alb", "bud", "ser", "tyr", "ven", "vie"]
+  "tun": ["naf"]
+  "tus": ["pie", "rom", "ven"]
+  "tyr": ["boh", "mun", "pie", "tri", "ven", "vie"]
+  "ukr": ["gal", "mos", "rum", "sev", "war"]
+  "ven": ["apu", "pie", "rom", "tri", "tus", "tyr"]
+  "vie": ["boh", "bud", "gal", "tri", "tyr"]
+  "wal": ["lon", "lvp", "yor"]
+  "war": ["gal", "lvn", "mos", "pru", "sil", "ukr"]
+  "yor": ["edi", "lon", "lvp", "wal"]
+
+fleets:
+  "adr": ["alb", "apu", "ion", "tri", "ven"]
+  "aeg": ["bul/sc", "con", "eas", "gre", "ion", "smy"]
+  "alb": ["adr", "gre", "ion", "tri"]
+  "ank": ["arm", "bla", "con"]
+  "apu": ["adr", "ion", "nap", "ven"]
+  "arm": ["ank", "bla", "sev"]
+  "bal": ["ber", "bot", "den", "kie", "lvn", "pru", "swe"]
+  "bar": ["nwg", "nwy", "stp/nc"]
+  "bel": ["eng", "hol", "nth", "pic"]
+  "ber": ["bal", "kie", "pru"]
+  "bla": ["ank", "arm", "bul/ec", "con", "rum", "sev"]
+  "bot": ["bal", "fin", "lvn", "stp/sc", "swe"]
+  "bre": ["eng", "gas", "mao", "pic"]
+  "bul/ec": ["bla", "con", "rum"]
+  "bul/sc": ["aeg", "con", "gre"]
+  "cly": ["edi", "lvp", "nao", "nwg"]
+  "con": ["aeg", "ank", "bla", "bul/ec", "bul/sc", "smy"]
+  "den": ["bal", "hel", "kie", "nth", "ska", "swe"]
+  "eas": ["aeg", "ion", "smy", "syr"]
+  "edi": ["cly", "nth", "nwg", "yor"]
+  "eng": ["bel", "bre", "iri", "lon", "mao", "nth", "pic", "wal"]
+  "fin": ["bot", "stp/sc", "swe"]
+  "gas": ["bre", "mao", "spa/nc"]
+  "gol": ["mar", "pie", "spa/sc", "tus", "tys", "wes"]
+  "gre": ["aeg", "alb", "bul/sc", "ion"]
+  "hel": ["den", "hol", "kie", "nth"]
+  "hol": ["bel", "hel", "kie", "nth"]
+  "ion": ["adr", "aeg", "alb", "apu", "eas", "gre", "nap", "tun", "tys"]
+  "iri": ["eng", "lvp", "mao", "nao", "wal"]
+  "kie": ["bal", "ber", "den", "hel", "hol"]
+  "lon": ["eng", "nth", "wal", "yor"]
+  "lvn": ["bal", "bot", "pru", "stp/sc"]
+  "lvp": ["cly", "iri", "nao", "wal"]
+  "mao": ["bre", "eng", "gas", "iri", "naf", "nao", "por", "spa/nc", "spa/sc", "wes"]
+  "mar": ["gol", "pie", "spa/sc"]
+  "naf": ["mao", "tun", "wes"]
+  "nao": ["cly", "iri", "lvp", "mao", "nwg"]
+  "nap": ["apu", "ion", "rom", "tys"]
+  "nth": ["bel", "den", "edi", "eng", "hel", "hol", "lon", "nwg", "nwy", "ska", "yor"]
+  "nwg": ["bar", "cly", "edi", "nao", "nth", "nwy"]
+  "nwy": ["bar", "nth", "nwg", "ska", "stp/nc", "swe"]
+  "pic": ["bel", "bre", "eng"]
+  "pie": ["gol", "mar", "tus"]
+  "por": ["mao", "spa/nc", "spa/sc"]
+  "pru": ["bal", "ber", "lvn"]
+  "rom": ["nap", "tus", "tys"]
+  "rum": ["bla", "bul/ec", "sev"]
+  "sev": ["arm", "bla", "rum"]
+  "ska": ["den", "nth", "nwy", "swe"]
+  "smy": ["aeg", "con", "eas", "syr"]
+  "spa/nc": ["gas", "mao", "por"]
+  "spa/sc": ["gol", "mao", "mar", "por", "wes"]
+  "stp/nc": ["bar", "nwy"]
+  "stp/sc": ["bot", "fin", "lvn"]
+  "swe": ["bal", "bot", "den", "fin", "nwy", "ska"]
+  "syr": ["eas", "smy"]
+  "tri": ["adr", "alb", "ven"]
+  "tun": ["ion", "naf", "tys", "wes"]
+  "tus": ["gol", "pie", "rom", "tys"]
+  "tys": ["gol", "ion", "nap", "rom", "tun", "tus", "wes"]
+  "ven": ["adr", "apu", "tri"]
+  "wal": ["eng", "iri", "lon", "lvp"]
+  "wes": ["gol", "mao", "naf", "spa/sc", "tun", "tys"]
+  "yor": ["edi", "lon", "nth"]
+
+starting_units:
+  - { power: "austria", type: "army", province: "bud" }
+  - { power: "austria", type: "army", province: "vie" }
+  - { power: "austria", type: "fleet", province: "tri" }
+  - { power: "england", type: "fleet", province: "edi" }
+  - { power: "england", type: "army", province: "lvp" }
+  - { power: "england", type: "fleet", province: "lon" }
+  - { power: "france", type: "fleet", province: "bre" }
+  - { power: "france", type: "army", province: "mar" }
+  - { power: "france", type: "army", province: "par" }
+  - { power: "germany", type: "army", province: "ber" }
+  - { power: "germany", type: "fleet", province: "kie" }
+  - { power: "germany", type: "army", province: "mun" }
+  - { power: "italy", type: "fleet", province: "nap" }
+  - { power: "italy", type: "army", province: "rom" }
+  - { power: "italy", type: "army", province: "ven" }
+  - { power: "russia", type: "army", province: "mos" }
+  - { power: "russia", type: "fleet", province: "sev" }
+  - { power: "russia", type: "fleet", province: "stp", coast: "sc" }
+  - { power: "russia", type: "army", province: "war" }
+  - { power: "turkey", type: "fleet", province: "ank" }
+  - { power: "turkey", type: "army", province: "con" }
+  - { power: "turkey", type: "army", province: "smy" }
