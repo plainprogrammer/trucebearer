@@ -1,5 +1,5 @@
 case: "6.E.3"
-summary: A power can't help dislodge its own unit in a head-to-head battle
+summary: A support doesn't count against a unit of the supporter's own power when the two units meet head on
 position:
   units:
     - {power: germany, type: army, at: ber}

@@ -2309,7 +2309,7 @@ kase "6.F.1", "T:a:gre T:f:aeg T:f:con T:f:bla", [["m T gre sev","V"],["c T aeg 
 6.D.35: A dislodged supporter's support is cut, which lets another army's supported move succeed
 6.E.1: A dislodged unit doesn't hold its attacker's old province, so another unit can follow in
 6.E.2: Two units of one power can't dislodge each other in a head-to-head battle
-6.E.3: A power can't help dislodge its own unit in a head-to-head battle
+6.E.3: A support doesn't count against a unit of the supporter's own power when the two units meet head on
 6.E.4: A head-to-head loser that isn't dislodged still keeps another unit out of the province it attacked
 6.E.5: A head-to-head loser that is dislodged by a third unit still keeps another unit out
 6.E.6: A head-to-head loser that isn't dislodged, because the winner's support came from its own power, still keeps another unit out
