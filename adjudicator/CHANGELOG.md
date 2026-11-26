@@ -11,6 +11,7 @@ Releases are git tags named `adjudicator-vX.Y.Z`.
 - The gem skeleton: gemspec, Gemfile, Rakefile, `Trucebearer::Adjudicator::VERSION` (`0.0.0`) and RSpec with a first passing spec. The gem has no runtime dependencies. (#6)
 - `docs/interface.md` now defines the movement-phase interface. It covers the classic map and its queries; the value objects and their hash form (`format` 1); checking one order; listing a unit's legal orders; adjudicating a movement phase; and the `InvalidInput` error. Retreats and adjustments are placeholders until 0.3. (#5)
 - `docs/ruleset.md` records the DATC v3.4 options the interface relies on, and where it departs from the preferred results. (#5)
+- `bin/release` releases the gem in one command: it bumps the version, moves the "Unreleased" entries under the new version, regenerates `Gemfile.lock`, commits and tags `adjudicator-vX.Y.Z`. It never pushes or publishes, and `--dry-run` shows the plan. (#8)
 - `docs/reference/datc-v3.4.html`, an unmodified copy of the DATC v3.4, so the section numbers cited in fixtures and `docs/ruleset.md` can be checked. It is for reading only and is not packaged in the gem. (#58)
 
 ### Changed

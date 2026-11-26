@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Releases the gem: bumps the version, moves the CHANGELOG's Unreleased entries
+# under it, regenerates Gemfile.lock, commits and tags adjudicator-vX.Y.Z.
+# It never pushes and never publishes to RubyGems.
+#
+#   bin/release [--dry-run] major|minor|patch|X.Y.Z
+
+require "date"
+require "optparse"
+require_relative "release_tools/release"
+
+dry_run = false
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/release [--dry-run] major|minor|patch|X.Y.Z"
+  opts.on("--dry-run", "Print what would change; write nothing") { dry_run = true }
+end
+begin
+  args = parser.parse(ARGV)
+rescue OptionParser::ParseError => e
+  abort "bin/release: #{e.message}\n#{parser}"
+end
+abort parser.to_s unless args.size == 1
+
+root = File.expand_path("..", __dir__)
+begin
+  ReleaseTools::Release.new(
+    root: root, git: ReleaseTools::Git.new(root), lock_command: ReleaseTools::Lock, today: Date.today, out: $stdout
+  ).run(args.first, dry_run: dry_run)
+rescue ReleaseTools::Error => e
+  warn "bin/release: #{e.message}"
+  exit 1
+end
