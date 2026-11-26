@@ -70,7 +70,10 @@ RSpec.describe "Order secrecy", type: :request do
     let!(:created) { create_game(power: "germany") }
     let(:game) { created.game }
     let(:id) { game.public_id }
-    let!(:england_seat_and_token) { game.take_seat!("england") }
+    let!(:england_seat_and_token) do
+      seat, = game.take_seat!("england")
+      [ seat, game.reissue_seat!(seat) ] # a reissue row is in the history before any baseline (spec 026 AC-10.6)
+    end
     let!(:france_seat_and_token) { game.take_seat!("france") }
     let(:england_seat) { england_seat_and_token.first }
     let(:phase) { game.current_phase }
@@ -96,6 +99,14 @@ RSpec.describe "Order secrecy", type: :request do
       { "another seat" => france, "the host, with a seat of its own" => created.session, "the host, with no seat" => host_without_seat,
         "a stranger" => open_session, "the host, with France's seat cookie" => wearing_france, "the host, stepped into France" => stepped_in }
     end
+    it "has a reissue row and a step-in row in the host page the sweep compares (AC-10.6)" do
+      viewers
+      created.session.get "/games/#{id}/host"
+      history = Nokogiri::HTML5(created.session.response.body).at_css("[data-seat-history]")
+
+      expect(history.css("li").map { |row| row.text.squish }.join(" ")).to include("seat reissued").and include("stepped in")
+    end
+
     let(:england_phone) do
       open_session.tap { |session| session.get "/games/#{id}/seat-link", params: { token: england_seat_and_token.last } }
     end
