@@ -17,6 +17,9 @@ module RulesEngine
   class << self
     def starting_position = TA::Map.classic.starting_position
 
+    # The map's powers, each with an id (a symbol) and a name. The one place a power list comes from (spec 021 FR-12).
+    def powers = TA::Map.classic.powers
+
     def check(position, order) = TA.check(position, order)
 
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
