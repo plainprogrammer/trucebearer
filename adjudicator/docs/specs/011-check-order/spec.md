@@ -1,7 +1,7 @@
 # Feature 011: Check a single movement order against a position
 
-**Status:** Draft
-**Version:** 1.1.0
+**Status:** Approved
+**Version:** 1.1.1
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #11
@@ -15,6 +15,7 @@
 |---------|------|--------|
 | 1.0.0 | 2026-11-25 | Initial draft |
 | 1.1.0 | 2026-11-25 | Folded in the first independent review (round 1, changes required, three blocking):<br>• AC-3.8 names all three Move pairs that never fail together, and the seven that can.<br>• The "cases left to #14" table no longer claims 6.C to 6.H hold no legality: the cases that do are listed, with the reasons checking gives.<br>• Every order of an encoded case carries a `check:`, and an order the table doesn't name is legal (6.D.31's move included).<br>• Fixture format lists its keys and says where `phase` goes.<br>• AC-7.1 and AC-7.3 name their mechanism; AC-5.7, AC-3.9 and AC-6.4 are made concrete.<br>• Review-only criteria are marked, FR-3 has a criterion, and `Marshal` is stated once.<br>• AC-9.4 records only the 4.E.1 consequences |
+| 1.1.1 | 2026-11-25 | Gate A approved by the coordinator under the maintainer's delegation, with a patch: a fixture holds exactly the units and orders of its DATC case and nothing more (extra checks go in ordinary specs), and the "every order has a `check:`" rule is for files on disk while AC-8.5 is for the in-memory runner. Open Question 2 is decided: encode only 6.D.31, 6.D.34 and 6.G.19. Status is now Approved |
 
 ## Problem Statement
 
@@ -116,7 +117,9 @@ orders:
 
 Each is encoded for what checking decides: which orders are legal and, if not, which reason. Where the DATC says an order is "illegal", "invalid" or similar, the fixture says which reason `docs/interface.md` gives.
 
-**Every order of an encoded case carries a `check:`.** An order that the table below doesn't name expects `legal: true`. So in 6.D.31 the army's move from Rumania to Armenia is legal (the contract finds a chain through the Black Sea; the DATC's word "invalid" there is about the move being matched, not about its legality), and in 6.G.19 both army moves are legal.
+**A fixture holds exactly the units and orders of its DATC case, and nothing more.** #14 adjudicates these same files, so an extra order or unit would change the result. A check that isn't one of a case's own orders goes in an ordinary spec, not in a fixture.
+
+**Every order of an encoded case on disk carries a `check:`.** An order that the table below doesn't name expects `legal: true`. (The rule is for the files in `spec/datc/`. The runner itself ignores an order that has no `check:`, which is what lets #14 add orders of its own later, as AC-8.5 says.) So in 6.D.31 the army's move from Rumania to Armenia is legal (the contract finds a chain through the Black Sea; the DATC's word "invalid" there is about the move being matched, not about its legality), and in 6.G.19 both army moves are legal.
 
 | Case | What checking decides | Expected |
 |---|---|---|
@@ -416,7 +419,7 @@ A module function of `Trucebearer::Adjudicator`, `TA.check(position, order)`. It
 None blocking. These are decisions made in this spec, put to the maintainer at Gate A so approval settles them.
 
 1. **Is the contract consistent?** While writing the spec, every reason of the table was traced against its precedence order and the conditions in "When each order type is legal". Every reason can be returned (the pairs that can never fail together are named in AC-3.8 and AC-5.7, and none is a reason that is unreachable), and all the interface examples were traced by hand and match. No defect was found, so `docs/interface.md` is unchanged. If the specs find one, work stops and goes to the coordinator.
-2. **Fixtures outside 6.A and 6.B.** The Issue names 6.A and 6.B. This spec adds 6.D.31, 6.D.34 and 6.G.19, because the contract cites each as the source of a checking condition. Other cases in 6.D to 6.G also hold orders the DATC calls illegal (listed above, with the reasons the contract gives). **Recommendation: encode the three, and leave the rest to the issue that needs them.** Encoding the whole list now (6.D.22 to 6.D.24, 6.D.28 to 6.D.30, 6.D.32, 6.E.14, 6.F.1, 6.F.12, 6.G.7 would be 11 more small files) is the alternative, and would give `move_impossible` and `not_fleet_at_sea` a DATC source. Drop the three if you want the fixtures strictly to the Issue; the conditions are then covered by unit specs alone (AC-5.3, AC-5.5, AC-6.4).
+2. **Fixtures outside 6.A and 6.B. Decided at Gate A: encode only the three.** The Issue names 6.A and 6.B. This spec adds 6.D.31, 6.D.34 and 6.G.19, because the contract cites each as the source of a checking condition. Other cases in 6.D to 6.G also hold orders the DATC calls illegal (listed above, with the reasons the contract gives). **Recommendation: encode the three, and leave the rest to the issue that needs them.** Encoding the whole list now (6.D.22 to 6.D.24, 6.D.28 to 6.D.30, 6.D.32, 6.E.14, 6.F.1, 6.F.12, 6.G.7 would be 11 more small files) is the alternative, and would give `move_impossible` and `not_fleet_at_sea` a DATC source. Drop the three if you want the fixtures strictly to the Issue; the conditions are then covered by unit specs alone (AC-5.3, AC-5.5, AC-6.4).
 3. **`Marshal` (#77).** #77 runs in parallel. If it merges before this pull request is done, `CheckResult` gets the same handling it adds. If this merges first, the #77 worker adds it. Nothing of its own is built here.
 4. **`docs/ruleset.md` rows (AC-9.4).** The contract already states the choices, so the rows only record them under their DATC section, as `AGENTS.md` asks. Only 6.D.31 and 6.G.19 get rows, beside 4.E.1: they follow the DATC's own remarks about programs that offer only possible orders. The own-province cases are the DATC's preferred results and no choice is open.
 5. **Fixture notation.** Locations are written `"spa/nc"` in the short notation, as in `data/maps/classic.yml`, and the loader expands them to the hash forms. This keeps hand-written fixtures readable and is the only departure from the hash forms.
