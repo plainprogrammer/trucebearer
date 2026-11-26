@@ -4,7 +4,7 @@ module QrHelper
   def qr_code_svg(url, label)
     svg = RQRCode::QRCode.new(url, level: :m).as_svg(
       offset: 4, module_size: 1, use_path: true, viewbox: true, standalone: true,
-      svg_attributes: { role: "img", "aria-label": label, class: "qr-card__code" }
+      svg_attributes: { role: "img", "aria-label": ERB::Util.html_escape(label).to_str, class: "qr-card__code" }
     )
     svg.sub(/<\?xml[^>]*\?>/, "").sub(/ fill="[^"]*"/, "").html_safe
   rescue RQRCodeCore::QRCodeRunTimeError => error

@@ -14,6 +14,17 @@ RSpec.describe QrHelper, type: :helper do
     expect(svg.scan("<path").size).to eq(1)
   end
 
+  it "cannot be broken out of by a label with quotes and angle brackets" do
+    text = %(say "hi" <script>alert(1)</script> & more)
+    root = Nokogiri::XML(helper.qr_code_svg(url, text)).root
+
+    expect(root.name).to eq("svg")
+    expect(root["aria-label"]).to eq(text)
+    plain = Nokogiri::XML(svg).root
+    expect(root.attribute_nodes.map(&:name)).to eq(plain.attribute_nodes.map(&:name))
+    expect(root.element_children.map(&:name)).to eq(%w[path])
+  end
+
   it "carries a four-module quiet zone in its view box (AC-9.8)" do
     side = RQRCode::QRCode.new(url, level: :m).modules.size + 8
 

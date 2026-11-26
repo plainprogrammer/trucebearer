@@ -6,10 +6,10 @@ module JoinCode
 
   def self.generate = Array.new(LENGTH) { ALPHABET[SecureRandom.random_number(ALPHABET.size)] }.join
 
-  # Upper-cased, spaces and hyphens removed. Nothing is converted into another character.
+  # Upper-cased (ASCII letters only), spaces and hyphens removed. Nothing is converted into another character.
   # Returns nil for anything that is not a code.
   def self.normalize(input)
-    code = input.to_s.upcase.delete(" \t-")
+    code = input.to_s.upcase(:ascii).delete(" \t-")
     code if code.match?(SHAPE)
   end
 

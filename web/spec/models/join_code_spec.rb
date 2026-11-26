@@ -26,6 +26,11 @@ RSpec.describe JoinCode do
     expect(JoinCode.normalize(nil)).to be_nil
   end
 
+  it "never turns a character that upcases to several letters into valid characters" do
+    # Six visible characters, the first an ff ligature; a full Unicode upcase would make it two letters and a valid code.
+    expect(JoinCode.normalize("\uFB00CDEG")).to be_nil
+  end
+
   it "splits a code into two groups of three" do
     expect(JoinCode.groups("ACDEFG")).to eq(%w[ACD EFG])
   end
