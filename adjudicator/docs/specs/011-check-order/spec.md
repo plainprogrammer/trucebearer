@@ -40,7 +40,7 @@
 - **Adjudication (#14, #15).** Nothing here decides who moves, bounces or is dislodged. A DATC case that is about what happens on adjudication is not encoded here, apart from the legality of its orders (see "DATC fixtures").
 - **Any change to `docs/interface.md`.** This feature implements the contract as it stands. If building it shows that the contract is wrong or contradicts itself, for example a reason that can't be reached in its precedence order, work stops and goes to the coordinator, because changing the contract is an interface change with its own rules in `adjudicator/AGENTS.md`. None was found while writing this spec (see Open Questions 1).
 - **Retreat and adjustment orders.** They have no order classes yet (0.3). A position in those phases is answered with `:wrong_phase`.
-- **Its own design of `Marshal` handling.** #77 adds it for the value objects. If #77 has merged when this pull request is ready, `CheckResult` gets the same handling, and nothing more (Open Question 3).
+- **Its own design of `Marshal` handling.** #77 adds it for the value objects. If #77 has merged when this pull request is ready, `CheckResult` gets the same handling and a spec that mirrors #77's own, and nothing more (Open Question 3).
 - A map other than the classic one.
 - Reporting more than one reason. `reasons` stays a list for a later version, but holds at most one now.
 
@@ -177,7 +177,7 @@ Some cases in 6.D to 6.G are mostly about adjudication but contain orders the DA
 | 6.F.1 | the move: `not_reachable`; the coastal fleet's convoy: `not_fleet_at_sea`; the two sea fleets' convoys: `not_on_chain` |
 | 6.F.12 and 6.G.7 | the unneeded fleet's convoy: `not_on_chain` |
 
-Every other case in 6.C to 6.H holds only legal orders, and is left to #14 and later. Encoding the cases above now instead is a one-line decision for the maintainer at Gate A (Open Question 2).
+Every other case in 6.C to 6.G holds no order the DATC marks illegal, and is left to #14 and later. 6.H is the retreat section, and arrives with retreats in 0.3. Encoding the cases above now instead is a one-line decision for the maintainer at Gate A (Open Question 2).
 
 ## User Stories
 
@@ -263,7 +263,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-5.4** Given a support to move for a unit that couldn't make the move itself as a plain move, to any coast of the destination (an army that doesn't touch the destination and has no chain, a fleet that can't reach it) Then `[:move_impossible]`. Given a unit that could, to a coast the supporter can't reach itself, Then the order is legal, and the supported fleet's coast plays no part
 - [ ] **AC-5.5** Given a supported army that can reach the destination only by a convoy chain Then the order is legal when the chain doesn't need the supporter's province, and `[:move_impossible]` when it does, because the chain is judged without the supporter's fleet (DATC 6.D.31)
 - [ ] **AC-5.6** Given a support order, whatever the other powers' units, Then supporting a foreign unit is legal, and a support never names a coast (there is no field for one)
-- [ ] **AC-5.7** Given orders that fail two conditions Then the earlier in the order of the table is reported. For a support to hold, `:own_province` and `:no_unit` never fail together (the supporter stands in its own province), and the other two pairs are pinned. For a support to move, every pair is pinned, `:own_province` with `:no_unit` only for a destination that is the supporter's province and an empty origin
+- [ ] **AC-5.7** Given orders that fail two conditions Then the earlier in the order of the table is reported. For a support to hold, `:own_province` and `:no_unit` never fail together (the supporter stands in its own province), and the other two pairs are pinned. For a support to move, every pair that can fail together is pinned: `:own_province` with `:no_unit` only for a destination that is the supporter's province and an empty origin, and `:no_unit` with `:move_impossible` never, because an empty origin has no unit to judge (any `:no_unit` case covers it)
 
 ### Story 6: Check a convoy
 
@@ -276,7 +276,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-6.1** Given the interface example for England's fleet in London convoying Liverpool to Belgium Then the result is `[:not_fleet_at_sea]`
 - [ ] **AC-6.2** Given a fleet in a sea province, an army in the origin, two different coastal provinces, and the fleet part of a minimal convoy chain between them Then the order is legal, whoever owns the army and the other fleets in the chain
 - [ ] **AC-6.3** Given an army, or a fleet that is not in a sea province, ordered to convoy Then `[:not_fleet_at_sea]`. Given an origin equal to the destination, or an origin or destination that is not coastal (sea or inland) Then `[:bad_endpoints]`. Given an origin with no army (empty, or holding a fleet) Then `[:no_unit]`
-- [ ] **AC-6.4** Given a fleet that is in no minimal convoy chain between the origin and the destination Then `[:not_on_chain]`. The specs show three positions: a sea fleet that touches no other fleet of a chain and neither endpoint (the shape of 6.F.12); two fleets that form the only chain, where each is legal; and a fleet that a one-fleet chain bypasses (DATC 6.G.19), which is refused while the fleet on the short chain is legal
+- [ ] **AC-6.4** Given a fleet that is in no minimal convoy chain between the origin and the destination Then `[:not_on_chain]`. The specs show three positions: a sea fleet that touches a chain fleet but neither endpoint, so no chain through it reaches the origin (the shape of 6.F.12); two fleets that form the only chain, where each is legal; and a fleet that a one-fleet chain bypasses (DATC 6.G.19), which is refused while the fleet on the short chain is legal
 - [ ] **AC-6.5** Given a convoy whose endpoints are on a split-coast province Then the coast plays no part (DATC 6.B.18, 6.B.19)
 - [ ] **AC-6.6** Given a convoy that fails two conditions Then the earlier in the order `:not_fleet_at_sea`, `:bad_endpoints`, `:no_unit`, `:not_on_chain` is reported. The specs pin each pair
 
@@ -304,7 +304,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-8.2** Given the directory `spec/datc/` When the specs run Then the set of `*.yml` files is exactly the list of cases kept in the runner, which starts as "Cases encoded": none missing, none extra, none for a case in "Cases left out", and each file's `case:` equals its file name. #14 adds its cases to that list, which is the one edit the runner needs
 - [ ] **AC-8.3** (review) Given the fixtures Then none carries text copied from the DATC: each `summary` is our own wording, and the one reference copy of the DATC is read only
 - [ ] **AC-8.4** Given a fixture marked `departure: true` Then it is one of 6.B.2 and 6.B.12, the two checking departures named in `docs/ruleset.md`, and the specs check that no other fixture is marked
-- [ ] **AC-8.5** Given a fixture with a `result:` or an `after:` key, or an order with no `check:` Then the checking runner ignores them, so #14 can add them without editing the loader. They are the only keys the loader accepts beyond those listed under "Format". A spec shows this with an in-memory case
+- [ ] **AC-8.5** Given a fixture with a `result:` or an `after:` key, or an order with no `check:` Then the checking runner ignores them, so #14 can add them without editing the loader. They are the two keys the "Keys" list reserves for #14. A spec shows this with an in-memory case
 - [ ] **AC-8.6** Given a malformed fixture (an unknown key, an unknown reason, a case id that doesn't match its file) Then the loader raises a clear error naming the file. A spec shows each, including a key that is neither ours nor reserved for #14
 
 ### Story 9: The examples and the record
@@ -320,7 +320,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-9.3** (review) Given `adjudicator/CHANGELOG.md` Then "Unreleased → Added" has an entry for `TA::CheckResult` and `TA.check`, citing #11, and the #10 entry no longer says `TA::CheckResult` arrives with #11 as a future item (it has arrived)
 - [ ] **AC-9.4** (review) Given `docs/ruleset.md` Then, beside its 4.E.1 row, it records in our own words and citing the section the two choices that the contract takes from that row and the table doesn't yet hold: 6.D.31 (a support is illegal when the move it supports needs a chain through the supporter's province) and 6.G.19 (a convoy order is illegal for a fleet that no minimal chain needs). Nothing already recorded is restated, and the own-province cases (6.A.4, 6.A.5, 6.A.8, 6.D.34) are not open choices, so they get no row
 - [ ] **AC-9.5** (review) Given the pull request Then `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is unchanged
-- [ ] **AC-9.6** Given the internal helpers of FR-3 When they are referenced from outside the gem's module Then each is a private constant and raises `NameError`, and `docs/interface.md` doesn't name them
+- [ ] **AC-9.6** Given the internal helpers of FR-3 When they are referenced from outside the gem's module Then none is reachable (a private constant raises `NameError`, a private method `NoMethodError`, as the plan chooses), and `docs/interface.md` doesn't name them
 
 ## Functional Requirements
 
