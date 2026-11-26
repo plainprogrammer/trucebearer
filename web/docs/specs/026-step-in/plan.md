@@ -1145,3 +1145,58 @@ This section is appended to `docs/specs/026-step-in/plan.md` (the plan's header 
 - **Spec coverage:** AC-10.1 to 10.8 map to 1a, 1c, 2a, 3a, 3b; AC-6.4 and 6.6 to 2a; AC-8.5 to 3b; AC-8.6 to 3a; AC-9.1 to 3c; spec 021 AC-7.11 and 7.12 to 1c and the "adds nothing to a seat's pages" example of 2a.
 - **Types:** `Reissue.record!(phase:, seat:)`, `kind` (`:reissue`/`:step_in`), `Game#reissue_history`, `Game#seat_history` are named the same in every phase.
 - **Placeholder scan:** none. Every step has its code.
+
+---
+
+# Amendment 1.3.0 (#112): one History on the host page
+
+Spec: `spec.md` v1.3.0, D11 and Story 11 (Gate A approved with specs 025 1.2.0 and 027 1.0.6). Branch `web/112-one-history`. Everything is under `web/`. No migration, route or controller action changes.
+
+## Gates checked
+
+- **Order rule:** sort key is `[time, phase number, kind rank, id]`, with reissue 0, step-in 1, position edit 2, reveal 3 (D11). A reveal's time is the phase's `revealed_at`.
+- **Secrecy:** a reveal row holds a title, a time and a link to the existing host results route, for revealed phases only (`Game#history`). The open phase is never a reveal row. `host_history` is read only by the history partial.
+- **Seat page** and `results/_section`'s seat behaviour are untouched; the host page passes `earlier: []`.
+- **Parallel work:** #105 may edit the host page's results section. The only line this plan edits there is the `earlier:` argument of the one `render` of `results/_section` in `hosts/show.html.erb`; the removed "Revealed phases" block and the partial are elsewhere.
+
+## Files
+
+Create: `spec/requests/host_history_spec.rb` (the first test), `spec/models/game_host_history_spec.rb`.
+Change: `app/models/game.rb` (`Game::RevealEntry`, `Game#host_history`; `SEAT_HISTORY_ORDER` gains `reveal: 3`), `app/views/step_ins/_history.html.erb`, `app/views/hosts/show.html.erb` (delete the "Revealed phases" section; `earlier: []`), `app/controllers/hosts_controller.rb` (drop `@earlier`, keep the latest phase local), `README.md` (line 19: "History list"), `spec/support/secrecy_routes.rb` (the host page's `why`), and these specs, which name the old lists: `spec/requests/phase_pages_spec.rb` (`[data-history]` and the sentence), `spec/requests/reveal_post_spec.rb` (`[data-history]`), `spec/requests/step_in_notices_spec.rb` and `spec/requests/position_notice_spec.rb` (the old empty text), `spec/requests/reissue_history_spec.rb` (AC-10.4's exact rows now include a reveal row, with the reveal made under `travel_to`; AC-10.8 asserts no `[data-seat-history]` on the seat pages), `spec/requests/results_spec.rb` (AC-1.7 host half, new AC-6.4 example), `spec/models/step_in_boundary_spec.rb` (readers pattern gains `host_history`; `RevealEntry` scan), `spec/requests/order_secrecy_spec.rb` (a reveal-row control in the "after one reveal" context), `spec/system/step_in_screens_spec.rb` (History with four kinds at 360 pixels; retakes `docs/specs/026-step-in/screens/06-seat-history.png`), `spec/system/position_editor_screens_spec.rb` (the "History" wording; retakes `07-host-history.png`), and the plan changelogs of 025 and 027 (one line each).
+
+## Phase A: the first test, then the model
+
+1. **A1. The first test (red).** `spec/requests/host_history_spec.rb`, AC-11.1. A game with the host's seat as Germany and France's seat. Under `travel_to`: France reissued at 8:40 PM UTC, the host stepped into England... (England taken) at 8:41, and the phase revealed through `POST /games/:id/host/phases/1/reveal` at 8:42. The host page then has exactly one `[data-seat-history]` whose `h2` reads "History", whose `li` texts are, in order, "Spring 1901 · Movement France seat reissued 8:40 PM UTC", "Spring 1901 · Movement England stepped in 8:41 PM UTC", "Spring 1901 · Movement revealed 8:42 PM UTC", and the page has no "Earlier results", "Revealed phases" or "Seat history" text and no `[data-history]`. It fails today for the right reason: there are two lists, the reveal is not in the one that is labelled.
+2. **A2. Model specs (red).** `spec/models/game_host_history_spec.rb`: AC-11.2 (one frozen instant: phase 1's reissue, step-in, position edit and reveal, and phase 2's reissue and position edit sort as the spec says; `seat_history` unchanged), AC-11.5's model example (the open phase is never a reveal entry, with saved orders and a submission in it), and the entry's interface (`kind`, `phase`, `created_at`, `id`). They fail with `NoMethodError`.
+3. **A3. Build** `Game::RevealEntry` (a `Data.define(:phase)` with `kind` `:reveal`, `created_at` `phase.revealed_at`, `id` `phase.id`) and `Game#host_history`: `(seat_history + history.map { RevealEntry.new(phase: _1) }).sort_by { |e| [ e.created_at, e.phase.number, SEAT_HISTORY_ORDER.fetch(e.kind), e.id ] }`. `seat_history` is not changed. `bundle exec rspec spec/models/game_host_history_spec.rb spec/models/game_spec.rb spec/models/game_position_edit_spec.rb` passes.
+
+## Phase B: the view, the page and the specs that name the old lists
+
+1. **B1. The partial.** `step_ins/_history` reads `game.host_history`. Heading "History", id `history-heading`, hook `data-seat-history`. When no entry has `kind == :reveal`, a `<p>No phase has been revealed yet.</p>` comes first. Then the list: a reveal is `<li><a class="list__row" href="game_host_results_path(game.public_id, entry.phase.number)"><span class="mono">title</span> <span>revealed</span> <span class="text-muted">table_time</span></a></li>`; the other three rows are as they are. The partial names no model constant.
+2. **B2. The host page.** Delete the "Revealed phases" section from `hosts/show.html.erb`; pass `earlier: []` to the one `render` of `results/_section`; `HostsController#show` loses `@earlier` and `@history` (a local `history` finds the latest). The history partial stays where it is rendered.
+3. **B3. Fix the specs that fail** because they name the old lists (the list above), reading each failure, then run `bundle exec rspec spec/requests spec/models spec/views` until green. Add the AC-6.4 example to `results_spec.rb` (two reveals: the host page has no "Earlier results", two reveal links that return 200; the seat page still has the list).
+4. **B4. Secrecy.** `step_in_boundary_spec.rb`: `host_history` joins the readers pattern, `Game::RevealEntry` is named only in `game.rb`. `secrecy_routes.rb`: the host page's `why` mentions the reveal rows. `order_secrecy_spec.rb`: in "after one reveal (spec 025)", a control that the swept host page's `[data-seat-history]` holds a reveal row (and a reissue, a step-in and a position edit row, if that context's setup does not already make them: add them before the baseline). The sweep must pass unchanged otherwise.
+
+## Phase C: 360 pixels, screenshots, documents and proof
+
+1. `step_in_screens_spec.rb`: the host page at 360 pixels with a reveal, a step-in, a reissue and a board change (AC-11.8): no sideways scroll, every link at least 44 pixels high (the existing `measure`), a long board-change row wraps; retake `06-seat-history.png`. `position_editor_screens_spec.rb`: wording, retake `07-host-history.png`.
+2. `README.md` line 19; the plan changelogs of 025 and 027; this plan's changelog.
+3. **Proof (from `web/`):** `bundle exec rspec` (system specs included); `bin/brakeman`; `bin/rubocop`; the `Web specs` job green on the pull request; `git diff --name-only main...HEAD` lists only paths under `web/`; the 360-pixel screenshot.
+
+| Done when (Issue #112) | Proof |
+|---|---|
+| One history section, in time order, with clear labels | `host_history_spec.rb` (AC-11.1), `game_host_history_spec.rb` (AC-11.2), `results_spec.rb` (AC-6.4), `step_in_screens_spec.rb` (AC-11.8) |
+| Nothing in it shows an open phase's orders; sweeps and scans pass | `order_secrecy_spec.rb` (AC-11.6), `step_in_boundary_spec.rb` (AC-11.7), `game_host_history_spec.rb` (AC-11.5) |
+| Specs 025 and 026 amended, a changelog row each (and 027) | the three changelog rows; `spec/docs/spec_amendments_spec.rb` |
+
+## Risks
+
+- A request spec that asserts an exact row list in a game that has since gained a reveal (AC-10.4 above). Fixed by making the reveal happen under `travel_to`.
+- `hosts/show.html.erb` may also change under #105. The edits here are one deleted block and one argument; if `main` moves, merge it and re-run.
+- The seat page's results section must not change: `results_partials_spec` and the seat half of `results_spec` guard it.
+
+## Plan changelog
+
+| Version | Change |
+|---|---|
+| 1.3.0 | Plan for the 1.3.0 amendment (#112), for Gate B |
