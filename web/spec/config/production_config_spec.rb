@@ -12,6 +12,17 @@ RSpec.describe "The production configuration" do
     expect(live_lines).to match(%r{^\s*config\.ssl_options = \{ redirect: \{ exclude: ->\(request\) \{ request\.path == "/up" \} \} \}\s*$})
   end
 
+  # Issue #30: the public host name is one variable, TRUCEBEARER_HOST, shared with kamal-proxy's host in deploy.yml. Unset keeps
+  # Rails' own default (every host), the same unset-is-harmless pattern as the other TRUCEBEARER_ variables.
+  it "allows only the host named in TRUCEBEARER_HOST, when it is set and not blank, ignoring stray spaces" do
+    expect(live_lines).to match(/^\s*allowed_host = ENV\["TRUCEBEARER_HOST"\]\.to_s\.strip\.presence\s*$/)
+    expect(live_lines).to match(/^\s*config\.hosts = \[ allowed_host \] if allowed_host\s*$/)
+  end
+
+  it "skips the host check for the health check, which kamal-proxy sends straight to the container" do
+    expect(live_lines).to match(%r{^\s*config\.host_authorization = \{ exclude: ->\(request\) \{ request\.path == "/up" \} \}\s*$})
+  end
+
   # Rails writes the bind values of SQL to the log at the debug level, through a filter a model's filter_attributes does not
   # reach, so a saved order's text can appear in a debug log. The default of info keeps it out (spec 022 FR-9, known limit).
   it "logs at info unless told otherwise, so orders stay out of the SQL log" do
