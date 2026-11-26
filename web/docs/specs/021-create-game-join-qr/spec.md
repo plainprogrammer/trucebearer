@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Draft
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• Production turns on `assume_ssl` and `force_ssl` (FR-12), so `secure` cookies are written; plain http in production is unsupported, and the LAN-by-http claim is dropped. "Secure" gets a named switch and a test.<br>• The suite clears the cache before every request and system spec (FR-8).<br>• Every stranger response deletes any presented host or seat cookie for the path's id, so deletion is no existence oracle. AC-5.5 compares headers.<br>• One status per route for unknown, closed and malformed codes (URL table, error table). `/join/<code>` takes any single path segment.<br>• Taken tiles sit on `surface` with "Taken" in `text-muted`, so no new contrast pair is needed.<br>• New ACs: CSRF, `no-store`, `no-referrer`, Turbo no-cache on the one-time pages, a seated phone's POST, joining racing a close, the 429 body.<br>• Seat lookup compares each of the game's seats with `secure_compare`. Rate limits share named scopes and key IPv6 by /64. The creation refusal is 403 (a tunnel may replace a 5xx body). The QR's color comes from the stylesheet. The SVG carries its own quiet zone |
 
 ## Problem Statement
 
@@ -61,7 +62,7 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 **D5. Games are addressed by a random public identifier.** A game's URLs use a 12-character random identifier, never a counter, so URLs do not reveal how many games exist. The identifier is not a secret and grants nothing: every page that needs a right checks the host or seat cookie.
 
-**D6. A token shown once travels in the flash.** After creating a game, or reissuing a seat, the page that follows shows the new link or QR code once. The token reaches that page in the one-request flash, held in the encrypted session cookie, so the browser can follow a normal redirect and a reload does not create a second game or a second token. Reloading shows no token.
+**D6. A token shown once travels in the flash.** After creating a game, or reissuing a seat, the page that follows shows the new link or QR code once. The token reaches that page in the one-request flash, held in the encrypted session cookie, so the browser can follow a normal redirect and a reload does not create a second game or a second token. Reloading shows no token. The two pages that show a token tell Turbo not to cache them, so Back does not bring a token out of its snapshot.
 
 **D7. Confirmation pages for the two actions that cannot be undone.** Closing joining and reissuing a seat each have a page that says what will happen, with a button and a cancel link. #22 builds the shared `.confirm` component, and these two pages adopt it then. Until then they use `.stack`, `.button` and `.button--danger`.
 
@@ -82,9 +83,9 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-1.3** Given a wrong passphrase When it is posted Then no game and no seat is created, no cookie is set, the page shows the one message "That passphrase isn't right.", and the status is 422
 - [ ] **AC-1.4** Given an empty passphrase, a missing passphrase, a passphrase one character short, one character long, and one differing only in case When each is posted Then every one gives exactly the response of AC-1.3, with the same body apart from the page's own form token
 - [ ] **AC-1.5** Given the right passphrase and a power that is not one of the seven (missing, blank, or unknown) When it is posted Then no game is created, the page says "Pick one of the seven powers.", and the status is 422
-- [ ] **AC-1.6** Given the variable `TRUCEBEARER_PASSPHRASE` is unset or blank When a person opens `/games/new` or posts to `/games` with any passphrase Then no game is created, the page says "Creating games is turned off on this instance. Ask whoever runs it.", the status is 503, no passphrase field is shown, and the log records, once per request, that the variable is not set
-- [ ] **AC-1.7** Given any passphrase When it is compared Then the comparison is made with `secure_compare` on equal-length digests of both values, and the passphrase value never appears in the log
-- [ ] **AC-1.8** Given a game was just created When the host page `/games/<id>/host` first loads Then it shows the secret host link once, in a read-only field with a sentence saying anyone with it controls the game, and a reload shows no link
+- [ ] **AC-1.6** Given the variable `TRUCEBEARER_PASSPHRASE` is unset or blank When a person opens `/games/new` or posts to `/games` with any passphrase Then no game is created, the page says "Creating games is turned off on this instance. Ask whoever runs it.", the status is 403, no passphrase field is shown, and the log records, once per request, that the variable is not set
+- [ ] **AC-1.7** Given any passphrase When it is compared Then the comparison is made with `secure_compare` on equal-length digests of both values, the digest of the guess is computed even when the guess is missing, and the passphrase value never appears in the log
+- [ ] **AC-1.8** Given a game was just created When the host page `/games/<id>/host` first loads Then it shows the secret host link once, in a read-only field with a sentence saying anyone with it controls the game, the response carries `Cache-Control: no-store` and the Turbo no-cache meta tag, and a reload shows no link
 
 ### Story 2: The host link and the host cookie
 
@@ -94,9 +95,9 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 **Acceptance criteria:**
 
-- [ ] **AC-2.1** Given a host link `/games/<id>/host-link?token=<token>` with the right token When it is opened Then the host cookie for that game is set and the response redirects to `/games/<id>/host`, a page that shows the host controls and not the token
+- [ ] **AC-2.1** Given a host link `/games/<id>/host-link?token=<token>` with the right token When it is opened Then the host cookie for that game is set, the response redirects to `/games/<id>/host` (a page that shows the host controls and not the token) and carries `Referrer-Policy: no-referrer`
 - [ ] **AC-2.2** Given a host link with a wrong token, an empty token, or a game that does not exist When it is opened Then the response is the stranger page of FR-6 and no cookie is set
-- [ ] **AC-2.3** Given a phone with the host cookie When it opens `/games/<id>/host` Then the host controls show. Given a phone without it, or with a cookie that does not match, or one for another game, Then the stranger page shows and a cookie that did not match is deleted
+- [ ] **AC-2.3** Given a phone with the host cookie When it opens `/games/<id>/host` Then the host controls show. Given a phone without it, or with a cookie that does not match, or one for another game, Then the stranger page shows (FR-6)
 - [ ] **AC-2.4** Given the host token When the database is inspected Then only its digest is stored, and no column of any table contains the token
 
 ### Story 3: The game shows a QR code and a join code
@@ -109,12 +110,12 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 - [ ] **AC-3.1** Given a game with joining open When the host page loads Then it shows a QR card holding an inline SVG QR code, the six-character join code in two groups of three, and the join link as text under it
 - [ ] **AC-3.2** Given a request with the host name `play.example.org` over https When the host page loads Then the QR code and the link text are for `https://play.example.org/join/<code>`, an absolute URL with no path other than the join page
-- [ ] **AC-3.3** Given the same game requested with another host name and over http When the host page loads Then the URL follows the request. The QR code is never built from a stored or configured host name
+- [ ] **AC-3.3** Given the same game requested with another host name When the host page loads Then the URL follows the request, including a port if there is one. The QR code is never built from a stored or configured host name
 - [ ] **AC-3.4** Given a join code When it is generated Then it has six characters, each from the 22-character alphabet in FR-3, which holds none of `0 O Q 1 I L 2 Z 5 S 8 B U V`
-- [ ] **AC-3.5** Given 1,000 codes generated When they are inspected Then all six-character, all in the alphabet, and generated with `SecureRandom`
+- [ ] **AC-3.5** Given 1,000 codes generated When they are inspected Then every one has six characters, all from the alphabet, and given a stubbed `SecureRandom` the generator's output follows it, so the codes come from `SecureRandom` and from nothing else
 - [ ] **AC-3.6** Given an open game holds a code When another game is made, and the generator first returns the same code Then it tries again, and the new game has a different code
 - [ ] **AC-3.7** Given a game whose joining is closed When another game is made Then the new game may hold the code the closed game had
-- [ ] **AC-3.8** Given the page's HTML When it is read Then the QR code is inline `<svg>` with `role="img"` and a label, and the page has no `<img>`, no script that makes it, and no request to another host
+- [ ] **AC-3.8** Given the page's HTML When it is read Then the QR code is inline `<svg>` with `role="img"` and a label, carries no color attribute and no `style` attribute, and the page has no `<img>`, no script that makes it, and no request to another host
 
 ### Story 4: A player joins by QR code or by code and picks a power
 
@@ -129,9 +130,10 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-4.3** Given an open game and an open power When a phone posts that power to `/join/<code>/seat` Then one seat is created for that power, the seat cookie for that game is set, and the response redirects to the player's page `/games/<id>`
 - [ ] **AC-4.4** Given the seat token When the database is inspected Then only its digest is stored, and the cookie holds the token signed, not in the clear
 - [ ] **AC-4.5** Given a power that another phone already holds When a phone posts that power Then no seat is created, no cookie is set, the page shows the tiles again with a message "<Power> has been taken. Pick another.", and the status is 422
-- [ ] **AC-4.6** Given two phones post the same open power at the same moment When both are handled Then exactly one seat is created, and the other phone gets AC-4.5
-- [ ] **AC-4.7** Given a power name that is not one of the seven When it is posted Then no seat is created and the response is as AC-4.5 without a power name
-- [ ] **AC-4.8** Given a phone that holds a valid seat for the game When it opens `/join/<code>` Then it is redirected to `/games/<id>` and no second seat is offered
+- [ ] **AC-4.6** Given two phones post the same open power at the same moment (a spec makes it happen by letting the second insert run after the first has taken the power, with the model's own check bypassed) When both are handled Then exactly one seat is created, and the other phone gets AC-4.5
+- [ ] **AC-4.11** Given a phone has loaded the join page of an open game and the host then closes joining When the phone posts a power Then no seat is created and the response is as AC-5.1. The check that joining is open is made inside the same transaction that creates the seat
+- [ ] **AC-4.7** Given a power name that is not one of the seven, or none When it is posted Then no seat is created, no cookie is set, the tiles show again with the message "Pick one of the seven powers.", and the status is 422
+- [ ] **AC-4.8** Given a phone that holds a valid seat for the game When it opens `/join/<code>`, or posts an open power to `/join/<code>/seat` Then it is redirected to `/games/<id>`, no second seat is created, and the cookie is unchanged
 - [ ] **AC-4.9** Given all seven seats are taken When `/join/<code>` loads Then seven taken tiles show with a sentence saying every seat is taken
 - [ ] **AC-4.10** Given a phone with a valid seat When it opens `/games/<id>` Then the page shows its power's badge with the name, and a sentence saying the host will start the game. It shows no other seat's details
 
@@ -143,11 +145,11 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 **Acceptance criteria:**
 
-- [ ] **AC-5.1** Given a code that matches no game and a code of a game whose joining is closed When each is posted to `/join` Then both responses have status 422 and the same body, the message "That code doesn't match a game that is open for joining.", and neither echoes the code
-- [ ] **AC-5.2** Given the same two codes When each is requested at `/join/<code>` Then both give status 404 and the page of AC-5.1, with the same body
-- [ ] **AC-5.3** Given a code that is not six characters from the alphabet (too short, too long, with a symbol) When it is posted or requested Then the response is the same as AC-5.1 and AC-5.2
-- [ ] **AC-5.4** Given a closed game When a phone posts a power to `/join/<code>/seat` Then no seat is created and the response is the same as AC-5.1
-- [ ] **AC-5.5** Given `/games/<id>` or `/games/<id>/host` for a game that does not exist, and for a game that does, requested with no cookie, with a bad cookie, and with the seat cookie on a host page Then every response is the stranger page of FR-6, with the same status and body
+- [ ] **AC-5.1** Given a code that matches no game and a code of a game whose joining is closed When each is posted to `/join` Then both responses have status 422 and the same headers and body, the message "That code doesn't match a game that is open for joining.", and neither echoes the code
+- [ ] **AC-5.2** Given the same two codes When each is requested at `/join/<code>` Then both give status 404 and the page of AC-5.1, with the same headers and body
+- [ ] **AC-5.3** Given a code that is not six characters from the alphabet (too short, too long, with a symbol, with a dot, with a percent escape) When it is posted to `/join`, requested at `/join/<code>`, or posted to `/join/<code>/seat` Then the response is the same as for an unknown code on that route, and never Rails' own 404 page
+- [ ] **AC-5.4** Given an unknown code, a closed game's code and a malformed code When a power is posted to `/join/<code>/seat` Then no seat is created, no cookie is set, and each response has status 422 and the same headers and body as AC-5.1
+- [ ] **AC-5.5** Given `/games/<id>` and `/games/<id>/host` for a game that does not exist and for one that does, requested with no cookie, with a bad cookie, with a cookie for another game, and with the seat cookie on a host page Then every response is the stranger page of FR-6, with the same status, the same headers (including `Set-Cookie`) and the same body
 - [ ] **AC-5.6** Given a seat link `/games/<id>/seat-link?token=<token>` with a wrong token, no token, or an unknown game When it is opened Then the response is the stranger page and no cookie is set
 
 ### Story 6: The host closes joining
@@ -175,9 +177,9 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-7.1** Given a game with seats When the host page loads Then it lists all seven powers, each taken power as a row that links to its reissue page and each open power as a row saying "Open"
 - [ ] **AC-7.2** Given a taken seat When the host opens `/games/<id>/host/seats/<power>/reissue` Then a page says the old phone loses the seat at once, with a danger button and a link back
 - [ ] **AC-7.3** Given the confirmation page When the host posts it Then the seat's stored digest is replaced by the digest of a new token, and the response redirects to `/games/<id>/host/seats/<power>/qr`
-- [ ] **AC-7.4** Given that redirect When the page loads Then it shows a QR card for the seat, with the power's badge as its caption and the link `/games/<id>/seat-link?token=<token>` as absolute text and QR code, once. A reload shows no QR code and sends the host back to the host page with a sentence saying a new code can be issued
+- [ ] **AC-7.4** Given that redirect When the page loads Then it shows a QR card for the seat, with the power's badge as its caption and the link `/games/<id>/seat-link?token=<token>` as absolute text and QR code, once. The response carries `Cache-Control: no-store` and the Turbo no-cache meta tag. A reload shows no QR code and sends the host back to the host page with a sentence saying a new code can be issued
 - [ ] **AC-7.5** Given the old seat cookie of that power When its phone makes its next request to `/games/<id>` Then it gets the stranger page, and the cookie is deleted
-- [ ] **AC-7.6** Given the new link When a phone opens it with the right token Then the seat cookie for that game is set, the response redirects to `/games/<id>`, and the page shows that power
+- [ ] **AC-7.6** Given the new link When a phone opens it with the right token Then the seat cookie for that game is set, the response redirects to `/games/<id>` and carries `Referrer-Policy: no-referrer`, and the page shows that power
 - [ ] **AC-7.7** Given a reissued seat When the old token is presented in a seat link Then the response is the stranger page and no cookie is set
 - [ ] **AC-7.8** Given a power with no seat, or a power name that is not one of the seven When its reissue page or reissue is requested Then the stranger page shows and nothing changes
 - [ ] **AC-7.9** Given a reissue request from a phone that is not the host When it is made Then the stranger page shows and the seat's digest is unchanged
@@ -198,6 +200,9 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-8.5** Given one address that has posted 10 times to `/games` in five minutes, right or wrong, When it posts the 11th Then the response is 429, and no game is created even if the passphrase is right
 - [ ] **AC-8.6** Given one address that has opened 20 host links and seat links in a minute together When it opens the 21st Then the response is 429
 - [ ] **AC-8.7** Given the minute has passed When the same address tries again Then it is answered normally
+- [ ] **AC-8.8** Given a request refused by a rate limit When it is answered Then the response is a page with status 429, the one sentence of FR-8 as its only text besides the page's header, and the same body for every bucket
+- [ ] **AC-8.9** Given two IPv6 addresses in one /64 and an IPv4 address When each makes requests Then the two IPv6 addresses share one bucket and the IPv4 address has its own
+- [ ] **AC-8.10** Given a request whose connection is from a private-range proxy address and whose `X-Forwarded-For` names a client When the bucket is chosen Then it is chosen by the client's address, so players behind the proxy do not share one bucket
 
 ### Story 9: The four components, on the style guide, at phone width
 
@@ -209,12 +214,12 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 - [ ] **AC-9.1** Given `/styleguide` When it loads Then it shows sections `join-code`, `qr-card`, `power-tile` (open and taken tiles) and `host-section`, each with a heading
 - [ ] **AC-9.2** Given `/styleguide` and every new screen at 360 and 768 pixels wide When each open `.power-tile` and every other tappable control is measured Then each is at least 44 by 44 pixels, and the page has no horizontal scroll at 360 pixels
-- [ ] **AC-9.3** Given a power tile When it is read Then it shows the power's name as text, in open and in taken form, and a taken tile also says "Taken". No tile relies on color alone
+- [ ] **AC-9.3** Given a power tile When it is read Then it shows the power's name as text, in open and in taken form, and a taken tile also says "Taken" in `text-muted` on `surface`, with a dashed edge. No tile relies on color alone
 - [ ] **AC-9.4** Given the stylesheets When they are scanned Then the existing rules hold: no raw color, no banned property, total weight within 24 KB and the style guide's own file within 4 KB
 - [ ] **AC-9.5** Given the host section's ground, `ice-pale` When the controls on it are used Then the pairs `primary`, `primary-pressed`, `border`, `danger`, `danger-pressed` and `focus` against `ice-pale` (minimum 3), and `link` and `link-visited` on `ice-pale` (minimum 4.5), are in the documented pairs of `web/docs/design-system.md` and in the contrast spec, and pass
 - [ ] **AC-9.6** Given `web/docs/design-system.md` When it is read Then the catalog marks the four components as built by #21, with their final class names and variants
-- [ ] **AC-9.7** Given the join code on a 360-pixel screen When it is measured Then it is in mono type, at least `--text-2xl`, and fits without wrapping or scrolling
-- [ ] **AC-9.8** Given a seat's QR card and a game's QR card When each is measured at 360 pixels Then the QR code is at least 200 pixels wide and has a quiet zone of at least four modules on a white ground
+- [ ] **AC-9.7** Given the join code on a 360-pixel screen When it is measured Then its element has the `.mono` class, its font size is at least `--text-2xl`, and it fits without wrapping or scrolling
+- [ ] **AC-9.8** Given a seat's QR card and a game's QR card When each is measured at 360 pixels Then the QR code is at least 200 pixels wide, and its SVG's view box is wider than the bounding box of its drawing by at least four modules on every side, on the card's white `surface` ground
 
 ### Story 10: A game is created and joined in a real browser
 
@@ -228,6 +233,19 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-10.2** Given a second browser session with its own cookies When it opens `/join`, types the join code and picks a free power Then it lands on its player page for that power, and the first session's host page, reloaded, marks that power taken
 - [ ] **AC-10.3** Given the host session When it closes joining and a third session opens the same code Then the third sees the page of AC-5.1
 - [ ] **AC-10.4** Given a screen shown by these flows When it is measured Then it has no horizontal scroll at 360 pixels
+
+### Story 11: The usual web protections hold
+
+**As a** host
+**I want** forged requests and stale pages to do nothing
+**So that** a web page of someone else's cannot act for me
+
+**Acceptance criteria:**
+
+- [ ] **AC-11.1** Given forgery protection switched on for the spec When `POST /games`, `POST /join`, `POST /join/<code>/seat`, `POST /games/<id>/host/close` and `POST /games/<id>/host/seats/<power>/reissue` are sent without the form's token Then each is refused and changes nothing
+- [ ] **AC-11.2** Given the host, seat and session cookies are set over https with the `secure` switch on When their `Set-Cookie` headers are read Then each has `HttpOnly`, `SameSite=Lax` and `Secure`, and with the switch off the first two have no `Secure`
+- [ ] **AC-11.3** Given the host or seat cookie When its raw value is read from the response Then it is not the token, and it verifies as a signed value whose payload is the token
+- [ ] **AC-11.4** Given the configuration of production When it is read Then `assume_ssl` and `force_ssl` are on, `/up` is excluded from the redirect, and the cookie `secure` switch follows `force_ssl`
 
 ## Functional Requirements
 
@@ -251,10 +269,13 @@ Every screen is a normal page with its own URL, and works without JavaScript.
 | `/join/<code>` | GET | The power tiles for an open game. The QR code's URL |
 | `/join/<code>/seat` | POST | Take a power |
 
+**Statuses.** For a code that is unknown, closed or malformed: `POST /join` and `POST /join/<code>/seat` answer 422 with the code page, `GET /join/<code>` answers 404 with the same page. For a game, host, link or seat that the phone has no right to: 404 with the stranger page (FR-6). `/join/<code>` takes any one path segment, so a malformed code reaches the controller, not Rails' own 404 page. The two links and every state-changing route other than `host-link` and `seat-link` are POSTs. `host-link` and `seat-link` are GETs because a QR code can only open a URL: they set a cookie, which is an accepted exception, because opening one needs a token that only the host holds.
+
 **Must:**
 - Name every page with a `<title>` and one `<h1>`.
 - Use `.stack`, `.field`, `.control`, `.button`, `.list`, `.power-badge` and the four new components, and no inline style.
 - Show every error as text near the top of the page, with the status code given in the AC.
+- Send `Cache-Control: no-store` and the Turbo no-cache meta tag (`<meta name="turbo-cache-control" content="no-cache">`) on the two pages that show a token once.
 
 **Must not:**
 - Use a modal, a sheet, a dialog or any overlay.
@@ -265,11 +286,11 @@ Every screen is a normal page with its own URL, and works without JavaScript.
 **Must:**
 - Make a host token and a seat token from `SecureRandom`: 24 bytes, URL-safe base64, 32 characters, at least 128 bits.
 - Store only the SHA-256 digest of a token, as a hex string. No log line, flash value that outlives the next request, or column holds a token.
-- Compare a presented token with the stored digest through `ActiveSupport::SecurityUtils.secure_compare`, on digests of equal length.
-- Set the host cookie `host_<id>` and the seat cookie `seat_<id>` as signed, permanent cookies with `httponly: true` and `same_site: :lax`, and `secure: true` when the app runs in production. Their value is the token. A phone holds at most one of each per game.
+- Compare a presented token with the stored digest through `ActiveSupport::SecurityUtils.secure_compare`, on digests of equal length. For a seat, compare against each of the game's seats in turn (seven at most) and never look a seat up by digest. The unique index on a digest is a safeguard, not a lookup.
+- Set the host cookie `host_<id>` and the seat cookie `seat_<id>` as signed, permanent cookies with `httponly: true` and `same_site: :lax`, and `secure` when `force_ssl` is on, which it is in production. Their value is the token. A phone holds at most one of each per game.
 - Treat a cookie whose token does not match the stored digest as a stranger's, and delete it.
 - Filter `passphrase` and `token` from the log, so the passphrase and `?token=` values never appear there. (`token` is already filtered.)
-- Make the session cookie that carries the one-time flash `httponly`, `same_site: :lax` and `secure` in production.
+- Make the session cookie that carries the one-time flash `httponly` and `same_site: :lax`. With `force_ssl` on, Rails also marks every cookie `secure`.
 
 **Must not:**
 - Put a token in a cookie in the clear, in a response header, or in a path (it is in a query string so the log filter hides it).
@@ -289,10 +310,10 @@ Every screen is a normal page with its own URL, and works without JavaScript.
 
 **Must:**
 - Hold the absolute join URL `<base URL>/join/<code>`, built from the request's base URL: the scheme and host the request arrived with.
-- Be inline SVG made by the server, with module squares in one color from a token (`text`) on the card's `surface` ground, with a quiet zone of four modules, an error correction level of at least M, and an accessible name.
+- Be inline SVG made by the server: one `<path>` with a `viewBox`, no `fill` or `style` attribute, colored by the stylesheet from the `text` token on the card's `surface` ground. The SVG carries its own quiet zone of four modules. The error correction level is at least M, and the SVG has an accessible name.
 - Show the same URL as text under the code, so a person can copy it or read it out.
 
-**Behind a proxy.** The scheme comes from `assume_ssl` or `X-Forwarded-Proto`, and the host from `X-Forwarded-Host` or `Host`, as Rails reads them. Behind the Cloudflare tunnel (`docs/architecture.md`, "Hosting") the tunnel keeps the public host name in `Host`, and `assume_ssl` makes the scheme `https`, so the code holds the public https URL. If the proxy rewrote `Host`, the QR code would be wrong, so the proxy must not. A host who opens the page by another name (for example the machine's address on the local network) gets a code for that name, which is right for a phone on that network.
+**Behind a proxy.** The scheme comes from `assume_ssl` or `X-Forwarded-Proto`, and the host from `X-Forwarded-Host` or `Host`, as Rails reads them. Behind the Cloudflare tunnel (`docs/architecture.md`, "Hosting") the tunnel keeps the public host name in `Host`, and `assume_ssl` (turned on by FR-12) makes the scheme `https`, so the code holds the public https URL. If the proxy rewrote `Host`, the QR code would be wrong, so the proxy must not. A host who opens the page by another https name gets a code for that name. Production over plain http is not supported: `force_ssl` redirects it (the health check at `/up` is excluded).
 
 **Must not:**
 - Fetch a QR code or any asset from another host, or use JavaScript to draw it.
@@ -317,7 +338,8 @@ The stranger page is a page that says "We can't find that page.", with status 40
 
 **Must:**
 - Show it identically for an unknown game, a known game with no cookie, a cookie that does not match, a host cookie on a seat page and the reverse, a bad link token and a missing token.
-- Show it for a reissued seat's old cookie, and delete that cookie.
+- Show it for a reissued seat's old cookie.
+- On every stranger response, whatever the reason, delete any `host_<id>` and `seat_<id>` cookie that the request presented for the id in its path, whether or not that game exists, so the `Set-Cookie` header tells a stranger nothing.
 
 **Must not:**
 - Redirect a stranger to the code page, or say a game exists, is closed, or has seats.
@@ -326,7 +348,8 @@ The stranger page is a page that says "We can't find that page.", with status 40
 
 **Must:**
 - Offer only the seven powers the rules engine reports for the classic map, with the names it reports. The app reads them through `RulesEngine` and names no gem constant elsewhere.
-- Never let two seats hold one power in one game, even for requests made at the same moment: the database enforces it.
+- Never let two seats hold one power in one game, even for requests made at the same moment: the database enforces it. A request that loses the race is answered as AC-4.5.
+- Check that joining is open inside the transaction that creates a seat, so a seat is never created after joining closed.
 - Create the host's seat when the game is created, in the same step, so a game never exists without it.
 - Close joining by setting a time on the game. A game with a time set is closed for good (D7).
 - Reissue a seat by replacing its token digest, in one step. The old token stops working with that step.
@@ -347,11 +370,13 @@ Rails' `rate_limit` is used, keyed by `request.remote_ip`, with these limits. Ea
 | Opening a link: `host-link` and `seat-link` | together | 20 per minute |
 
 **Must:**
-- Count every request in a bucket, whether it succeeds or not.
-- Use a cache store that remembers. In production this is the Solid Cache store. In the test environment it is set to the in-memory store, and each spec that tests a limit starts with an empty one. A spec fails if the store is the null store (AC-8.1).
+- Count every request in a bucket, whether it succeeds or not. A bucket shared by two controllers has an explicit shared `scope:`, and two limits in one controller have different `name:`s, because Rails keys a bucket by scope, name and address.
+- Key a bucket by the client's IPv4 address, or by the first 64 bits of an IPv6 address.
+- Answer a refusal with the page of AC-8.8, by giving `rate_limit` a `with:` that renders it. Rails' default raises an exception, and the app has no 429 page of its own.
+- Use a cache store that remembers. In production this is the Solid Cache store. In the test environment it is set to the in-memory store, and a hook that runs before every request spec and system spec clears the cache, because one process and one address serve the whole suite and every example would otherwise share buckets. A spec fails if the store is the null store (AC-8.1). The store a limit uses is fixed when its controller loads, so a spec cannot swap it.
 - Leave room for seven phones behind one address to join in a minute (about 14 requests in the lookup bucket and 7 in the taking bucket, plus mistyped codes).
 
-**Behind a proxy.** `remote_ip` is the address of the player, as Rails reads it from `X-Forwarded-For` through the proxies it trusts. Behind the tunnel, the trusted-proxy defaults of Rails cover the tunnel and the local proxy. If the proxy chain changed so every request seemed to come from one address, all strangers and players would share one bucket. The plan records how this is checked on the real instance.
+**Behind a proxy.** `remote_ip` is the address of the player, as Rails reads it from `X-Forwarded-For` through the proxies it trusts. Behind the tunnel, the trusted-proxy defaults of Rails cover the tunnel and the local proxy. If the proxy chain changed so every request seemed to come from one address, all strangers and players would share one bucket. A spec covers the logic (AC-8.10). Whether the real instance gets the client's address through kamal-proxy and the tunnel is checked on the instance by the maintainer after the first deploy, and this is listed in the pull request as owed to the maintainer. `config/deploy.yml` has no `proxy:` block yet.
 
 ### FR-9: What is kept
 
@@ -396,16 +421,16 @@ Built to `web/docs/design-system.md`, with the names in its catalog. The compone
 
 | Component | Class | Rule |
 |---|---|---|
-| Join code | `.join-code` | Six mono characters in two groups of three, at least `--text-2xl`. The element holds the text, so it can be selected and read aloud |
-| QR card | `.qr-card` | `surface` ground and `border` edge, padding to give the quiet zone, the SVG centered at no more than 18rem, a caption slot under it (`.qr-card__caption`) for the join code or a power badge, and the link text under that, wrapping anywhere |
-| Power tile | `.power-tile`, `--taken` | A grid of two columns at 360 pixels, more as the width allows. Each tile has the power's badge (`power_badge`) and, when taken, the text "Taken", a dashed edge and the disabled fill. An open tile is a `<button>` of at least 44 pixels in height and `touch-action: manipulation`. A taken tile is a `<div>` |
+| Join code | `.join-code` | Six characters in two groups of three, with the `.mono` class, at least `--text-2xl`. The element holds the text, so it can be selected and read aloud |
+| QR card | `.qr-card` | `surface` ground and `border` edge, padding, the SVG (with its own quiet zone) centered at no more than 18rem, a caption slot under it (`.qr-card__caption`) for the join code or a power badge, and the link text under that, wrapping anywhere |
+| Power tile | `.power-tile`, `--taken` | A grid of two columns at 360 pixels, more as the width allows. Each tile has the power's badge (`power_badge`) on a `surface` ground with a `border` edge. A taken tile has a dashed edge and the text "Taken" in `text-muted`, so it needs no contrast pair beyond the documented ones. An open tile is a `<button>` of at least 44 pixels in height and `touch-action: manipulation`. A taken tile is a `<div>` |
 | Host section | `.host-section` | `ice-pale` ground, the heading "Host", apart from the player's own content. It holds the host's controls, and appears on the host page and, as a link back to it, on the host's own player page |
 
 **Must:**
 - Use `power_badge` for every power color. A power color is never drawn by the new CSS.
 - Put each component on `/styleguide` with a section named by `data-component`, and keep the style guide's checks (tap size at 360 and 768, no sideways scroll, the focus check) green. The tap-size check's selector list gains `.power-tile:not(.power-tile--taken)`.
-- Keep total stylesheet weight within 24 KB, and `styleguide.css` within 4 KB. The folder is about 21.0 KB now, so the four components together must take no more than about 3 KB. If they cannot, that is raised as an Issue before any limit is changed.
-- Add the `ice-pale` pairs of AC-9.5 to the document, the style guide's pair list and the contrast spec.
+- Keep total stylesheet weight within 24 KB (24,576 bytes), and `styleguide.css` within 4 KB. The folder is 21,026 bytes now, so the four components together must take under 3,550 bytes. `styleguide.css` is 3,716 of 4,096 bytes, so the new style guide sections add no more than 380 bytes of `.sg-` rules, and preferably none. If either cannot be met, that is raised as an Issue before any limit is changed.
+- Add the `ice-pale` pairs of AC-9.5 to the document, the style guide's pair list and the contrast spec. If one fails, raise it with the numbers and do not change a color value (the document's own rule).
 
 **Must not:**
 - Use a modal, a raw color, `!important`, `opacity` or a power color outside `power_badge`.
@@ -424,7 +449,9 @@ All three are pure Ruby, with no native extension and no further runtime depende
 
 ### FR-12: What changes elsewhere in the app
 
-- `RulesEngine` gains one reader, `powers`, returning the map's powers (identifier and name). This is the only place a power list comes from. A spec checks that `PowerBadgeHelper::POWER_NAMES` has the same powers and names, so the two cannot drift.
+- `RulesEngine` gains one reader, `powers`, returning the map's powers, each with an identifier (a symbol) and a name. A seat stores the identifier as a string, the form `PowerBadgeHelper::POWER_NAMES` uses. This is the only place a power list comes from. A spec checks that `POWER_NAMES` has the same powers and names, so the two cannot drift.
+- `config/environments/production.rb` turns on `assume_ssl` and `force_ssl`, with `/up` excluded from the redirect, as `docs/architecture.md` ("Hosting") already says. They are commented out there today. This change is in `web/`, and the pull request names it for the maintainer.
+- A hook in `spec/rails_helper.rb` clears the cache before every request spec and system spec.
 - `config/routes.rb`, the home page, the style guide, the contrast spec, `web/docs/design-system.md`, `web/README.md`, `config/deploy.yml`, the test environment's cache store and the log filter change as set out above.
 - Nothing outside `web/` changes.
 
@@ -440,8 +467,9 @@ All three are pure Ruby, with no native extension and no further runtime depende
 - The instance can be reached from the internet (`docs/architecture.md`, "Hosting"). Every control above is tested in a request spec: tokens, cookies, passphrase, stranger pages, code lookup, rate limits and reissue.
 - No page reveals a token after the one page that shows it. No log holds a token or the passphrase.
 - `bin/brakeman` is clean, with no warning ignored for this feature.
-- Responses that show a token send `Cache-Control: no-store`, and the host-link and seat-link responses send `Referrer-Policy: no-referrer`.
-- Forms keep Rails' forgery protection on, and every state-changing route is a POST.
+- Responses that show a token send `Cache-Control: no-store` and the Turbo no-cache tag, and the host-link and seat-link responses send `Referrer-Policy: no-referrer`.
+- A host link or seat link holds the same token as its cookie, and a token in a query string can reach the proxy's and the tunnel's logs and the browser's history, which the app's log filter cannot clean. This is accepted for the playtest and written in `web/README.md`. The host token cannot be rotated in this feature.
+- Forms keep Rails' forgery protection on (AC-11.1). Every route that changes a game is a POST. The two link routes set a cookie on GET, as FR-1 explains.
 - A stranger can still make requests that cost the server something, up to the limits of FR-8. This feature does not add a firewall.
 - Code lookups do not take constant time. The defense is the rate limit and the size of the code space (FR-3), not timing.
 
@@ -459,7 +487,7 @@ All three are pure Ruby, with no native extension and no further runtime depende
 
 | Scenario | Expected behavior |
 |---|---|
-| Passphrase variable unset or blank | Page and POST refused with 503 and a plain message. No game. A log line names the variable |
+| Passphrase variable unset or blank | Page and POST refused with 403 and a plain message. No game. A log line names the variable |
 | Wrong, empty or missing passphrase | 422, "That passphrase isn't right.", no game, no cookie |
 | Right passphrase, no valid power | 422, "Pick one of the seven powers." |
 | Unknown code, closed game's code, malformed code | `/join` POST 422 and `/join/<code>` GET 404, one message and one body |
@@ -485,7 +513,7 @@ None.
 - A game name and a "my games" list (#28).
 - Claiming a guest seat with an account (1.0).
 - Removing a seat altogether (as opposed to reissuing it), and ending or deleting a game.
-- Hardening `config.hosts` for the production host name. Production does not set it yet, and `assume_ssl` is commented out in `config/environments/production.rb` although `docs/architecture.md` says it is true. Both are for the maintainer.
+- Hardening `config.hosts` for the production host name, a `proxy:` block in `config/deploy.yml`, and a way to rotate a host token. All are for the maintainer.
 
 ## Verification
 
@@ -494,8 +522,9 @@ None.
 | 1.x, 2.x, 4.x, 5.x, 6.x, 7.x | Request specs, `spec/requests/`: games, host links, joining, strangers, closing, reissuing |
 | 3.4 to 3.7 | Plain model specs for the join code and for the games table's constraints |
 | 3.1 to 3.3, 3.8, 7.4 | Request specs that read the page's HTML, and compare the QR code's SVG with the one made for the expected URL |
-| 8.x | Request specs against the in-memory cache store, with a limit test for each bucket, a second address, and a spec that fails on the null store |
-| 1.7, 2.4, 4.4, FR-2 | Model and request specs on tokens, digests, cookie flags (read from the `Set-Cookie` header: signed, `HttpOnly`, `SameSite=Lax`, `Secure` in production) and the log filter |
+| 8.x | Request specs against the in-memory cache store, with a limit test for each bucket, a second address, IPv6 and proxy cases, and a spec that fails on the null store |
+| 11.x | Request specs with forgery protection switched on, header reads, a stubbed `force_ssl` with `https!` for the `Secure` flag, and a read of `config/environments/production.rb` |
+| 1.7, 2.4, 4.4, FR-2 | Model and request specs on tokens, digests, cookie flags (read from the `Set-Cookie` header: `HttpOnly`, `SameSite=Lax`, `Secure` when the switch is on; the value is checked through the signed cookie jar) and the log filter |
 | 9.1, 9.3, 9.4, 9.5, 9.6 | The style guide request spec, the stylesheet rules spec, the contrast spec and the design-system document spec |
 | 9.2, 9.7, 9.8, 10.x | System specs in headless Chrome at 360 and 768 pixels: the style guide's layout spec, and a new spec in which one session creates a game and a second session joins it by code |
 | Dependencies and the guard | `bundle exec rspec`, `bin/brakeman`, `bin/rubocop`, and the existing guard spec on the gem's name |
