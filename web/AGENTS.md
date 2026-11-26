@@ -12,6 +12,14 @@ Don't keep a `.ruby-version` or a `.github/` in this folder. The root `.ruby-ver
 - Deployed with Kamal to a single server. Self-hosters run the same Docker image, so all configuration comes from environment variables. The Docker build context is this folder.
 - Sign-in uses passkeys, with an emailed sign-in link as the fallback. No passwords are stored.
 
+## Testing
+
+- RSpec, test first. Plain Ruby and request specs cover everything that doesn't need a browser.
+- **System specs live in `spec/system/`** and run Capybara with headless Chrome (`type: :system`). Layout and in-browser behavior are tested there: tap-target sizes, sideways scroll, the sticky action area, focus. Don't test these in request specs, which can't see geometry.
+- `spec/support/system.rb` sets up the driver. Wrap a page check in `with_viewport(width)` to lay it out at a real phone width: a desktop Chrome window can't be narrower than about 500 pixels, so the helper emulates the viewport instead of resizing the window. Read sizes in the page with `getBoundingClientRect` through `evaluate_script`.
+- System specs need Chrome installed. Selenium Manager finds the driver; don't add a driver gem. `bundle exec rspec` runs them with the rest, and so does the `Web specs` CI job.
+- The checks that need a real iPhone (pinch zoom, safe-area insets, the iOS toolbar, `:active` on touch) stay manual. See Issue #71.
+
 ## Ready for Hotwire Native
 
 Native apps come later through Hotwire Native, so build for it from the start:
