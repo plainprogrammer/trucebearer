@@ -7,7 +7,7 @@ RSpec.describe RulesEngine do
   let(:start) { RulesEngine.starting_position }
 
   it "gives the classic starting position, with 22 units (AC-2.1)" do
-    expect([ start.season, start.year, start.phase ]).to eq([ :spring, 1901, :movement ])
+    expect([ start.map, start.season, start.year, start.phase ]).to eq([ "classic", :spring, 1901, :movement ])
     expect(start.units.size).to eq(22)
   end
 
@@ -47,15 +47,19 @@ RSpec.describe RulesEngine do
         expect(order.to_h).to eq(h)
       end
       expect(RulesEngine.load_position(JSON.parse(JSON.generate(start.to_h)))).to eq(start)
-      result = RulesEngine.check(start, rules_order(:hold, :france, :lon))
-      expect(RulesEngine.load_check_result(JSON.parse(JSON.generate(result.to_h)))).to eq(result)
+      [ rules_order(:hold, :england, :lon), rules_order(:hold, :france, :lon) ].each do |order|
+        result = RulesEngine.check(start, order)
+        expect(RulesEngine.load_check_result(JSON.parse(JSON.generate(result.to_h)))).to eq(result)
+      end
     end
 
     it "returns an object of the right kind as it is, and nil as nil (AC-2.5a)" do
       order = rules_order(:hold, :england, :lon)
       expect(RulesEngine.load_order(order)).to equal(order)
       expect(RulesEngine.load_position(start)).to equal(start)
-      expect(RulesEngine.load_order(nil)).to be_nil
+      verdict = RulesEngine.check(start, order)
+      expect(RulesEngine.load_check_result(verdict)).to equal(verdict)
+      expect([ RulesEngine.load_order(nil), RulesEngine.load_position(nil), RulesEngine.load_check_result(nil) ]).to all(be_nil)
     end
 
     it "raises InvalidInput naming a value of the wrong kind (AC-2.5b)" do
@@ -69,10 +73,22 @@ RSpec.describe RulesEngine do
       expect(RulesEngine.load_check_result(nil)).to be_nil
     end
 
-    it "raises InvalidInput for a bad hash (AC-2.6)" do
+    it "raises InvalidInput, naming the offending key or value, for a bad hash (AC-2.6)" do
       good = start.to_h
-      [ good.merge("format" => 2), good.except("format"), good.transform_keys(&:to_sym), good.merge("extra" => 1), good.except("year") ].each do |bad|
-        expect { RulesEngine.load_position(bad) }.to raise_error(RulesEngine::InvalidInput)
+      hold = order_hashes.first
+      verdict = RulesEngine.check(start, rules_order(:hold, :england, :lon)).to_h
+      {
+        load_position: [ [ good.merge("format" => 2), /format 2/ ], [ good.except("format"), /"format"/ ],
+                         [ good.merge("extra" => 1), /"extra"/ ], [ good.except("year"), /"year"/ ],
+                         [ good.merge("year" => "1901"), /"year".*1901/ ], [ good.transform_keys(&:to_sym), /"format"/ ] ],
+        load_order: [ [ hold.merge("format" => 2), /format 2/ ], [ hold.except("at"), /"at"/ ],
+                      [ hold.merge("type" => "dance"), /dance/ ], [ hold.merge("extra" => 1), /"extra"/ ] ],
+        load_check_result: [ [ verdict.merge("format" => 2), /format 2/ ], [ verdict.except("legal"), /"legal"/ ],
+                             [ verdict.merge("extra" => 1), /"extra"/ ] ]
+      }.each do |loader, cases|
+        cases.each do |bad, message|
+          expect { RulesEngine.public_send(loader, bad) }.to raise_error(RulesEngine::InvalidInput, message)
+        end
       end
     end
   end

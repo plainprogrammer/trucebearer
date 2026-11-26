@@ -59,11 +59,16 @@ module RulesEngine
   #  2. Each submitted order is checked with check. An order that fails is :void.
   #  3. A legal hold is :held. A legal support or convoy is :given. Supports and convoys have no
   #     other effect.
-  #  4. A legal move (Move or MoveViaConvoy) targets a province. Every legal move starts as
-  #     :succeeded. Every move whose target is also the target of another legal move becomes
-  #     :bounced. Then, repeatedly, a move still :succeeded becomes :bounced when its target holds a
-  #     unit that is not making a move that still succeeds. Swaps and rotations succeed: that is a
-  #     fake result, and 0.2.0 corrects it. A convoy chain is not looked at.
+  #  4. A legal move (Move or MoveViaConvoy) targets a province (the move's destination, or the
+  #     via-convoy move's to). Its result is found like this:
+  #       1. Every legal move starts as :succeeded.
+  #       2. Every move whose target is also the target of another legal move becomes :bounced.
+  #       3. Repeat until nothing changes: a move that is still :succeeded becomes :bounced when its
+  #          target province holds a unit that is not making a move that is still :succeeded.
+  #     Each step only turns moves into bounces, so it ends, and it has one answer. Moves that swap
+  #     two units, or rotate three or more, succeed. That is a fake result: under the real rules a
+  #     swap bounces unless convoyed, and the real adjudicator in 0.2.0 corrects it. A convoy chain
+  #     is not looked at.
   #  5. A unit stays when its order is a hold, a support, a convoy, is void, or is a bounced move. A
   #     unit with no legal order from its owner gets an implied hold.
   #  6. The outcome list is the submitted orders in the order given, then one implied hold per
@@ -74,7 +79,8 @@ module RulesEngine
   #     moves targeted and that is empty afterward.
   #  8. The result's to_h is the documented form, with format 1.
   # No support is counted, no convoy route is worked out, no strength is compared, no unit is
-  # dislodged. At 0.2.0 delete this, and let adjudicate and load_adjudication call TA.
+  # dislodged. Only from_h validates a stand-in result (the gem's classes validate on construction).
+  # At 0.2.0 delete this, and let adjudicate and load_adjudication call TA.
   StandInOutcome = Data.define(:order, :result, :submitted, :dislodged) do
     def self.from_h(hash)
       raise InvalidInput, "an outcome must be a Hash, got #{hash.inspect}" unless hash.is_a?(Hash)
@@ -122,7 +128,7 @@ module RulesEngine
 
     def self.adjudicate(position, orders)
       unless position.is_a?(TA::Position) && orders.is_a?(Array)
-        raise InvalidInput, "adjudicate needs a position and an Array of orders, got #{position.inspect} and #{orders.inspect}"
+        raise InvalidInput, "adjudicate needs a position and an Array of orders, got #{position.class} and #{orders.class}"
       end
       raise InvalidInput, "the phase must be :movement, got #{position.phase.inspect}" unless position.phase == :movement
 

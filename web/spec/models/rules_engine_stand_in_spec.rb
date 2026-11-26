@@ -50,9 +50,10 @@ RSpec.describe "RulesEngine.adjudicate, the stand-in" do
   it "gives a legal support or convoy :given with no effect (AC-3.4)" do
     pos = rules_position(units: [ [ :england, :army, :lon ], [ :england, :fleet, :nth ], [ :germany, :army, :mun ], [ :germany, :army, :ber ] ])
     adj = adjudicate_legal(pos, [ rules_order(:convoy, :england, :nth, from: "lon", to: "nwy"),
-                                  rules_order(:support_hold, :germany, :mun, target: "ber") ])
-    expect(results(adj).first(2)).to eq([ :given, :given ])
-    expect(provinces(adj)).to contain_exactly(:lon, :nth, :mun, :ber)
+                                  rules_order(:support_hold, :germany, :mun, target: "ber"),
+                                  move(:germany, :ber, :sil) ])
+    expect(results(adj).first(3)).to eq([ :given, :given, :succeeded ])
+    expect(provinces(adj)).to contain_exactly(:lon, :nth, :mun, :sil)
   end
 
   describe "a move into a province whose unit stays (AC-3.5)" do
@@ -164,6 +165,9 @@ RSpec.describe "RulesEngine.adjudicate, the stand-in" do
         orders = pos.units.map { |u| RulesEngine.legal_orders(pos, u).sample(random: rng) }
         adj = RulesEngine.adjudicate(pos, orders)
         expect(RulesEngine.load_position(adj.position.to_h)).to eq(adj.position)
+        expect(adj.outcomes.map(&:dislodged)).to all(be(false))
+        expect([ adj.paradox, adj.position.phase, adj.position.dislodged_units ]).to eq([ false, :retreat, [] ])
+        expect([ adj.position.season, adj.position.year, adj.position.ownership ]).to eq([ pos.season, pos.year, pos.ownership ])
         expect(RulesEngine.load_adjudication(JSON.parse(JSON.generate(adj.to_h)))).to eq(adj)
         phases += 1
       end
@@ -180,7 +184,7 @@ RSpec.describe "RulesEngine.adjudicate, the stand-in" do
   end
 
   it "lists submitted orders in the order given, then implied holds by province, with documented results (AC-3.8)" do
-    orders = [ move(:germany, :kie, :hol), move(:england, :lon, :nth) ]
+    orders = [ move(:england, :lon, :nth), move(:germany, :kie, :hol) ] # lon comes after kie by province, so a sort would reorder them
     adj = adjudicate_legal(start, orders)
     expect(adj.outcomes.first(2).map(&:order)).to eq(orders)
     implied_provinces = adj.outcomes.drop(2).map { |o| o.order.at }
@@ -237,12 +241,16 @@ RSpec.describe "RulesEngine.adjudicate, the stand-in" do
 
     it "raises InvalidInput for each kind of bad hash" do
       outcome = good["outcomes"].first
-      bad = [ good.merge("format" => 2), good.except("format"), good.transform_keys(&:to_sym), good.merge("extra" => 1),
-              good.except("paradox"), good.merge(mixed: 1), good.merge("outcomes" => "none"),
-              good.merge("paradox" => "no"), good.merge("position" => nil), good.merge("position" => 5),
-              good.merge("outcomes" => [ outcome.merge("format" => 1) ]), good.merge("outcomes" => [ outcome.merge("result" => "won") ]),
-              good.merge("outcomes" => [ outcome.merge("submitted" => "yes") ]), good.merge("outcomes" => [ outcome.except("order") ]) ]
-      bad.each { |h| expect { RulesEngine.load_adjudication(h) }.to raise_error(RulesEngine::InvalidInput) }
+      bad = [ [ good.merge("format" => 2), /"format".*2/ ], [ good.except("format"), /"format"/ ],
+              [ good.transform_keys(&:to_sym), /"format"/ ], [ good.merge("extra" => 1), /"extra"/ ],
+              [ good.except("paradox"), /"paradox"/ ], [ good.merge(mixed: 1), /:mixed/ ],
+              [ good.merge("outcomes" => "none"), /"outcomes".*none/ ], [ good.merge("paradox" => "no"), /"paradox".*no/ ],
+              [ good.merge("position" => nil), /"position"/ ], [ good.merge("position" => 5), /"position".*5/ ],
+              [ good.merge("outcomes" => [ outcome.merge("format" => 1) ]), /"format"/ ],
+              [ good.merge("outcomes" => [ outcome.merge("result" => "won") ]), /"result".*won/ ],
+              [ good.merge("outcomes" => [ outcome.merge("submitted" => "yes") ]), /"submitted".*yes/ ],
+              [ good.merge("outcomes" => [ outcome.except("order") ]), /"order"/ ] ]
+      bad.each { |h, message| expect { RulesEngine.load_adjudication(h) }.to raise_error(RulesEngine::InvalidInput, message) }
     end
   end
 end

@@ -110,7 +110,7 @@ RSpec.describe "Stored gem objects" do
 
   it "raises InvalidInput, naming the value, when a stored row has an unknown format (AC-4.8, AC-4.9)" do
     record = insert_raw("board", JSON.generate(start.to_h.merge("format" => 2)))
-    expect { model.find(record.id).board }.to raise_error(RulesEngine::InvalidInput, /2/)
+    expect { model.find(record.id).board }.to raise_error(RulesEngine::InvalidInput, /format 2/)
   end
 
   it "does not hide or repair a stored row that is not JSON, not an object, or JSON null (AC-4.9a)" do

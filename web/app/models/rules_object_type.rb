@@ -4,6 +4,12 @@
 # InvalidInput from the loader reaches the caller (FR-5).
 #
 #   attribute :board, RulesObjectType.position
+#
+# Notes for the models that use it:
+# - Query with the object, never a hash: where(board: position) serializes to the canonical JSON
+#   text, while where(board: some_hash) is read by ActiveRecord as a nested table condition.
+# - A stored row that won't load can't be repaired through the model (assigning a new value reads the
+#   old one first, which raises). Repair it with update_columns or SQL, as a deliberate data fix.
 class RulesObjectType < ActiveRecord::Type::Value
   KINDS = %i[position order check_result adjudication].freeze
   KINDS.each { |kind| define_singleton_method(kind) { new(kind) } }

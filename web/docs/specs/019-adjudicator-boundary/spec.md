@@ -1,7 +1,7 @@
 # Feature 019: The adjudicator boundary and a stand-in adjudicator
 
 **Status:** Approved
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #19
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.2.2 | 2026-11-26 | Patch, after the implementation review: the spec-only table is built inside the storage spec (not `spec/support/`); the guard skips encrypted files; the lockfile pins the tag (and so its commit); FR-5 records two caveats for models that use the types; only `from_h` validates a stand-in result |
 | 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). Rule 4 says outright that swaps and rotations succeeding is a fake result that 0.2.0 corrects |
 | 1.2.0 | 2026-11-26 | Changed after the second independent review.<br>• The guard's module pattern no longer flags the app's name at the end of a sentence (it did flag `manifest.json.erb`), skips binary files, and also scans `spec/` for the gem's constants.<br>• The attribute types raise at assignment (`assert_valid_value`).<br>• Wording: the stand-in does the loading for an adjudication before 0.2.0; `load_order` tests the six documented classes by name; the stand-in's wrong-argument error is called its own choice; `github:` shorthand dropped from the pin check; `standoffs` is a set; a column holding JSON `null` is nil |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• The boundary gets four loaders (`load_position`, `load_order`, `load_check_result`, `load_adjudication`) that take a gem object, a string-keyed hash or nil, so the attribute types never name a gem class.<br>• The attribute types subclass `ActiveRecord::Type::Value`, never `Type::Json`, and let errors out. Unparsable JSON text is stated.<br>• Rule 4 of the stand-in is now a stated procedure with one result, and the swap, rotation, chain and coast cases get ACs, plus a sweep over legal orders.<br>• The guard gets exact patterns, negatives and a wider file set. The gem is declared `require: false`.<br>• "One file" is reworded to what really changes at 0.2.0. The stand-in's result classes are `Data` classes with fixed names.<br>• Verification fixes: no timing number, drop-table check, pin spec reads `Gemfile` text only |
@@ -63,7 +64,7 @@ These were chosen for this spec, with the alternatives that were left out.
 
 Option B lives inside `app/models/rules_engine.rb`, as the nested classes `RulesEngine::StandInAdjudication` and `RulesEngine::StandInOutcome`, both built with `Data.define` so equality, `to_h` and pattern matching behave as the gem's do. The 0.2.0 upgrade deletes them. Their `position` is a real gem position, and their orders are real gem orders. `load_adjudication` for a hash validates as the gem documents for value objects: exactly the documented keys, `format` 1, `outcomes` an Array of hashes, an outcome hash with no `format` key of its own (one is an unknown key), `result` one of the nine documented strings, booleans where booleans belong. Its `outcomes` array is frozen.
 
-**D3. How storage is proved.** A table that exists only while the specs run, built in `spec/support/` and never in `db/`. The alternative, one minimal real table, would put a table in the production schema that #21 and #22 then have to migrate away. The attribute types are real app code (`app/models/`) and are the part #21 and #22 reuse.
+**D3. How storage is proved.** A table that exists only while the specs run, built and dropped inside the storage spec itself and never in `db/`. The alternative, one minimal real table, would put a table in the production schema that #21 and #22 then have to migrate away. The attribute types are real app code (`app/models/`) and are the part #21 and #22 reuse.
 
 **D4. Attribute types.** One ActiveRecord attribute type per stored kind: position, order, check result and adjudication result. Each subclasses `ActiveRecord::Type::Value` (not `Type::Json`, whose `deserialize` swallows decode errors and whose in-place change check re-reads the raw value). Each serializes with `to_h` as JSON text, and loads through the boundary's matching loader. The types never name a gem class.
 
@@ -241,20 +242,20 @@ The stand-in is a private part of `app/models/rules_engine.rb`. **Its outcomes a
 
 ### FR-5: What the app does when stored data won't load
 
-A stored value that the gem refuses (an unknown or missing `format`, or any other hash the gem rejects) is a data problem that needs a person. The type lets `InvalidInput` out at the moment the attribute is read. It does not guess, skip or blank it. Because attributes load lazily, anything that reads the bad attribute raises, including `attributes` and `as_json` on that record, and `inspect` wherever it lists that attribute (production's `inspect` lists only the id). In a request it ends as a server error with the gem's message in the log. Showing something kinder, and any migration of old stored data, belong to the screen that reads it and to the pull request that upgrades the pin, which can match on the new `format`.
+A stored value that the gem refuses (an unknown or missing `format`, or any other hash the gem rejects) is a data problem that needs a person. The type lets `InvalidInput` out at the moment the attribute is read. It does not guess, skip or blank it. Because attributes load lazily, anything that reads the bad attribute raises, including `attributes` and `as_json` on that record, and `inspect` wherever it lists that attribute (production's `inspect` lists only the id). In a request it ends as a server error with the gem's message in the log. Two caveats for models that use the types: a bad stored row can't be repaired by assigning a new value through the model (the old value is read first, and raises), so it needs `update_columns` or SQL; and a column is queried with the object, never a hash. Showing something kinder, and any migration of old stored data, belong to the screen that reads it and to the pull request that upgrades the pin, which can match on the new `format`.
 
 ### FR-6: Specs for the round trip
 
 **Must:**
 - Cover the boundary, the stand-in, the attribute types and the guard, test first.
-- Prove the database round trip with a table that exists only during the specs, created in `spec/support/` and dropped after, with its own model class defined there.
+- Prove the database round trip with a table that exists only during the specs, created before and dropped after the storage spec's examples (the spec fails if the table survives), with its own model class defined in that spec.
 - Build spec data (custom positions, the six order types, a legal convoy, a fleet in Spain's north coast) with `RulesEngine.load_position` and `load_order` from hand-written string-keyed hashes, so specs need no gem constants.
 - Read only `web/Gemfile` text in the pin spec. The early-warning job's unfrozen install rewrites `Gemfile.lock` to a path source, so a spec that read the lockfile or the loaded gem's source would fail there.
 
 ### FR-7: The guard spec
 
 **Must:**
-- Scan every file, of any extension, under `app/`, `lib/`, `config/`, `db/` and `bin/`, plus `config.ru` and `Rakefile`, and fail on any match outside `app/models/rules_engine.rb` of:
+- Scan every file, of any extension except Rails' encrypted `*.enc` files (random text that could match `TA` by chance), under `app/`, `lib/`, `config/`, `db/` and `bin/`, plus `config.ru` and `Rakefile`, and fail on any match outside `app/models/rules_engine.rb` of:
   - `\bTrucebearer\s*::` (the module), and `\bTrucebearer\s*\.\s*[a-z_]` (a method call on it, such as `Trucebearer.const_get`; a full stop after the name at the end of a sentence doesn't match);
   - `(?<![A-Za-z0-9_])TA(?![A-Za-z0-9_])` (the alias);
   - `require\s*\(?\s*["']trucebearer` (the gem);
@@ -288,7 +289,7 @@ It also scans `spec/` for the first three patterns, so specs never name the gem'
 
 ### Reliability
 
-- The default install is frozen and reproducible: the lockfile pins the commit that the tag points at.
+- The default install is frozen and reproducible: the lockfile pins the tag (and, through it, the commit the tag points at). A tag that moves makes the install fail rather than change the code silently.
 - A stored value that doesn't load stops at the read with the gem's error, so bad data is never silently replaced.
 
 ## Error Scenarios
