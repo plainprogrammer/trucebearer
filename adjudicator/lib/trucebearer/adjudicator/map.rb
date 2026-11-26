@@ -23,12 +23,17 @@ module Trucebearer
 
         def from_file(path)
           raw = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+          starting_units = raw["starting_units"].map do |u|
+            { power: u["power"].to_sym, type: u["type"].to_sym,
+              province: u["province"].to_sym, coast: u["coast"]&.to_sym }.freeze
+          end.sort_by { |u| u[:province] }.freeze
           new(
             id: raw["map"],
             powers: raw["powers"].map { |p| Power.new(id: p["id"].to_sym, name: p["name"]) },
             provinces: raw["provinces"].map { |p| build_province(p) },
             armies: raw["armies"].to_h { |from, tos| [from.to_sym, tos.map(&:to_sym).to_set.freeze] }.freeze,
-            fleets: raw["fleets"].to_h { |from, tos| [fleet_key(from), tos.map { |to| fleet_key(to) }.to_set.freeze] }.freeze
+            fleets: raw["fleets"].to_h { |from, tos| [fleet_key(from), tos.map { |to| fleet_key(to) }.to_set.freeze] }.freeze,
+            starting_units: starting_units
           )
         end
 
@@ -54,7 +59,7 @@ module Trucebearer
 
       attr_reader :id, :powers, :provinces, :supply_centers
 
-      def initialize(id:, powers:, provinces:, armies:, fleets:)
+      def initialize(id:, powers:, provinces:, armies:, fleets:, starting_units:)
         @id = id.freeze
         @powers = powers.sort_by(&:id).freeze
         @provinces = provinces.sort_by(&:id).freeze
@@ -66,6 +71,7 @@ module Trucebearer
         end.freeze
         @armies = armies
         @fleets = fleets
+        @starting_units = starting_units
         freeze
       end
 
@@ -96,6 +102,17 @@ module Trucebearer
         to_key = lookup_key(unit_type, to, "to")
         table = unit_type == :army ? @armies : @fleets
         table.fetch(from_key, NO_NEIGHBORS).include?(to_key)
+      end
+
+      # Internal: not part of docs/interface.md, and may change in any release.
+      # The units a game starts with, for Map#starting_position (issue #10).
+      # Each entry is a frozen Hash with :power, :type and :location (a TA::Location).
+      # Built on each call so that no Location is made while the map is loading.
+      def starting_units
+        @starting_units.map do |u|
+          { power: u[:power], type: u[:type],
+            location: Location.new(province: u[:province], coast: u[:coast]) }.freeze
+        end.freeze
       end
 
       private

@@ -218,3 +218,27 @@ fleets:
   "wal": ["eng", "iri", "lon", "lvp"]
   "wes": ["gol", "mao", "naf", "spa/sc", "tun", "tys"]
   "yor": ["edi", "lon", "nth"]
+
+starting_units:
+  - { power: "austria", type: "army", province: "bud" }
+  - { power: "austria", type: "army", province: "vie" }
+  - { power: "austria", type: "fleet", province: "tri" }
+  - { power: "england", type: "fleet", province: "edi" }
+  - { power: "england", type: "army", province: "lvp" }
+  - { power: "england", type: "fleet", province: "lon" }
+  - { power: "france", type: "fleet", province: "bre" }
+  - { power: "france", type: "army", province: "mar" }
+  - { power: "france", type: "army", province: "par" }
+  - { power: "germany", type: "army", province: "ber" }
+  - { power: "germany", type: "fleet", province: "kie" }
+  - { power: "germany", type: "army", province: "mun" }
+  - { power: "italy", type: "fleet", province: "nap" }
+  - { power: "italy", type: "army", province: "rom" }
+  - { power: "italy", type: "army", province: "ven" }
+  - { power: "russia", type: "army", province: "mos" }
+  - { power: "russia", type: "fleet", province: "sev" }
+  - { power: "russia", type: "fleet", province: "stp", coast: "sc" }
+  - { power: "russia", type: "army", province: "war" }
+  - { power: "turkey", type: "fleet", province: "ank" }
+  - { power: "turkey", type: "army", province: "con" }
+  - { power: "turkey", type: "army", province: "smy" }

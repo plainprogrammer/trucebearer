@@ -323,4 +323,56 @@ RSpec.describe Trucebearer::Adjudicator::Map do
       end
     end
   end
+
+  describe "#starting_units (internal)" do
+    let(:units) { map.starting_units }
+
+    it "returns 22 frozen entries sorted by province, each with a power, a type and a location" do
+      expect(units.size).to eq(22)
+      expect(units).to be_frozen
+      expect(units).to all(be_frozen)
+      expect(units.map(&:keys).uniq).to eq([%i[power type location]])
+      expect(units.map { |u| u[:location].province }).to eq(units.map { |u| u[:location].province }.sort)
+      expect(units.map { |u| u[:location] }).to all(be_a(TA::Location))
+    end
+
+    it "gives each power its starting units" do
+      by_power = units.group_by { |u| u[:power] }.transform_values do |list|
+        list.map { |u| [u[:type], u[:location].province, u[:location].coast] }.sort_by { |_, p, _| p }
+      end
+      expect(by_power).to eq(
+        austria: [[:army, :bud, nil], [:fleet, :tri, nil], [:army, :vie, nil]],
+        england: [[:fleet, :edi, nil], [:fleet, :lon, nil], [:army, :lvp, nil]],
+        france: [[:fleet, :bre, nil], [:army, :mar, nil], [:army, :par, nil]],
+        germany: [[:army, :ber, nil], [:fleet, :kie, nil], [:army, :mun, nil]],
+        italy: [[:fleet, :nap, nil], [:army, :rom, nil], [:army, :ven, nil]],
+        russia: [[:army, :mos, nil], [:fleet, :sev, nil], [:fleet, :stp, :sc], [:army, :war, nil]],
+        turkey: [[:fleet, :ank, nil], [:army, :con, nil], [:army, :smy, nil]]
+      )
+    end
+
+    it "puts no two units in one province" do
+      expect(units.map { |u| u[:location].province }.uniq.size).to eq(22)
+    end
+
+    it "puts each unit on a home center of its own power, one unit per home center" do
+      map.powers.each do |power|
+        provinces = units.select { |u| u[:power] == power.id }.map { |u| u[:location].province }
+        expect(provinces.sort).to eq(map.home_centers(power.id))
+      end
+    end
+
+    it "keeps armies off the sea, fleets out of inland provinces, and gives split-coast fleets a coast" do
+      units.each do |unit|
+        province = map.province(unit[:location].province)
+        expect(province.type).not_to eq(:sea) if unit[:type] == :army
+        expect(province.type).not_to eq(:inland) if unit[:type] == :fleet
+        expect(unit[:location].coast.nil?).to eq(unit[:type] == :army || province.coasts.empty?)
+      end
+    end
+
+    it "is not mentioned in the interface document, and starting_position is not built here" do
+      expect(File.read(INTERFACE_DOC)).not_to include("starting_units")
+    end
+  end
 end

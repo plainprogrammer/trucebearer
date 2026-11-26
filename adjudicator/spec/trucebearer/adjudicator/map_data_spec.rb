@@ -14,7 +14,7 @@ RSpec.describe "data/maps/classic.yml" do
     powers = raw["powers"].map { |power| power["id"] }
     armies = raw["armies"].flat_map { |from, tos| [from, *tos] }
     fleets = raw["fleets"].flat_map { |from, tos| [from, *tos] }.flat_map { |loc| loc.split("/") }
-    units = raw.fetch("starting_units", []).flat_map { |u| [u["power"], u["type"], u["province"], u["coast"]].compact }
+    units = raw["starting_units"].flat_map { |u| [u["power"], u["type"], u["province"], u["coast"]].compact }
     provinces + powers + armies + fleets + units
   end
 
@@ -79,6 +79,19 @@ RSpec.describe "data/maps/classic.yml" do
         end
       end
       expect(raw["fleets"].keys.size).to eq(64)
+    end
+  end
+
+  describe "starting units" do
+    it "name a known power, unit type, province and, where given, a coast the province has" do
+      powers = raw["powers"].map { |p| p["id"] }
+      provinces = raw["provinces"].to_h { |p| [p["id"], p["coasts"] || []] }
+      raw["starting_units"].each do |unit|
+        expect(powers).to include(unit["power"])
+        expect(%w[army fleet]).to include(unit["type"])
+        expect(provinces.keys).to include(unit["province"])
+        expect(provinces[unit["province"]]).to include(unit["coast"]) if unit["coast"]
+      end
     end
   end
 end
