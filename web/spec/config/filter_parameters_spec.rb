@@ -14,4 +14,11 @@ RSpec.describe "The log filter" do
 
     expect(filtered).to eq({ "orders" => "[FILTERED]", "submit" => "1" })
   end
+
+  it "hides the unfinished order in a picker's query, and nothing else (spec 023 AC-3.7)" do
+    filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered = filter.filter({ "draft" => { "kind" => "move", "to" => "bel" }, "public_id" => "abc", "number" => "1" })
+
+    expect(filtered).to eq({ "draft" => "[FILTERED]", "public_id" => "abc", "number" => "1" })
+  end
 end

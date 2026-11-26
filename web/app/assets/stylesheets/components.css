@@ -437,6 +437,51 @@
     gap: var(--space-3);
   }
 
+  /* ---- Picker step (#23): the order so far above a list of choices; each choice is a .list__row ---- */
+  .picker {
+    gap: var(--space-4);
+  }
+
+  .picker__draft {
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-ice-pale);
+    border-radius: var(--radius);
+  }
+
+  .picker__draft p {
+    margin: 0;
+  }
+
+  .picker__choice {
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+
+  .picker__note {
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Save status (#23): words, never colour alone. Turbo marks a submitting form aria-busy, which swaps the text ---- */
+  .save-status {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .save-status__saving {
+    display: none;
+  }
+
+  .app:has(form[aria-busy="true"]) .save-status__rest,
+  .save-status--saving .save-status__rest {
+    display: none;
+  }
+
+  .app:has(form[aria-busy="true"]) .save-status__saving,
+  .save-status--saving .save-status__saving {
+    display: inline;
+  }
+
   /* ---- Reduced motion: no transition runs ---- */
   @media (prefers-reduced-motion: reduce) {
     .button {

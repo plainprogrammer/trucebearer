@@ -44,11 +44,11 @@ RSpec.describe "Order secrecy", type: :request do
       expect(SecrecyRoutes.classified?("GET /rails/mailers/*path")).to be(true)
     end
 
-    it "marks as showing orders only the seat page, and the orders page and its endpoint" do
+    it "marks as showing orders only the seat page, the orders page, the picker and the endpoint (spec 023 AC-5.1)" do
       showing = SecrecyRoutes::APP.select { |_key, entry| entry[:shows] == :own }.keys
 
       expect(showing).to match_array([ "GET /games/:public_id", "GET /games/:public_id/phases/:number/orders",
-                                       "PUT /games/:public_id/phases/:number/orders" ])
+                                       "GET /games/:public_id/phases/:number/orders/:province", "PUT /games/:public_id/phases/:number/orders" ])
     end
   end
 
@@ -105,10 +105,10 @@ RSpec.describe "Order secrecy", type: :request do
     def snapshot
       Rails.cache.clear
       viewers.to_h do |name, session|
-        responses = SecrecyRoutes.readable.to_h do |key, entry|
-          requester = entry[:fresh] ? open_session : session
-          requester.get entry[:sweep].call(context)
-          [ key, normalized(requester.response) ]
+        responses = SecrecyRoutes.sweeps(context).to_h do |label, item|
+          requester = item[:entry][:fresh] ? open_session : session
+          requester.get item[:path]
+          [ label, normalized(requester.response) ]
         end
         [ name, responses ]
       end
@@ -124,7 +124,7 @@ RSpec.describe "Order secrecy", type: :request do
     it "answers every viewer but England the same whatever England has ordered (AC-7.2)" do
       set_orders(:none)
       baseline = snapshot
-      expect(baseline.values.flat_map(&:keys).uniq.size).to eq(SecrecyRoutes.readable.size)
+      expect(baseline.values.flat_map(&:keys).uniq.size).to eq(SecrecyRoutes.sweeps(context).size)
       # The sweep must be comparing real pages, not four copies of the stranger page: the viewers that have a right to a page got it.
       status = ->(viewer, key) { baseline.fetch(viewer).fetch(key).first }
       orders = "GET /games/:public_id/phases/:number/orders"
@@ -141,6 +141,36 @@ RSpec.describe "Order secrecy", type: :request do
         set_orders(name)
         changed = differences(baseline, snapshot)
         expect(changed).to be_empty, "the pages changed when England's orders became #{name}: #{changed.join('; ')}"
+      end
+    end
+
+    it "sweeps real picker pages: France reaches its own deep step, England its own (spec 023 AC-5.2)" do
+      set_orders(:none)
+      baseline = snapshot
+      label = "GET /games/:public_id/phases/:number/orders/:province"
+
+      expect(baseline.fetch("another seat").fetch("#{label} [par]").first).to eq(200)
+      expect(baseline.fetch("another seat").fetch("#{label} [lon]").first).to eq(404) # London is England's, not France's
+      england_phone.get "/games/#{id}/phases/1/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi"
+      expect(england_phone.response).to have_http_status(:ok)
+    end
+
+    it "shows England no order of France's on any picker page (spec 023 AC-5.3)" do
+      france_seat = game.seats.find_by(power: "france")
+      france_seat.save_orders!(phase, { "par" => json_of(move(:france, :par, :bur)), "mar" => json_of(rules_order(:hold, :france, :mar)) })
+      pages = []
+      %w[lon edi lvp].each do |province|
+        [ "", "?draft%5Bkind%5D=move", "?draft%5Bkind%5D=support", "?draft%5Bkind%5D=support&draft%5Btarget%5D=edi" ].each do |query|
+          england_phone.get "/games/#{id}/phases/1/orders/#{province}#{query}"
+          pages << england_phone.response.body if england_phone.response.status == 200
+        end
+      end
+      expect(pages.size).to be > 6
+      france_json = france_seat.orders_for(phase).values.map { |order| ERB::Util.html_escape(json_of(order)) }
+      pages.each do |body|
+        france_json.each { |text| expect(body).not_to include(text) }
+        expect(body).not_to include("2 of 3 ordered")
+        expect(body).not_to include("Move to Burgundy (BUR)")
       end
     end
 
