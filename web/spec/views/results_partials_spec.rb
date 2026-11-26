@@ -68,7 +68,7 @@ RSpec.describe "results partials", type: :view do
   it "notes an implied hold's cause, and drops 'so it held' when it was dislodged; a void order and its implied hold are two rows (AC-1.6)" do
     phase = revealed_phase_with(game, dislodged: [ %w[england fleet lon] ], outcomes: [
       [ move_to("england", "edi", "wal"), :void, true, false ],
-      [ order("hold", "england", "lon"), :held, false, true ], [ order("hold", "england", "edi"), :held, false, false ] ])
+      [ order("hold", "england", "edi"), :held, false, false ], [ order("hold", "england", "lon"), :held, false, true ] ]) # implied holds, by province
     fragment = draw(phase)
     notes = fragment.css(".result-row").filter_map { |row| [ row["data-province"], row.at_css(".result-row__note")&.text ] if row.at_css(".result-row__note") }.to_h
 

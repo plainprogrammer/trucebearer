@@ -206,6 +206,15 @@ RSpec.describe "Order secrecy", type: :request do
         expect(status.call(host, "GET /games/:public_id/host/phases/:number/reveal")).to eq(200)
       end
 
+      # The two results routes before any reveal, where the swept number is the open phase's (spec 025 AC-5.2): the stranger page for every
+      # viewer, and for the host wearing France's seat cookie the step-in redirect on the seat route.
+      seat_results = "GET /games/:public_id/phases/:number/results"
+      host_results = "GET /games/:public_id/host/phases/:number/results"
+      baseline.each_key do |viewer|
+        expect(status.call(viewer, host_results)).to eq(404), viewer
+        expect(status.call(viewer, seat_results)).to eq(viewer == "the host, with France's seat cookie" ? 303 : 404), viewer
+      end
+
       # The step-in controls (spec 026 AC-8.2): the host without a step-in is a stranger on England's stepped-in URLs, the host stepped into
       # France reaches France's and not England's, and the host with France's seat cookie is sent to its confirmation.
       stepped = "GET /games/:public_id/host/seats/:power/phases/:number/orders"

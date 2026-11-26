@@ -36,7 +36,9 @@ RSpec.describe "The results broadcast" do
   it "is one element with one attribute, no child and no text, and equal for a game with orders and one without (AC-4.2)" do
     quiet = Game.start!(power: "england").game
     busy = game
-    busy.seats.find_by(power: "england").save_orders!(busy.current_phase, { "lon" => json_of(move(:england, :lon, :nth)) }, submit: true)
+    busy.seats.find_by(power: "england").save_orders!(busy.current_phase, { "lon" => json_of(move(:england, :lon, :nth)), "edi" => json_of(move(:england, :edi, :nwg)) }, submit: true)
+    busy.take_seat!("france").first.save_orders!(busy.current_phase, { "par" => json_of(move(:france, :par, :bur)) }, submit: true)
+    busy.take_seat!("germany").first.save_orders!(busy.current_phase, { "kie" => json_of(move(:germany, :kie, :hol)) })
     [ quiet, busy ].each { |g| g.current_phase.reveal! }
 
     decoded = [ quiet, busy ].map { |g| JSON.parse(raw(g).first) } # the adapter keeps the raw string, JSON-encoded

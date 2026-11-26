@@ -63,7 +63,10 @@ RSpec.describe "The host's reading view", type: :request do
     end
     [ "2", "3", "01", "x" ].each do |number|
       host.get "/games/#{id}/host/phases/#{number}/results"
+      stranger = open_session.tap { |session| session.get "/games/#{id}/host/phases/#{number}/results" }
       expect(stranger_body?(host.response)).to be(true), number
+      # Byte for byte what a stranger gets, headers included: the no-store header comes after the access and phase checks.
+      expect(comparable(host.response, id)).to eq(comparable(stranger.response, id)), number
     end
   end
 

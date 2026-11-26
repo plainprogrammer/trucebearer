@@ -1,7 +1,7 @@
 # Plan 025: Reveal results to every phone at once
 
 **Spec:** `web/docs/specs/025-reveal-results/spec.md` v1.0.0 (Approved at Gate A)
-**Issue:** #25 · **Branch:** `web/25-reveal-results` · **Plan version:** 1.1.0 (after the Opus review: see the changelog at the end; `main` with #104 is merged in)
+**Issue:** #25 · **Branch:** `web/25-reveal-results` · **Plan version:** 1.2.0 (after the Opus review and execution: see the changelog at the end; `main` with #104 is merged in)
 
 ## Goal
 
@@ -1141,5 +1141,6 @@ Then the implementation review (an Opus subagent, read-only), the session wrap, 
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2.0 | 2026-11-26 | Recorded while executing (no change of design). Sizes after Phase 2 (AC-8.3): `components.css` 15,309 to 16,690 bytes, total 27,019 to 28,400 of 32,768, `styleguide.css` unchanged at 3,716 of 6,144. The two confirmation pages (reveal and step-in) are not re-requested for the revealed number in the sweep: each answers a revealed phase with a redirect and a flash banner that the next request would show, so a sweep cannot compare them; spec 022 AC-4.11 and spec 026 AC-1.7 test those redirects. `reveal_post_spec.rb`'s dislodged fixture is kept hand-built (it drives the real reveal through a stubbed `adjudicate`) but now sets the position and the outcome's flag together and asserts the banner count equals the tag count. After the Opus implementation review (11 non-blocking findings, all taken): the sweep's first world asserts the results routes' statuses, the host's stranger page is compared byte for byte, the system spec shows a host tab and a picker phone switching and measures the refusal page, the fixture's implied holds are in province order, the page the two key orders draw is compared, the payload fixture has three seats ordering |
 | 1.1.0 | 2026-11-26 | After the Opus plan review (5 blocking, 9 non-blocking, all taken): `.outcome-tag` takes `.mono` and no `font-family` (the font spec allows one reader of the token); the two results routes are classified, and the old AC-7.9 example rewritten, in Phase 3, the 303 line in Phase 4 and the signed-name example in Phase 5, so every commit ends green; world 2 gives France `mar -> pie` (Paris stays French), uses legal phase-2 orders, a `numbered` flag instead of per-entry revealed sweeps, and full example bodies; the rendered examples for AC-1.3, AC-1.4, AC-7.3 and AC-4.5, the AC-7.2 body, the system spec bodies and the first test's absolute require are written out; the `reveal_post_spec` dislodged fixture moves to the one builder; live-status waits count both sources; the morph side effect on a submit is checked at 360 pixels. `main` (with #104) merged in |
 | 1.0.0 | 2026-11-26 | First plan, for Gate B |

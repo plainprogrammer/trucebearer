@@ -47,7 +47,8 @@ class Game < ApplicationRecord
 
   # Tells every open seat page and host page which seats have submitted. One snapshot of the seven states, rendered from
   # Phase#seat_statuses and nothing else, on a stream of its own that only the seat and host pages subscribe to (spec 024
-  # D1, D2, D4). It is the only place the app talks to the cable; spec/models/status_broadcast_scan_spec.rb enforces that. The
+  # D1, D2, D4). With broadcast_results_refresh below, it is one of the only two places the app talks to the cable;
+  # spec/models/status_broadcast_scan_spec.rb enforces that. The
   # render is outside the rescue so a broken template raises everywhere; the cable call is inside it so a stored save is
   # never answered with an error (D7).
   def broadcast_seat_status

@@ -47,31 +47,61 @@ RSpec.describe "Revealing results to every phone", type: :system do
     end
   end
 
-  it "moves a second phone and a phone on the order screen to the results when the host reveals (AC-3.1, AC-3.2)" do
+  it "moves a second phone, an order screen, a picker step and the host's other tab when the host reveals (AC-3.1, AC-3.2)" do
     with_viewport(360) do
       visit "/games/#{id}/seat-link?token=#{england.last}"
       visit "/games/#{id}/phases/1/orders"
       connected(1) # the order screen holds the results source only
-      Capybara.using_session(:france) do
+      Capybara.using_session(:host_tab) do
         with_viewport(360) do
-          visit "/games/#{id}/seat-link?token=#{france.last}"
-          visit "/games/#{id}"
-          connected(2) # the status source and the results source
-          expect(page).not_to have_css("section[data-results]")
-          host_reveals
+          visit "/games/#{id}/host-link?token=#{started.host_token}"
+          visit "/games/#{id}/host"
+          connected(2)
+          Capybara.using_session(:picker) do
+            with_viewport(360) do
+              visit "/games/#{id}/seat-link?token=#{england.last}"
+              visit "/games/#{id}/phases/1/orders/lon"
+              connected(1)
+              Capybara.using_session(:france) do
+                with_viewport(360) do
+                  visit "/games/#{id}/seat-link?token=#{france.last}"
+                  visit "/games/#{id}"
+                  connected(2) # the status source and the results source
+                  expect(page).not_to have_css("section[data-results]")
+                  host_reveals
 
-          expect(page).to have_css("section[data-results] .result-row", text: "Move to North Sea (NTH)", wait: 5)
-          expect(page).to have_css(".phase-header", text: /fall 1901/i) # the half-stale header of spec 024 is gone
-          expect(page).to have_link("Skip to orders")
-          expect(font_px(".result-group")).to be <= 16.5
-          measure("France's seat page after the reveal")
-          screenshot("01-seat-page-after-reveal")
+                  expect(page).to have_css("section[data-results] .result-row", text: "Move to North Sea (NTH)", wait: 5)
+                  expect(page).to have_css(".phase-header", text: /fall 1901/i) # the half-stale header of spec 024 is gone
+                  expect(page).to have_link("Skip to orders")
+                  expect(font_px(".result-group")).to be <= 16.5
+                  measure("France's seat page after the reveal")
+                  screenshot("01-seat-page-after-reveal")
+                end
+              end
+              expect(page).to have_current_path("/games/#{id}/phases/1/results", wait: 5) # the picker step's refresh met the 303
+            end
+          end
+          expect(page).to have_css("section[data-results] .result-group--reading", wait: 5) # the host's other tab shows the reading view
+          expect(font_px(".result-group--reading")).to be >= 19
+          measure("the host's other tab after the reveal")
         end
       end
       expect(page).to have_current_path("/games/#{id}/phases/1/results", wait: 5) # the order screen's refresh met the 303
       expect(page).to have_css("section[data-results] .result-row", text: "Move to North Sea (NTH)")
       measure("England's results page")
       screenshot("02-results-page")
+    end
+  end
+
+  it "still measures the refusal page a stale write meets, at 360 pixels (spec 022 AC-6.1)" do
+    allow_any_instance_of(Game).to receive(:broadcast_results_refresh) # so the open order screen stays put and its stale write is sent
+    with_viewport(360) do
+      visit "/games/#{id}/seat-link?token=#{france.last}"
+      visit "/games/#{id}/phases/1/orders"
+      Phase.find_by(game: game, number: 1).reveal!
+      click_on "Submit orders"
+      expect(page).to have_css(".banner--danger", text: "The host has already revealed this phase")
+      measure("the refusal page")
     end
   end
 

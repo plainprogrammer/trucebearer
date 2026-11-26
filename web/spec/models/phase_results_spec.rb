@@ -51,6 +51,10 @@ RSpec.describe PhaseResults do
 
     expect(PhaseResults.new(phases.first).groups).to eq(PhaseResults.new(phases.last).groups)
     expect(PhaseResults.new(phases.first).groups.first.rows.map(&:province)).to eq(%w[lon])
+    drawn = phases.map do |phase|
+      ApplicationController.render(partial: "results/section", locals: { results: PhaseResults.new(phase), kind: :seat, game: phase.game, earlier: [], banners: false, skip: false })
+    end
+    expect(drawn.first).to eq(drawn.last) # both draw the same page
   end
 
   it "carries the stored paradox flag" do
