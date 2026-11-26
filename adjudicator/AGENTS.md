@@ -37,6 +37,7 @@ Run the specs with `bundle exec rspec`; `bundle exec rake` does the same. Develo
 1. Pick up Issues labeled `adjudicator`. A request Issue gives example input and expected output. Turn that example into your first failing spec.
 2. Write the test first. For rules behavior, the DATC scenario is the test.
 3. **DATC fixtures** are written by hand from the scenario's position and expected result. Name each one by its DATC section number (for example `6.A.1`). Never copy the document's prose or commentary, not even in a comment.
+
    The reference for those section numbers is the unmodified copy at `docs/reference/datc-v3.4.html` (DATC v3.4). It is for reading only. Write fixtures and `docs/ruleset.md` entries in your own words, and never quote it. Don't edit, reformat or replace the file, and don't add another copy of the DATC anywhere. It never ships in the gem.
 4. Where the DATC leaves a choice open, record the option you chose and why in `docs/ruleset.md`.
 5. The algorithm follows Kruijswijk's approach in "The Math of Adjudication": decision-based resolution with explicit handling of paradoxes. This choice is proposed, not final; raise it in an Issue if it doesn't hold up.
