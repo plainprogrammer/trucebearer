@@ -37,11 +37,13 @@ class Seat < ApplicationRecord
   # blank to clear that unit's order }; provinces not named keep what they have. All of one call is one transaction,
   # and either every change is stored or none is (spec 022 FR-2, D4, D8).
   def save_orders!(phase, entries, submit: false)
-    Phase.transaction do
+    before = nil
+    saved = Phase.transaction do
       phase.lock!
       raise Phase::Revealed unless phase.open?
       raise Stale unless Seat.exists?(id: id, token_digest: token_digest)
 
+      before = submitted?(phase) # inside the lock, before any change (spec 024 D3)
       parsed = entries.to_h do |province, text|
         unit = own_unit_at(phase, province.to_s) # every key is checked, a blank value included
         [ province.to_s, clearing?(text) ? nil : read_order(phase, province.to_s, text.to_s, unit) ]
@@ -62,6 +64,8 @@ class Seat < ApplicationRecord
       submissions.find_or_create_by!(phase_id: phase.id) if submit
       Saved.new(changed: changed, submitted: submitted?(phase))
     end
+    phase.game.broadcast_seat_status if saved.submitted != before # only a flip of the submitted state is news (spec 024 D3)
+    saved
   end
 
   # Deletes this seat's saved orders and its submission for the phase (a reissue, spec 022 D9). The caller holds the phase lock.

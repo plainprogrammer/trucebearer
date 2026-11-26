@@ -45,6 +45,21 @@ class Game < ApplicationRecord
   # The phases already revealed, oldest first.
   def history = phases.where.not(revealed_at: nil)
 
+  # Tells every open seat page and host page which seats have submitted. One snapshot of the seven states, rendered from
+  # Phase#seat_statuses and nothing else, on a stream of its own that only the seat and host pages subscribe to (spec 024
+  # D1, D2, D4). It is the only place the app talks to the cable; spec/models/status_broadcast_scan_spec.rb enforces that. The
+  # render is outside the rescue so a broken template raises everywhere; the cable call is inside it so a stored save is
+  # never answered with an error (D7).
+  def broadcast_seat_status
+    html = ApplicationController.render(partial: "shared/seat_status", locals: { statuses: current_phase.seat_statuses })
+    begin
+      Turbo::StreamsChannel.broadcast_update_to(:seat_status, public_id, target: "seat-status", content: html,
+                                                attributes: { method: :morph })
+    rescue StandardError => error
+      Rails.logger.warn("seat status broadcast failed: #{error.class}")
+    end
+  end
+
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
   end
