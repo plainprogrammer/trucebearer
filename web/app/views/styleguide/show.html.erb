@@ -126,6 +126,44 @@
     </ul>
   </section>
 
+<section data-component="unit-icon" class="stack" aria-labelledby="sg-unit-icon">
+  <h2 id="sg-unit-icon">Unit icons</h2>
+  <p>An army and a fleet for each power, at 20, 32 and 48 pixels. The tag in the corner holds the power's initial. The first row sits on <code>ice-pale</code>.</p>
+  <ul class="sg-units">
+    <% StyleguideHelper::POWER_IDS.each_with_index do |id, index| %>
+      <li class="sg-unit<%= " sg-bg-ice-pale" if index.zero? %>">
+        <span class="sg-unit__name"><%= PowerBadgeHelper::POWER_NAMES.fetch(id) %></span>
+        <span class="sg-unit__icons">
+          <% StyleguideHelper::UNIT_TYPES.each do |type| %>
+            <% StyleguideHelper::UNIT_SIZES.each do |size| %>
+              <%= unit_icon(id, type, size: size, decorative: true) %>
+            <% end %>
+          <% end %>
+        </span>
+      </li>
+    <% end %>
+  </ul>
+  <p>With no name beside it, an icon carries its own label, which a screen reader reads out:</p>
+  <p><%= unit_icon(:austria, :army) %> <%= unit_icon(:england, :fleet) %></p>
+</section>
+
+<section data-component="supply-center-icon" class="stack" aria-labelledby="sg-supply-icon">
+  <h2 id="sg-supply-icon">Supply-center icons</h2>
+  <p>A center owned by each power, and an unowned one.</p>
+  <ul class="sg-supply">
+    <% StyleguideHelper::POWER_IDS.each do |id| %>
+      <li class="sg-supply__item"><%= supply_center_icon(id, decorative: true) %> <span class="sg-supply__name"><%= PowerBadgeHelper::POWER_NAMES.fetch(id) %></span></li>
+    <% end %>
+    <li class="sg-supply__item"><%= supply_center_icon(nil, decorative: true) %> <span class="sg-supply__name">Unowned</span></li>
+  </ul>
+</section>
+
+<section data-component="mono-text" class="stack" aria-labelledby="sg-mono">
+  <h2 id="sg-mono">Mono text</h2>
+  <p>The <code>mono</code> class sets text in the one self-hosted monospace. It is for codes and tags, not for sentences.</p>
+  <p class="mono">JOIN 4F7-K2Q &middot; PAR &middot; SPRING 1901</p>
+</section>
+
   <section class="stack" aria-labelledby="sg-colors">
     <h2 id="sg-colors">Colors</h2>
     <ul class="sg-swatches">

@@ -23,6 +23,8 @@ PAIRS = [
   [ "disabled-text", "disabled-fill", "3" ]
 ].freeze
 
+  UNIT_SIZES = [ 20, 32, 48 ].freeze
+  UNIT_TYPES = %w[army fleet].freeze
   TYPE_STEPS = %w[sm base lg xl 2xl].freeze
   SPACE_STEPS = (1..8).to_a.freeze
   POWER_IDS = PowerBadgeHelper::POWER_NAMES.keys.freeze

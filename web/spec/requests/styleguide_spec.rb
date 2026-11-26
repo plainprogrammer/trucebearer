@@ -2,7 +2,7 @@ require "rails_helper"
 require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
-  components = %w[button link list field choice power-badge heading-text]
+  components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text]
   # The documented pairs other than the power pairs (spec FR-3): 31 of them.
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
@@ -74,6 +74,25 @@ RSpec.describe "Style guide", type: :request do
         %w[austria england france germany italy russia turkey].map { |id| "--color-power-#{id}" }
       )
     end
+
+it "shows every power's army and fleet at 20, 32 and 48 pixels, one row on ice-pale (AC-7.10, 4.5)" do
+  icons = page.css(".sg-units .unit-icon")
+  expect(icons.size).to eq(42)
+  expect(icons.map { |i| [ i["width"], i["class"][/unit-icon--(\w+)/, 1] ] }.tally.values.uniq).to eq([ 2 ])
+  expect(icons.map { |i| i["width"] }.tally).to eq("20" => 14, "32" => 14, "48" => 14)
+  expect(page.css(".sg-units .sg-bg-ice-pale").size).to eq(1)
+  expect(page.css(".sg-unit__name").map(&:text)).to match_array(%w[Austria England France Germany Italy Russia Turkey])
+end
+
+it "shows each owner and the unowned look, named beside each (AC-7.10)" do
+  expect(page.css(".sg-supply .supply-center-icon").map { |i| i["class"][/--(\w+)\z/, 1] })
+    .to match_array(%w[austria england france germany italy russia turkey unowned])
+  expect(page.css(".sg-supply__name").map(&:text)).to include("Unowned", "Austria")
+end
+
+it "shows a line of mono text" do
+  expect(page.css("section[data-component=mono-text] .mono").size).to be >= 1
+end
 
     it "shows an action area with two buttons inside the real layout" do
       expect(page.css("header").size).to eq(1)
