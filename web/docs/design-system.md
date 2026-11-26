@@ -136,9 +136,9 @@ Class names follow the pattern of the base stylesheet: block, `__element`, `--va
 | QR card | `.qr-card` (`__code`, `__caption`, `__link`; `qr_card`) | #21 (built) | QR code on white with a caption under it (the join code, or a power's badge for a seat) and the link as text |
 | Power tile | `.power-tile` (`--taken`; `.power-tiles`, `power_tiles`) | #21 (built) | Seven tiles in a grid; an open tile is a button, a taken tile says "Taken" and is not a control |
 | Host section | `.host-section` | #21 (built) | `ice-pale` ground with a "Host" heading, apart from the player's own screen |
-| Unit row | `.unit-row` (extends `.list__row`) | #23 | Unit icon, province name, mono abbreviation, current order or "holds", chevron |
-| Picker step | `.picker`, `.picker__draft` | #23 | Each step is a page; the draft order so far at the top; choices are a `.list` |
-| Submit bar | `.submit-bar`, `.save-status` | #23 | In `.app-actions`; the button carries the count ("2 of 3 ordered"); "Saved" or "Saving…" |
+| Unit row | `.unit-row` (extends `.list__row`; partial `seat_orders/_unit_row`) | #23 (built) | Unit icon, province name with its abbreviation, current order or "holds", chevron drawn by CSS |
+| Picker step | `.picker`, `.picker__draft` (partial `order_pickers/_draft`; choices `order_pickers/_choice`) | #23 (built) | Each step is a page; the draft order so far at the top; choices are a `.list` of links, and the last pick is a form |
+| Submit bar | `.submit-bar`, `.save-status` (partials `seat_orders/_submit_bar`, `shared/_save_status`) | #23 (built) | In `.app-actions`; the button carries the count ("2 of 3 ordered"); the status reads "Saved", "Saves when you pick", "Not saved", and "Saving…" while Turbo submits a form |
 | Seat status | `.seat-status` | #24 | Seven rows: badge plus "Submitted" or "Not submitted"; a live region announces changes; rendered through one partial |
 | Result row | `.result-row`, `.outcome-tag` | #25 | The order in words, then a mono tag ("Succeeded", "Bounced", "Support cut", "Dislodged"); dislodged uses `danger`; tags through one partial |
 | Result group | `.result-group` (`--reading`) | #25 | Grouped by power; the host's reading variant has larger type and dislodged units first |
