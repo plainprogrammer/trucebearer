@@ -3,6 +3,7 @@
 
 <div class="stack">
   <h1>Your game</h1>
+  <%= render "phases/header", phase: @phase %>
 
   <% if @host_token %>
     <div class="field">
@@ -14,6 +15,7 @@
 
   <section class="host-section stack" aria-labelledby="host-heading">
     <h2 id="host-heading">Host</h2>
+    <%= link_to "Reveal orders", game_reveal_path(@game.public_id, @phase.number), class: "button" %>
     <% if @game.open? %>
       <% join_link = join_game_url(@game.join_code) %>
       <%= qr_card(join_link, label: "QR code to join the game", caption: join_code_text(@game.join_code)) %>
@@ -36,6 +38,19 @@
         </li>
       <% end %>
     </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="history-heading" data-history>
+    <h2 id="history-heading">Revealed phases</h2>
+    <% if @history.empty? %>
+      <p>No phase has been revealed yet.</p>
+    <% else %>
+      <ul class="list">
+        <% @history.each do |past| %>
+          <li><div class="list__row"><span class="mono"><%= past.title %></span> <span class="text-muted">revealed</span></div></li>
+        <% end %>
+      </ul>
+    <% end %>
   </section>
 
   <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>

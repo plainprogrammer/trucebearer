@@ -4,6 +4,8 @@ class HostsController < ApplicationController
   def show
     @host_token = flash[:host_token]
     @seats = @game.seats.index_by(&:power)
+    @phase = @game.current_phase
+    @history = @game.history.to_a
     no_store if @host_token # the one page that shows the host link, once (spec D6)
   end
 end

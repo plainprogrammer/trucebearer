@@ -24,6 +24,7 @@ class GamesController < ApplicationController
     return stranger!(@game) unless @seat
 
     @host = host?(@game)
+    @phase = @game.current_phase
   end
 
   private
