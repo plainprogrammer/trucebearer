@@ -1,13 +1,13 @@
-<%# The game's step-ins, oldest first (spec 026 D6). Phases, powers and times only. locals: game %>
-<% entries = game.step_in_history.to_a %>
-<section class="stack" aria-labelledby="step-ins-heading" data-step-ins>
-  <h2 id="step-ins-heading">Step-ins</h2>
+<%# The game's seat history: each step-in and each reissue, oldest first (spec 026 D6, D10). Phases, powers and times only. locals: game %>
+<% entries = game.seat_history %>
+<section class="stack" aria-labelledby="seat-history-heading" data-seat-history>
+  <h2 id="seat-history-heading">Seat history</h2>
   <% if entries.empty? %>
-    <p>The host has not stepped into a seat.</p>
+    <p>Nothing has happened to a seat yet.</p>
   <% else %>
     <ul class="list">
       <% entries.each do |entry| %>
-        <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <%= power_badge(entry.seat.power) %> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
+        <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <%= power_badge(entry.seat.power) %> <span><%= entry.kind == :reissue ? "seat reissued" : "stepped in" %></span> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
       <% end %>
     </ul>
   <% end %>

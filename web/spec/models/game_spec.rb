@@ -191,5 +191,22 @@ RSpec.describe Game do
 
       expect(game.step_in_history.to_a).to eq([ first, second ])
     end
+
+    it "lists this game's reissues and no other game's, and merges them with the step-ins, oldest first, a reissue before a step-in at the same instant (D10)" do
+      game = described_class.start!(power: "germany").game
+      other = described_class.start!(power: "germany").game
+      england = game.take_seat!("england").first
+      other_england = other.take_seat!("england").first
+      step_in = reissue = later = nil
+      travel_to(Time.utc(2026, 11, 26, 20, 0)) do
+        step_in = StepIn.record!(phase: game.current_phase, seat: england)
+        reissue = Reissue.record!(phase: game.current_phase, seat: england)
+        Reissue.record!(phase: other.current_phase, seat: other_england)
+      end
+      travel_to(Time.utc(2026, 11, 26, 21, 0)) { later = Reissue.record!(phase: game.current_phase, seat: england) }
+
+      expect(game.reissue_history.to_a).to eq([ reissue, later ])
+      expect(game.seat_history).to eq([ reissue, step_in, later ])
+    end
   end
 end
