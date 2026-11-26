@@ -26,7 +26,7 @@ Each section below arrives in the release shown here. Before 1.0, any minor vers
 | Value objects: `Outcome` and `Adjudication` | 0.2.0 |
 | Checking an order | 0.1.0 |
 | Legal orders | 0.1.0 |
-| Errors: building value objects and checking orders | 0.1.0 |
+| Errors: all but adjudication | 0.1.0 |
 | Adjudicating a movement phase | 0.2.0 |
 | Errors: adjudication | 0.2.0 |
 | Retreats | 0.3 |
@@ -148,7 +148,7 @@ In total: 75 provinces (14 inland, 42 coastal, 19 sea), 34 supply centers, and 2
 
 *Arrives in 0.1.0.*
 
-The gem has one map, the classic map, built into the gem. A caller gets it with one call and passes no file path. The map and its records (powers and provinces) are query-only: they are not value objects and have no hash form. A position refers to its map only by identifier, `"classic"` (decided in Issue #56). Every list the map returns is sorted by identifier.
+The gem has one map, the classic map, built into the gem. A caller gets it with one call and passes no file path. The map and its records (powers and provinces) are query-only: they are not value objects, and have no documented hash form and no `from_h`. A position refers to its map only by identifier, `"classic"` (decided in Issue #56). Every list the map returns is sorted by identifier.
 
 ```ruby
 map = TA::Map.classic
@@ -269,7 +269,7 @@ start.ownership.key?(:bel)               # => false
 
 *Arrives in 0.1.0, except `TA::Outcome` and `TA::Adjudication`, which arrive in 0.2.0.*
 
-Positions, units, orders and check results are value objects, and so are the outcome and adjudication results that arrive in 0.2.0. These rules hold for every one of them:
+Locations, units, dislodged units, positions, orders and check results are value objects, and so are the outcome and adjudication results that arrive in 0.2.0. These rules hold for every one of them:
 
 - **Immutable.** Each is a Ruby `Data` class. Its fields can't be changed after it is built.
 - **`new` takes symbols.** Identifiers are passed as symbols, as set out in [Identifiers](#identifiers).
@@ -698,7 +698,7 @@ What each reason means:
 - **Supports for moves nobody has ordered** are included, since checking doesn't look at other orders.
 - **One move per coast.** A fleet that can reach a province with split coasts gets one move for each coast it can reach, and no move without a coast.
 - **Moves by convoy.** For an army with a convoy chain to a province, a province it can't reach by land appears as a plain move only. A province it can reach by land appears both as a plain move and as a move via convoy.
-- **Empty, never an exception.** The list is empty when the position isn't in a movement phase, or when the unit isn't on the board. A unit is on the board only when the position holds a unit with the same power, type and location.
+- **Empty, never an exception.** The list is empty when the position isn't in a movement phase, or when the unit isn't on the board. A unit is on the board only when the position holds a unit with the same power, type and location. Only an argument that isn't a `TA::Position` or a `TA::Unit` raises `TA::InvalidInput`.
 
 ### List order
 
@@ -934,15 +934,17 @@ Under the DATC's preferred rules, 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 hold
 
 ## Errors
 
-*Building value objects and checking orders arrive in 0.1.0. Adjudication errors arrive in 0.2.0.*
+*Arrives in 0.1.0, except the adjudication errors, which arrive in 0.2.0.*
 
-The gem has one error class, `TA::InvalidInput`, a subclass of `StandardError`, with no subclasses of its own. Rescuing it catches every input error the gem raises.
+The gem has one error class, `TA::InvalidInput`, a subclass of `StandardError`, with no subclasses of its own. Rescuing it catches every input error the gem raises, with one exception: calling `new` with a missing or unknown keyword raises Ruby's own `ArgumentError`, as it does for any `Data` class. `from_h` raises `TA::InvalidInput` for a missing or unknown key.
 
 It is raised for:
 
 - a bad hash, or a missing or unknown `format` (see [Value objects](#value-objects));
 - a coast in a province field (see [Province fields and location fields](#province-fields-and-location-fields));
 - an impossible value object (see [Impossible objects](#impossible-objects));
+- an unknown power, province or coast given to a map query, or a bad unit type or location given to `Map#adjacent?` (see [Map](#map));
+- an argument of the wrong class given to `TA.check` or `TA.legal_orders`;
 - from 0.2.0, one power giving two orders for units in the same province (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
 - from 0.2.0, adjudicating a position that isn't in the movement phase.
 
