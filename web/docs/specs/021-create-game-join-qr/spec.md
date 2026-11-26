@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Approved
-**Version:** 1.3.0
+**Version:** 1.3.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.3.1 | 2026-11-26 | Amended by spec 026 (the host stepping into another seat, #26): a request that holds a valid host cookie and presents the token of a seat other than the host's own is sent to that seat's step-in confirmation and no seat cookie is stored (026 D5). Every other seat link behaves as before |
 | 1.0.0 | 2026-11-26 | First draft |
 | 1.3.0 | 2026-11-26 | Amended by spec 022 (#22), approved at its Gate A.<br>• **AC-4.10:** the player's page no longer says the host will start the game, because a phase is open from creation. It says "Keep this page. The host reveals each phase when the table is ready."<br>• **Reissue (Story 7):** reissuing a seat also deletes that seat's saved orders and submission for the open phase, in the same transaction as the new token, and the confirmation page says so (022 D9, AC-7.10, AC-7.11). Reason: otherwise the host could read a seat's orders through a reissue.<br>• **D7:** the close-joining and reissue pages now use the shared `.confirm` component (danger variant), built by #22.<br>• **FR-10:** the stylesheet caps of 24 KB and 4 KB are raised to 32 KB (32,768 bytes) and 6 KB (6,144 bytes), by 022 changelog 1.2.0 |
 | 1.2.2 | 2026-11-26 | Patch: the maintainer approved `force_ssl`, so the "pending" marks are gone from AC-11.4 and FR-12 and the fallback sentence is dropped. The cookies' `secure` flag is also set from `Rails.env.production?`, so they are `Secure` in production whichever way `force_ssl` is set |

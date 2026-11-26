@@ -35,7 +35,8 @@ RSpec.describe "The status list on the pages", type: :request do
     expect(section.css("#seat-status > li").size).to eq(7)
     expect(heading <=> reveal).to eq(-1) # document order: the heading, and the list after it, come before the button
     expect(section.at_css("#seat-status") <=> reveal).to eq(-1)
-    expect(section.css("ul.list > li").size).to eq(7) # the seats list; the status list does not carry .list
+    expect(section.css("ul.list").map { |list| list["id"] }).not_to include("seat-status") # the status list shares .list's rules, not its class
+    expect(section.at_css("#seat-status")["class"]).to eq("seat-status")
   end
 
   it "is correct on a plain page load, with no live connection (AC-1.2, AC-5.1)" do

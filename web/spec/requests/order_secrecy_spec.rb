@@ -55,6 +55,14 @@ RSpec.describe "Order secrecy", type: :request do
       expect(showing).to match_array([ "GET /games/:public_id", "GET /games/:public_id/phases/:number/orders",
                                        "GET /games/:public_id/phases/:number/orders/:province", "PUT /games/:public_id/phases/:number/orders" ])
     end
+
+    it "marks as showing one seat's orders to the host, inside a step-in, only the three stepped-in routes (spec 026 AC-8.1)" do
+      stepped_in = SecrecyRoutes::APP.select { |_key, entry| entry[:shows] == :stepped_in }.keys
+
+      expect(stepped_in).to match_array([ "GET /games/:public_id/host/seats/:power/phases/:number/orders",
+                                          "PUT /games/:public_id/host/seats/:power/phases/:number/orders",
+                                          "GET /games/:public_id/host/seats/:power/phases/:number/orders/:province" ])
+    end
   end
 
   # A game with the host on Germany, England and France seated, and a viewer of every kind that is not England.
@@ -73,8 +81,20 @@ RSpec.describe "Order secrecy", type: :request do
     let(:viewers) do
       host_without_seat = open_session.tap { |session| session.get "/games/#{id}/host-link", params: { token: created.host_token } }
       france = open_session.tap { |session| session.get "/games/#{id}/seat-link", params: { token: france_seat_and_token.last } }
+      # The host with France's seat cookie is sent away, and its first own-seat request deletes that cookie (spec 026 D5), so the
+      # sweep puts it back before every request (see `snapshot`); otherwise the next snapshot would be a host with no seat.
+      wearing_france = open_session.tap do |session|
+        session.get "/games/#{id}/seat-link", params: { token: france_seat_and_token.last }
+        session.get "/games/#{id}/host-link", params: { token: created.host_token }
+        @wearing_france_cookie = session.cookies["seat_#{id}"]
+      end
+      # Stepped into France before the baseline, so its bar and cookie are the same in every snapshot.
+      stepped_in = open_session.tap do |session|
+        session.get "/games/#{id}/host-link", params: { token: created.host_token }
+        session.post "/games/#{id}/host/seats/france/phases/1/step-in"
+      end
       { "another seat" => france, "the host, with a seat of its own" => created.session, "the host, with no seat" => host_without_seat,
-        "a stranger" => open_session }
+        "a stranger" => open_session, "the host, with France's seat cookie" => wearing_france, "the host, stepped into France" => stepped_in }
     end
     let(:england_phone) do
       open_session.tap { |session| session.get "/games/#{id}/seat-link", params: { token: england_seat_and_token.last } }
@@ -112,6 +132,7 @@ RSpec.describe "Order secrecy", type: :request do
       viewers.to_h do |name, session|
         responses = SecrecyRoutes.sweeps(context).to_h do |label, item|
           requester = item[:entry][:fresh] ? open_session : session
+          requester.cookies["seat_#{id}"] = @wearing_france_cookie if name == "the host, with France's seat cookie" && !item[:entry][:fresh]
           requester.get item[:path]
           [ label, normalized(requester.response) ]
         end
@@ -141,6 +162,18 @@ RSpec.describe "Order secrecy", type: :request do
         expect(status.call(host, "GET /games/:public_id/host")).to eq(200)
         expect(status.call(host, "GET /games/:public_id/host/phases/:number/reveal")).to eq(200)
       end
+
+      # The step-in controls (spec 026 AC-8.2): the host without a step-in is a stranger on England's stepped-in URLs, the host stepped into
+      # France reaches France's and not England's, and the host with France's seat cookie is sent to its confirmation.
+      stepped = "GET /games/:public_id/host/seats/:power/phases/:number/orders"
+      [ "the host, with a seat of its own", "the host, with no seat", "another seat", "a stranger" ].each do |viewer|
+        expect(status.call(viewer, "#{stepped} [england]")).to eq(404), viewer
+        expect(status.call(viewer, "#{stepped} [france]")).to eq(404), viewer
+      end
+      expect(status.call("the host, stepped into France", "#{stepped} [france]")).to eq(200)
+      expect(status.call("the host, stepped into France", "#{stepped} [england]")).to eq(404)
+      expect(status.call("the host, with France's seat cookie", "GET /games/:public_id")).to eq(303)
+      expect(status.call("the host, with France's seat cookie", orders)).to eq(303)
 
       %i[one all other none].each do |name|
         set_orders(name)
@@ -193,12 +226,19 @@ RSpec.describe "Order secrecy", type: :request do
       confirm = "GET /games/:public_id/host/phases/:number/reveal"
       seat_page = "GET /games/:public_id"
       host_page = "GET /games/:public_id/host"
-      hosts = [ "the host, with a seat of its own", "the host, with no seat" ]
-      # The four viewer and page pairs that get a status list. The others get the stranger page and stay in the strict comparison.
-      listed = [ [ "another seat", seat_page ], [ hosts[0], seat_page ], [ hosts[0], host_page ], [ hosts[1], host_page ] ]
+      hosts = [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ]
+      # The viewer and page pairs that get a status list, read from the pages themselves; the others get the stranger page, a
+      # redirect or a step-in page and stay in the strict comparison. The pairs known to get one must be among them, so a list
+      # that stopped showing cannot shrink the set unnoticed.
+      listed = unsubmitted.flat_map do |viewer, routes|
+        routes.select { |key, response| [ seat_page, host_page ].include?(key) && response[1].include?('id="seat-status"') }.keys.map { |key| [ viewer, key ] }
+      end
+      expect(listed).to include([ "another seat", seat_page ], [ hosts[0], seat_page ], [ hosts[0], host_page ], [ hosts[1], host_page ])
+      expect(listed).not_to include([ "a stranger", seat_page ], [ "a stranger", host_page ], [ "another seat", host_page ], [ hosts[1], seat_page ])
       expect(differences(unsubmitted, submitted, except: hosts.map { |host| [ host, confirm ] } + listed)).to be_empty
 
-      # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row.
+      # Where a list shows, the page differs inside #seat-status and nowhere else, and only in England's row. Status, headers
+      # and cookies are compared exactly as for every other page (spec 024 AC-3.5).
       outside = lambda do |body|
         Nokogiri::HTML5(body).tap { |doc| doc.at_css("#seat-status").remove }.to_html
       end
@@ -206,13 +246,14 @@ RSpec.describe "Order secrecy", type: :request do
         Nokogiri::HTML5(body).css("#seat-status li").to_h { |row| [ row["data-power"], row.text.squish ] }
       end
       listed.each do |viewer, key|
-        before = unsubmitted[viewer][key][1]
-        after = submitted[viewer][key][1]
+        before = unsubmitted[viewer][key]
+        after = submitted[viewer][key]
 
-        expect(outside.call(after)).to eq(outside.call(before)), "#{viewer} on #{key}"
-        changed = rows.call(after).reject { |power, text| rows.call(before)[power] == text }.keys
+        expect(after.values_at(0, 2, 3)).to eq(before.values_at(0, 2, 3)), "#{viewer} on #{key}"
+        expect(outside.call(after[1])).to eq(outside.call(before[1])), "#{viewer} on #{key}"
+        changed = rows.call(after[1]).reject { |power, text| rows.call(before[1])[power] == text }.keys
         expect(changed).to eq([ "england" ]), "#{viewer} on #{key}"
-        expect(rows.call(after)["england"]).to eq("England Submitted")
+        expect(rows.call(after[1])["england"]).to eq("England Submitted")
       end
       hosts.each do |host|
         expect(unsubmitted[host][confirm][1]).to include("England")
@@ -230,7 +271,9 @@ RSpec.describe "Order secrecy", type: :request do
         [ "another seat", "GET /games/:public_id" ],
         [ "the host, with a seat of its own", "GET /games/:public_id" ],
         [ "the host, with a seat of its own", "GET /games/:public_id/host" ],
-        [ "the host, with no seat", "GET /games/:public_id/host" ]
+        [ "the host, with no seat", "GET /games/:public_id/host" ],
+        [ "the host, with France's seat cookie", "GET /games/:public_id/host" ],
+        [ "the host, stepped into France", "GET /games/:public_id/host" ]
       ])
     end
 
@@ -286,6 +329,64 @@ RSpec.describe "Order secrecy", type: :request do
 
           expect(Nokogiri::HTML5(body).css(".unit-row__order")).to be_empty, "#{viewer} on #{key}"
           expect(body).not_to match(/\b(?:Succeeded|Bounced|Held)\b/), "#{viewer} on #{key}"
+        end
+      end
+    end
+
+    # Spec 026: the one sanctioned way for the host to see or change another seat's orders before the reveal.
+    describe "the step-in (spec 026 Story 8)" do
+      let(:stepped_host) { open_session.tap { |session| session.get "/games/#{id}/host-link", params: { token: created.host_token } } }
+      let(:england_screen) { "/games/#{id}/host/seats/england/phases/1/orders" }
+
+      def rows_of(session) = Nokogiri::HTML5(session.response.body).css(".unit-row__order").map { |row| row.text.squish }
+
+      it "shows the host stepped into England only England's orders, and nothing else on the host's pages moves (AC-8.3)" do
+        set_orders(:all)
+        stepped_host.post "/games/#{id}/host/seats/england/phases/1/step-in"
+        stepped_host.get england_screen
+
+        expect(stepped_host.response).to have_http_status(:ok)
+        expect(rows_of(stepped_host)).to eq([ "Hold", "Move to North Sea (NTH)", "Move to Yorkshire (YOR)" ]) # EDI holds, LON and LVP move
+        [ "/games/#{id}/host/seats/france/phases/1/orders", "/games/#{id}/host/seats/france/phases/1/orders/par" ].each do |path|
+          stepped_host.get path
+          expect(stepped_host.response).to have_http_status(:not_found), path
+        end
+
+        pages = [ "/games/#{id}/host", "/games/#{id}/host/phases/1/reveal" ]
+        read = -> { pages.map { |path| stepped_host.get(path) && normalized(stepped_host.response) } }
+        before = read.call
+        set_orders(:other)
+        expect(read.call).to eq(before)
+      end
+
+      it "writes the record before any request shows France's order (AC-8.4)" do
+        france = game.seats.find_by(power: "france")
+        france.save_orders!(phase, { "par" => json_of(rules_order(:hold, :france, :par)) })
+        confirmation = "/games/#{id}/host/seats/france/phases/1/step-in"
+        screen = "/games/#{id}/host/seats/france/phases/1/orders"
+        log = []
+
+        [ [ :get, confirmation ], [ :get, screen ], [ :post, confirmation ], [ :get, screen ] ].each do |verb, path|
+          inserted = false
+          counter = ->(*, payload) { inserted ||= payload[:sql].to_s.match?(/INSERT INTO "step_ins"/) }
+          ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { stepped_host.public_send(verb, path) }
+          log << { inserted: inserted, shows_order: rows_of(stepped_host).include?("Hold") }
+        end
+
+        expect(log.map { |entry| entry[:inserted] }).to eq([ false, false, true, false ])
+        expect(log.map { |entry| entry[:shows_order] }).to eq([ false, false, false, true ]) # the first request that shows it comes after the INSERT
+      end
+
+      it "shows the host's pages no order, count or ordered unit of any seat while stepped in (AC-8.5)" do
+        set_orders(:all, submit: true)
+        stepped_host.post "/games/#{id}/host/seats/france/phases/1/step-in"
+
+        [ "/games/#{id}/host", "/games/#{id}/host/phases/1/reveal", "/games/#{id}/host/seats/england/phases/1/step-in" ].each do |path|
+          stepped_host.get path
+          body = stepped_host.response.body
+          expect(body).not_to match(/\bordered\b|\d of \d/), path
+          expect(Nokogiri::HTML5(body).css(".unit-row__order, select, option")).to be_empty, path
+          expect(body).not_to include(ERB::Util.html_escape(json_of(order_for(ENTRIES[:all]["lon"])))), path
         end
       end
     end

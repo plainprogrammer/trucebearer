@@ -50,6 +50,9 @@ env:
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true
 
+    # The table's time zone for step-in notices, a Rails zone name such as America/New_York (spec 026 D6). Unknown means UTC.
+    TRUCEBEARER_TIME_ZONE: UTC
+
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
 

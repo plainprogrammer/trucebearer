@@ -10,7 +10,10 @@ module OrderScreen
     stranger!(@game) unless @phase && @phase.number <= @game.current_phase.number
   end
 
-  def render_revealed = render("seat_orders/revealed", status: :conflict)
+  def render_revealed
+    @step_in = nil # a refusal page has no bar (spec 026 D7); its link still follows the stepped-in URLs
+    render("seat_orders/revealed", status: :conflict)
+  end
 
   # A page about a seat's own orders is never cached and never leaks its address (spec 022 AC-7.6, spec 023 AC-3.7).
   def own_orders_headers

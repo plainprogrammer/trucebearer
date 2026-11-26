@@ -42,6 +42,7 @@
         </li>
       <% end %>
     </ul>
+    <%= render "step_ins/entry", game: @game, seats: @seats, phase: @phase %>
   </section>
 
   <section class="stack" aria-labelledby="history-heading" data-history>
@@ -56,6 +57,8 @@
       </ul>
     <% end %>
   </section>
+
+  <%= render "step_ins/history", game: @game %>
 
   <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
 </div>

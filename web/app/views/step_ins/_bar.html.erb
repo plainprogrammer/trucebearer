@@ -1,0 +1,12 @@
+<%# The step-in bar (spec 026 D7): a banner and the way back, from existing components. locals: step_in.
+    @stepped_in_page says which sentence: on the stepped-in seat's own pages, or on any other game page. %>
+<% name = power_name(step_in.seat.power) %>
+<div class="stack">
+  <% if @stepped_in_page %>
+    <%= render "shared/banner", kind: "warning", text: "Acting as #{name}. What you save here is #{name}'s, and #{name} is told." %>
+  <% else %>
+    <%= render "shared/banner", kind: "warning", text: "Still stepped into #{name}'s seat." %>
+    <%= link_to "#{name}'s orders", game_step_in_orders_path(@game.public_id, step_in.seat.power, step_in.phase.number), class: "button" %>
+  <% end %>
+  <%= button_to "Leave #{name}'s seat", game_leave_step_in_path(@game.public_id, step_in.seat.power), method: :delete, class: "button button--secondary" %>
+</div>

@@ -16,7 +16,7 @@ class OrderPickersController < ApplicationController
 
     draft = draft_param
     @step = draft && OrderChoices.new(@phase.position, @unit, ordered: @seat.orders_for(@phase).key?(@province)).step(draft)
-    redirect_to game_order_picker_path(@game.public_id, @phase.number, @province), status: :see_other unless @step
+    redirect_to picker_path_for(@phase.number, @province), status: :see_other unless @step
   end
 
   private

@@ -1,7 +1,7 @@
 <%# One of the seat's units and its order. locals: unit, order (or nil), game, phase %>
 <% province = unit.location.province.to_s %>
 <li>
-  <%= link_to game_order_picker_path(game.public_id, phase.number, province), class: "list__row unit-row" do %>
+  <%= link_to picker_path_for(phase.number, province, game: game), class: "list__row unit-row" do %>
     <%= unit_icon(unit.power, unit.type, size: 32, decorative: true) %>
     <span class="unit-row__body">
       <span class="unit-row__unit"><%= unit.type.to_s.capitalize %> in <%= province_label(province) %></span>

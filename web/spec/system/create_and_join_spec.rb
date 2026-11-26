@@ -94,7 +94,7 @@ RSpec.describe "Creating a game and joining it", type: :system do
 
     with_viewport(360) do
       visit current_path
-      find("a.list__row", text: "France").click
+      find("a[href$='/host/seats/france/reissue']").click # the host page also has a "Step in" row for France (spec 026)
       click_button "Reissue seat"
       expect(page).to have_css(".qr-card__link")
       seat_link = find(".qr-card__link").text

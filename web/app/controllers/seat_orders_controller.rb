@@ -22,7 +22,7 @@ class SeatOrdersController < ApplicationController
 
     result = @seat.save_orders!(@phase, entries, submit: params[:submit] == "1")
     flash[:banner] = { "kind" => "info", "text" => "Submitted." } if params[:submit] == "1" && result.submitted
-    redirect_to game_seat_orders_path(@game.public_id, @phase.number), status: :see_other
+    redirect_to orders_path_for(@phase.number), status: :see_other
   rescue Seat::Refusal => error
     refuse(error.message)
   rescue Phase::Revealed
