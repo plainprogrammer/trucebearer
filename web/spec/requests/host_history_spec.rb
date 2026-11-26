@@ -57,7 +57,7 @@ RSpec.describe "The host page's one history", type: :request do
     expect(link.text.squish).to eq("Spring 1901 · Movement revealed 8:42 PM UTC")
     expect(row.at_css("time")["datetime"]).to eq("2026-11-26T20:42:00Z")
     expect(row.css(".outcome-tag, .result-row, .power-badge")).to be_empty
-    expect(row.text).not_to match(/Hold|PAR|Succeeded|Move/)
+    expect(row.text).not_to match(/\bHold\b|\bPAR\b|Succeeded|\bMove\b/)
 
     host.get link["href"]
     expect(host.response).to have_http_status(:ok)
