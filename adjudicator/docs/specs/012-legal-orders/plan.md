@@ -583,6 +583,395 @@ RSpec.describe "TA.legal_orders agrees with TA.check", :slow do
 
   LegalPositions.samples.each do |name, position|
     it "agrees in both directions for every unit of #{name}" do
+      aggregate_failures do
+        position.units.each do |unit|
+          listed = TA.legal_orders(position, unit)
+          passing = LegalPositions.candidates(unit).select { |order| TA.check(position, order).legal }
+
+          extra = listed - passing
+          missing = passing - listed
+          expect(extra).to eq([]), "#{unit.inspect}: listed but refused by TA.check, e.g. #{extra.first(3).inspect}"
+          expect(missing).to eq([]), "#{unit.inspect}: legal but not listed, e.g. #{missing.first(3).inspect}"
+          expect(listed.size).to eq(listed.uniq.size), "#{unit.inspect}: the list holds a duplicate"
+        end
+      end
+    end
+  end
+
+  %i[retreat adjustment].each do |phase|
+        expect(TA.legal_orders(Board.position(unit, phase: phase), unit)).to eq([])
+      end
+    end
+
+    it "is empty for a unit that is not on the board" do
+      position = Board.position(Board.unit(:england, :fleet, "lon"), Board.unit(:russia, :fleet, "stp/sc"))
+      expect(TA.legal_orders(position, Board.unit(:england, :fleet, "wal"))).to eq([])      # nothing there
+      expect(TA.legal_orders(position, Board.unit(:france, :fleet, "lon"))).to eq([])       # another power
+      expect(TA.legal_orders(position, Board.unit(:england, :army, "lon"))).to eq([])       # another type
+      expect(TA.legal_orders(position, Board.unit(:russia, :fleet, "stp/nc"))).to eq([])    # the other coast
+    end
+  end
+
+  describe "arguments of the wrong class (AC-2.3)" do
+    it "raises InvalidInput naming the argument, for a position that is not a position" do
+      [nil, start.to_h, :start, london_fleet].each do |bad|
+        expect { TA.legal_orders(bad, london_fleet) }
+          .to raise_error(TA::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
+      end
+    end
+
+    it "raises InvalidInput naming the argument, for a unit that is not a unit" do
+      [nil, london_fleet.to_h, :lon, O::Hold.new(power: :england, at: :lon)].each do |bad|
+        expect { TA.legal_orders(start, bad) }
+          .to raise_error(TA::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
+      end
+    end
+  end
+
+  describe "what is in the list" do
+    it "includes supports nobody has ordered, for any power's unit (AC-3.2)" do
+      vie = Board.unit(:austria, :army, "vie")
+      list = TA.legal_orders(start, vie)
+      expect(list).to include(O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal))
+      expect(list.grep(O::SupportHold).map(&:target)).to eq(%i[bud tri])
+    end
+
+    it "gives one move for each coast a fleet can reach, and none without a coast (AC-3.3)" do
+      spa = ->(position, unit) { moves_of(TA.legal_orders(position, unit)).select { _1.destination.province == :spa } }
+      expect(spa.(LegalPositions.at_sea, Board.unit(:france, :fleet, "mao")).map { _1.destination.coast }).to eq(%i[nc sc])
+      expect(spa.(LegalPositions.at_sea, Board.unit(:france, :fleet, "gol")).map { _1.destination.coast }).to eq([:sc])
+      gascony = Board.unit(:france, :fleet, "gas")
+      expect(spa.(Board.position(gascony), gascony).map { _1.destination.coast }).to eq([:nc])
+    end
+
+    it "judges a fleet's moves from the coast it stands on, and never lists its own province (AC-3.4)" do
+      [Board.unit(:russia, :fleet, "stp/sc"), Board.unit(:russia, :fleet, "stp/nc"),
+       Board.unit(:france, :fleet, "spa/nc"), Board.unit(:france, :fleet, "spa/sc"),
+       Board.unit(:turkey, :fleet, "bul/ec"), Board.unit(:turkey, :fleet, "bul/sc")].each do |unit|
+        destinations = moves_of(TA.legal_orders(Board.position(unit), unit)).map(&:destination)
+        expect(destinations).to eq(fleet_destinations(unit))
+        expect(destinations.map(&:province)).not_to include(unit.location.province)
+      end
+    end
+
+    it "gives an army one move via convoy only where it can also walk, and a plain move wherever a chain reaches (AC-3.5)" do
+      army = Board.unit(:england, :army, "lon")
+      list = TA.legal_orders(LegalPositions.ln, army)
+      expect(list.grep(O::MoveViaConvoy).map(&:to)).to eq([:yor])
+      expect(moves_of(list).map { _1.destination.province }).to eq(%i[bel den edi hol nwy wal yor])
+      expect(moves_of(list).map { _1.destination.coast }.uniq).to eq([nil])
+    end
+
+    it "gives a fleet no move via convoy and no move a chain alone could make, and an inland army none (AC-3.6)" do
+      nth = Board.unit(:england, :fleet, "nth")
+      list = TA.legal_orders(LegalPositions.ln, nth)
+      expect(list.grep(O::MoveViaConvoy)).to eq([])
+      expect(moves_of(list).map(&:destination)).to eq(fleet_destinations(nth))
+
+      munich = Board.unit(:germany, :army, "mun")
+      by_land = TA::Map.classic.provinces.map(&:id).select do |id|
+        id != :mun && TA::Map.classic.adjacent?(:army, L.new(province: :mun), L.new(province: id))
+      end
+      with_fleet = Board.position(munich, Board.unit(:england, :fleet, "nth"))
+      expect(moves_of(TA.legal_orders(with_fleet, munich)).map { _1.destination.province }).to eq(by_land.sort_by(&:to_s))
+    end
+
+    it "gives a convoy exactly to the fleets on a minimal chain (AC-3.7)" do
+      bypassed = LegalPositions.bypassed
+      expect(TA.legal_orders(bypassed, Board.unit(:italy, :fleet, "gol")))
+        .to include(O::Convoy.new(power: :italy, at: :gol, from: :mar, to: :spa))
+      expect(TA.legal_orders(bypassed, Board.unit(:france, :fleet, "wes")))
+        .not_to include(O::Convoy.new(power: :france, at: :wes, from: :mar, to: :spa))
+
+      two = LegalPositions.two_fleet_chain
+      expect(TA.legal_orders(two, Board.unit(:england, :fleet, "eng")))
+        .to include(O::Convoy.new(power: :england, at: :eng, from: :lon, to: :por))
+      expect(TA.legal_orders(two, Board.unit(:france, :fleet, "mao")))
+        .to include(O::Convoy.new(power: :france, at: :mao, from: :lon, to: :por))
+
+      shape = LegalPositions.no_chain_through
+      expect(TA.legal_orders(shape, Board.unit(:england, :fleet, "iri")))
+        .not_to include(O::Convoy.new(power: :england, at: :iri, from: :lon, to: :bel))
+    end
+
+    it "depends on the position alone, and changes neither argument (AC-3.8)" do
+      ln = LegalPositions.ln
+      reversed = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
+                                  dislodged_units: [], standoffs: [], units: ln.units.reverse)
+      army = Board.unit(:england, :army, "lon")
+      before = [ln.to_h, army.to_h]
+      expect(TA.legal_orders(reversed, army)).to eq(TA.legal_orders(ln, army))
+      expect([ln.to_h, army.to_h]).to eq(before)
+    end
+
+    it "gives a lone unit its hold and its moves only (AC-3.9)" do
+      lone = Board.unit(:france, :fleet, "mao")
+      list = TA.legal_orders(Board.position(lone), lone)
+      expect(list.map(&:class).uniq).to eq([O::Hold, O::Move])
+      expect(list.size).to eq(1 + fleet_destinations(lone).size)
+    end
+  end
+
+  describe "the order of the list (AC-4.1 to AC-4.4)" do
+    def groups = [O::Hold, O::Move, O::MoveViaConvoy, O::SupportHold, O::SupportMove, O::Convoy]
+
+    def sort_key(order)
+      case order
+      when O::Hold then []
+      when O::Move then [order.destination.province.to_s, order.destination.coast.to_s]
+      when O::MoveViaConvoy then [order.to.to_s]
+      when O::SupportHold then [order.target.to_s]
+      when O::SupportMove then [order.from.to_s, order.to.to_s]
+      when O::Convoy then [order.from.to_s, order.to.to_s]
+      end
+    end
+
+    def lists
+      [LegalPositions.start, LegalPositions.ln, LegalPositions.at_sea, LegalPositions.north_coasts,
+       LegalPositions.south_coasts].flat_map do |position|
+        position.units.map { |unit| [position, TA.legal_orders(position, unit)] }
+      end
+    end
+
+    it "puts the six groups in the contract's order, none interleaved (AC-4.1)" do
+      lists.each do |_, list|
+        ranks = list.map { |order| groups.index(order.class) }
+        expect(ranks).to eq(ranks.sort)
+      end
+    end
+
+    it "sorts each group as the contract says (AC-4.2)" do
+      lists.each do |_, list|
+        list.group_by(&:class).each_value do |group|
+          expect(group.map { sort_key(_1) }).to eq(group.map { sort_key(_1) }.sort)
+        end
+      end
+    end
+
+    it "gives the same list on every call and from a rebuilt position, with no duplicate (AC-4.3, AC-4.4)" do
+      lists.each do |position, list|
+        unit = position.units.find { |candidate| candidate.location.province == list.first.at }
+        rebuilt = TA::Position.from_h(position.to_h)
+        expect(TA.legal_orders(position, unit)).to eq(list)
+        expect(TA.legal_orders(rebuilt, unit)).to eq(list)
+        expect(list.uniq.size).to eq(list.size)
+      end
+    end
+  end
+
+  describe "the public surface (AC-7.5)" do
+    it "adds only legal_orders, and keeps the generator private" do
+      expect(TA.singleton_methods(false)).to contain_exactly(:check, :legal_orders)
+      expect(TA.constants).to contain_exactly(:CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map,
+                                              :Order, :Position, :Unit, :VERSION)
+      expect { TA::LegalOrders }.to raise_error(NameError, /private constant/)
+    end
+  end
+```
+
+Run it. Expected: every example fails with `NoMethodError: undefined method 'legal_orders'` (the surface example fails on the method list). Nothing is committed yet.
+
+### Step 4: The generator and the wiring
+
+Create `lib/trucebearer/adjudicator/legal_orders.rb`:
+
+```ruby
+# frozen_string_literal: true
+
+module Trucebearer
+  module Adjudicator
+    # Internal: the legal orders of one unit (docs/interface.md `## Legal orders`).
+    # It builds only the orders that could possibly be legal (the narrowings N1 to N4 of
+    # spec 012), in the contract's list order, and `Check.reason_for` decides each one. So
+    # the list can never hold an order that TA.check refuses, and the generator applies
+    # no other test of its own.
+    module LegalOrders
+      SORTED_COASTAL = Reach::COASTAL.sort_by(&:to_s).freeze
+
+      module_function
+
+      def call(position, unit)
+        Shape.instance_of!(position, Position, "position")
+        Shape.instance_of!(unit, Unit, "unit")
+        return [] unless position.phase == :movement && position.units.include?(unit)
+
+        candidates(position, unit).select { |order| Check.reason_for(position, order).nil? }
+      end
+
+      # Every order that could be legal, grouped and sorted as the contract lists them.
+      def candidates(position, unit)
+        power = unit.power
+        at = unit.location.province
+        occupied = position.units.map { |other| other.location.province }.sort_by(&:to_s)
+        steps = step_provinces(unit)
+
+        [Order::Hold.new(power: power, at: at)] +
+          move_destinations(unit).map { |to| Order::Move.new(power: power, at: at, destination: to) } +
+          via_convoy_targets(unit, steps).map { |to| Order::MoveViaConvoy.new(power: power, at: at, to: to) } +
+          occupied.map { |target| Order::SupportHold.new(power: power, at: at, target: target) } +
+          occupied.product(steps).map { |from, to| Order::SupportMove.new(power: power, at: at, from: from, to: to) } +
+          convoy_pairs(position, unit).map { |from, to| Order::Convoy.new(power: power, at: at, from: from, to: to) }
+      end
+
+      # N1: where a move could go, by destination province and then coast. An army on a
+      # coastal province may also go to any coastal province, because a chain could carry it.
+      def move_destinations(unit)
+        location = unit.location
+        places =
+          if unit.type == :army
+            provinces = Reach::ARMY_STEPS.fetch(location.province)
+            provinces |= Reach::COASTAL if Reach::COASTAL.include?(location.province)
+            provinces.map { |province| [province, nil] }
+          else
+            Reach::FLEET_STEPS.fetch([location.province, location.coast])
+          end
+        places.sort_by { |province, coast| [province.to_s, coast.to_s] }
+              .map { |province, coast| Location.new(province: province, coast: coast) }
+      end
+
+      # The provinces the unit reaches in one step, by identifier.
+      def step_provinces(unit)
+        location = unit.location
+        provinces =
+          if unit.type == :army
+            Reach::ARMY_STEPS.fetch(location.province)
+          else
+            Reach::FLEET_STEPS.fetch([location.province, location.coast]).map(&:first)
+          end
+        provinces.uniq.sort_by(&:to_s)
+      end
+
+      # N2: only an army, and only to a province it reaches by land.
+      def via_convoy_targets(unit, steps)
+        unit.type == :army ? steps : []
+      end
+
+      # N4: only a fleet in a sea province, from a province that holds an army, to a coastal province.
+      def convoy_pairs(position, unit)
+        return [] unless unit.type == :fleet && Reach::SEAS.include?(unit.location.province)
+
+        armies = position.units.select { |other| other.type == :army }.map { |other| other.location.province }
+        armies.sort_by(&:to_s).product(SORTED_COASTAL)
+      end
+    end
+    private_constant :LegalOrders
+  end
+end
+```
+
+(N3 is the `occupied` list for supports to hold, and `occupied` crossed with `steps` for supports to move, in `candidates`.)
+
+Edit `lib/trucebearer/adjudicator.rb`: add `require_relative "adjudicator/legal_orders"` after the `check` require, and below `TA.check`:
+
+```ruby
+    # Lists every order that is legal for one unit, in a fixed order (docs/interface.md,
+    # "Legal orders"). Empty when the position isn't in a movement phase or the unit isn't on
+    # the board. Raises InvalidInput only for an argument of the wrong class.
+    def self.legal_orders(position, unit) = LegalOrders.call(position, unit)
+```
+
+Run `bundle exec rspec spec/trucebearer/adjudicator/legal_orders_spec.rb`, expect green (the first two examples too). Fix by changing the **generator or the spec's expectation after checking the contract**, never by loosening an expectation to fit. Then run the whole suite: `bundle exec rspec` must be green with #11's specs unchanged. Commit the supporting module, the generator, the wiring and the spec additions: `Add TA.legal_orders and the specs for its list rules`.
+
+**Verifies:** the hold, `eng`, `nth` example; every list rule; the empty cases; the errors; the order; AC-7.5.
+
+---
+
+## Phase 2: The agreement spec
+
+**Implements:** the agreement proof. **Satisfies:** AC-5.1 to AC-5.5.
+
+**Goal:** the list and `TA.check` are proved to say the same thing, over each unit's whole candidate space, on hand-picked positions and fixed-seed random boards.
+
+### Step 1: Extend the sample positions (Edit `spec/support/legal_positions.rb`)
+
+Add these methods inside `module LegalPositions`, before the closing `end` (`north_coasts` and `south_coasts` already exist from Phase 1):
+
+```ruby
+  # A fleet in each of the 19 sea provinces and an army in each of the first 20 coastal
+  # provinces by identifier, the seven powers dealt in turn in identifier order.
+  def stress
+    powers = Board.powers.sort_by(&:to_s)
+    seas = Board.sea.sort_by(&:to_s)
+    coastal = Board.map.provinces.select { |province| province.type == :coastal }.map(&:id).sort_by(&:to_s).first(20)
+    units = seas.each_with_index.map { |id, i| Board.unit(powers[i % 7], :fleet, id.to_s) } +
+            coastal.each_with_index.map { |id, i| Board.unit(powers[i % 7], :army, id.to_s) }
+    Board.position(*units)
+  end
+
+  # [seed, armies, fleets at sea, fleets on a coast]. The first board has 34 units and is
+  # the mid-game board of the speed target.
+  RANDOM_BOARDS = [[1, 22, 8, 4], [2, 18, 6, 4], [3, 12, 3, 3], [4, 8, 2, 2], [5, 3, 1, 1], [6, 3, 2, 0]].freeze
+
+  def random_board(seed, armies, sea_fleets, coast_fleets)
+    rng = Random.new(seed)
+    powers = Board.powers.sort_by(&:to_s)
+    seas = Board.sea.sort_by(&:to_s).shuffle(random: rng).first(sea_fleets)
+    coastal = Board.map.provinces.select { |province| province.type == :coastal }.sort_by { _1.id.to_s }
+    split, plain = coastal.partition { |province| !province.coasts.empty? }
+    # The first coast fleet always stands on a split coast, so the boards exercise them.
+    on_coast = split.shuffle(random: rng).first(coast_fleets.clamp(0, 1)) +
+               plain.shuffle(random: rng).first([coast_fleets - 1, 0].max)
+    land = (Board.army_provinces - on_coast.map(&:id)).sort_by(&:to_s).shuffle(random: rng).first(armies)
+    coast_places = on_coast.map do |province|
+      province.coasts.empty? ? province.id.to_s : "#{province.id}/#{province.coasts.sort.sample(random: rng)}"
+    end
+    units = (seas.map(&:to_s) + coast_places).map { |place| [:fleet, place] } + land.map { |id| [:army, id.to_s] }
+    Board.position(*units.each_with_index.map { |(type, place), i| Board.unit(powers[i % 7], type, place) })
+  end
+
+  def random_boards = RANDOM_BOARDS.map { |seed, *counts| random_board(seed, *counts) }
+
+  # The sampled positions of AC-5.3, by name.
+  def samples
+    { "the starting position" => start, "fleets on the north coasts" => north_coasts,
+      "fleets on the south coasts" => south_coasts, "the interface's at_sea" => at_sea, "ln" => ln,
+      "a fleet bypassed by a shorter chain" => bypassed, "a chain of two fleets" => two_fleet_chain,
+      "a fleet with no chain through it" => no_chain_through, "the stress position" => stress }
+      .merge(random_boards.each_with_index.to_h { |position, i| ["random board #{i + 1}", position] })
+  end
+
+  # Every order the six classes can form for the unit's owner and province, with every
+  # province and every location: 11,482 orders. Built fresh each time.
+  def candidates(unit)
+    power = unit.power
+    at = unit.location.province
+    provinces = Board.provinces
+    [O::Hold.new(power: power, at: at)] +
+      Board.locations.map { |to| O::Move.new(power: power, at: at, destination: to) } +
+      provinces.map { |to| O::MoveViaConvoy.new(power: power, at: at, to: to) } +
+      provinces.map { |target| O::SupportHold.new(power: power, at: at, target: target) } +
+      provinces.product(provinces).map { |from, to| O::SupportMove.new(power: power, at: at, from: from, to: to) } +
+      provinces.product(provinces).map { |from, to| O::Convoy.new(power: power, at: at, from: from, to: to) }
+  end
+
+```
+
+`random_board` and `stress` build units on distinct provinces by construction (fleets on seas or on coastal provinces, armies on the other land provinces). Check it by running `ruby -Ilib -Ispec -e 'require "support/legal_positions"; LegalPositions.samples.each { |n, p| puts "#{n}: #{p.units.size} units, split coasts: #{p.units.select { _1.location.coast }.size}" }'`. Expected: the starting position 22, the stress position 39, and the six random boards 34, 28, 18, 12, 5 and 5 units, with one split-coast fleet on each of boards 1 to 5 (the plan review confirmed these counts, and that the seeds give `spa/sc`, `bul/ec`, `spa/nc`, `spa/sc` and `bul/sc`).
+
+### Step 2: The agreement spec, then watch it guard
+
+Create `spec/trucebearer/adjudicator/legal_orders_agreement_spec.rb`:
+
+```ruby
+# frozen_string_literal: true
+
+require "trucebearer/adjudicator"
+require_relative "../../support/board"
+require_relative "../../support/legal_positions"
+
+# TA.legal_orders and TA.check say the same thing (Story 5). For every unit of every
+# sampled position, every listed order passes TA.check (AC-5.1), and every order of the
+# unit's whole candidate space that passes TA.check is listed (AC-5.2). The candidate space
+# is built here, not by the generator, so a narrowing that is too tight can't hide.
+# It takes about 12 seconds in all, so it is tagged :slow. The tag only names it: .rspec has no
+# filter and CI runs `bundle exec rspec`, so it runs in CI with everything else.
+RSpec.describe "TA.legal_orders agrees with TA.check", :slow do
+  it "builds a candidate space of 11,482 orders for a unit" do
+    expect(LegalPositions.candidates(Board.unit(:england, :fleet, "lon")).size).to eq(11_482)
+  end
+
+  LegalPositions.samples.each do |name, position|
+    it "agrees in both directions for every unit of #{name}" do
       position.units.each do |unit|
         listed = TA.legal_orders(position, unit)
         passing = LegalPositions.candidates(unit).select { |order| TA.check(position, order).legal }
