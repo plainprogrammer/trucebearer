@@ -1,0 +1,40 @@
+case: "6.G.4"
+summary: The same, with a unit moving the other way
+position:
+  units:
+    - {power: france, type: fleet, at: bre}
+    - {power: france, type: army, at: pic}
+    - {power: france, type: army, at: bur}
+    - {power: france, type: fleet, at: mao}
+    - {power: england, type: fleet, at: eng}
+    - {power: england, type: army, at: bel}
+orders:
+  - order: {type: move, power: france, at: bre, destination: eng}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: france, at: pic, destination: bel}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: france, at: bur, from: pic, to: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: france, at: mao, from: bre, to: eng}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: england, at: eng, from: pic, to: bel}
+    check: {legal: true}
+    result: unmatched
+    dislodged: true
+  - order: {type: move, power: england, at: bel, destination: pic}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+after:
+  units:
+    - {power: france, type: army, at: bel}
+    - {power: france, type: army, at: bur}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: fleet, at: mao}
+  dislodged:
+    - {power: england, type: army, at: bel, from: pic}
+    - {power: england, type: fleet, at: eng, from: bre}

@@ -1,0 +1,50 @@
+case: "6.G.10"
+summary: A move explicitly via convoy is not a head-to-head battle
+position:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: england, type: fleet, at: den}
+    - {power: england, type: fleet, at: fin}
+    - {power: germany, type: fleet, at: ska}
+    - {power: russia, type: army, at: swe}
+    - {power: russia, type: fleet, at: bar}
+    - {power: france, type: fleet, at: nwg}
+    - {power: france, type: fleet, at: nth}
+orders:
+  - order: {type: move_via_convoy, power: england, at: nwy, to: swe}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: england, at: den, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: fin, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: germany, at: ska, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: swe, destination: nwy}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+  - order: {type: support_move, power: russia, at: bar, from: swe, to: nwy}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: france, at: nwg, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: nth, from: nwg, to: nwy}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: russia, type: fleet, at: bar}
+    - {power: england, type: fleet, at: den}
+    - {power: england, type: fleet, at: fin}
+    - {power: france, type: fleet, at: nth}
+    - {power: france, type: fleet, at: nwg}
+    - {power: germany, type: fleet, at: ska}
+    - {power: england, type: army, at: swe}
+  dislodged:
+    - {power: russia, type: army, at: swe, from: nwy, by_convoy: true}
+  standoffs: [nwy]

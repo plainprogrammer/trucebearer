@@ -1,0 +1,42 @@
+case: "6.G.6"
+summary: The intent stands even when the route runs through other fleets
+position:
+  units:
+    - {power: england, type: army, at: lvp}
+    - {power: england, type: fleet, at: eng}
+    - {power: germany, type: army, at: edi}
+    - {power: france, type: fleet, at: iri}
+    - {power: france, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: fleet, at: nao}
+orders:
+  - order: {type: move, power: england, at: lvp, destination: edi}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: england, at: eng, from: lvp, to: edi}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: edi, destination: lvp}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: hold, power: france, at: iri}
+    check: {legal: true}
+    result: held
+  - order: {type: hold, power: france, at: nth}
+    check: {legal: true}
+    result: held
+  - order: {type: convoy, power: russia, at: nwg, from: lvp, to: edi}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: russia, at: nao, from: lvp, to: edi}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: army, at: edi}
+    - {power: england, type: fleet, at: eng}
+    - {power: france, type: fleet, at: iri}
+    - {power: germany, type: army, at: lvp}
+    - {power: russia, type: fleet, at: nao}
+    - {power: france, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}

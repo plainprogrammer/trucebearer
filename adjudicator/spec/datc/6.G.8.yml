@@ -1,0 +1,22 @@
+case: "6.G.8"
+summary: A move via convoy with no convoy ordered fails and does not fall back to land
+position:
+  units:
+    - {power: france, type: army, at: bel}
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: hol}
+orders:
+  - order: {type: move_via_convoy, power: france, at: bel, to: hol}
+    check: {legal: true}
+    result: no_route
+  - order: {type: move, power: england, at: nth, destination: hel}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: england, at: hol, destination: kie}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: france, type: army, at: bel}
+    - {power: england, type: fleet, at: hel}
+    - {power: england, type: army, at: kie}

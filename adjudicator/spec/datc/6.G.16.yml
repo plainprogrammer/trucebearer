@@ -1,0 +1,42 @@
+case: "6.G.16"
+summary: "Two units must not end in one province: a convoyed move out of the way"
+position:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: england, type: army, at: den}
+    - {power: england, type: fleet, at: bal}
+    - {power: england, type: fleet, at: nth}
+    - {power: russia, type: army, at: swe}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: nwg}
+orders:
+  - order: {type: move, power: england, at: nwy, destination: swe}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: england, at: den, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: england, at: bal, from: nwy, to: swe}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: nth, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move_via_convoy, power: russia, at: swe, to: nwy}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: convoy, power: russia, at: ska, from: swe, to: nwy}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: russia, at: nwg, from: swe, to: nwy}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: fleet, at: bal}
+    - {power: england, type: army, at: den}
+    - {power: england, type: fleet, at: nth}
+    - {power: russia, type: fleet, at: nwg}
+    - {power: russia, type: army, at: nwy}
+    - {power: russia, type: fleet, at: ska}
+    - {power: england, type: army, at: swe}

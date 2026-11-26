@@ -1,0 +1,22 @@
+case: "6.G.2"
+summary: "A foreign convoy order gives no intent: the armies stay"
+position:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: russia, type: fleet, at: swe}
+    - {power: germany, type: fleet, at: ska}
+orders:
+  - order: {type: move, power: england, at: nwy, destination: swe}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: russia, at: swe, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: convoy, power: germany, at: ska, from: nwy, to: swe}
+    check: {legal: true}
+    result: unmatched
+after:
+  units:
+    - {power: england, type: army, at: nwy}
+    - {power: germany, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: swe}
