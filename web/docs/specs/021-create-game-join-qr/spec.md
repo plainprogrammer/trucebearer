@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Approved
-**Version:** 1.4.0
+**Version:** 1.5.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.5.0 | 2026-11-26 | Amended by spec 028 (resuming a game, #28).<br>• **AC-2.1:** the redirect after a verified host link goes to the seat page when the browser holds the host's own seat, and to the host page otherwise (spec 028 D5).<br>• The URL table's home page row (`/`): after its existing text it lists the games the browser's cookies verify for, then the two buttons, then the lost-seat line (spec 028 D1, D6).<br>• The stranger page also holds the line "Lost your seat? Ask the host for a new QR code." It is part of the one answer every request gets (D4, AC-5.5 still hold). |
 | 1.4.0 | 2026-11-26 | Amended by spec 026 v1.1.0 (#104, record seat reissues). **MINOR**: Story 7 gains AC-7.11 and AC-7.12. Every reissue also writes one append-only `reissues` row (the phase, the seat and the time) in the same transaction as the new token, and the host page's history shows it (026 D10). Nothing else about a reissue changes: the same pages, the same redirect, the same cleared orders (022 D9) |
 | 1.3.1 | 2026-11-26 | Amended by spec 026 (the host stepping into another seat, #26): a request that holds a valid host cookie and presents the token of a seat other than the host's own is sent to that seat's step-in confirmation and no seat cookie is stored (026 D5). Every other seat link behaves as before |
 | 1.0.0 | 2026-11-26 | First draft |
@@ -101,7 +102,7 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 
 **Acceptance criteria:**
 
-- [ ] **AC-2.1** Given a host link `/games/<id>/host-link?token=<token>` with the right token When it is opened Then the host cookie for that game is set, the response redirects to `/games/<id>/host` (a page that shows the host controls and not the token) and carries `Referrer-Policy: no-referrer`
+- [ ] **AC-2.1** Given a host link `/games/<id>/host-link?token=<token>` with the right token When it is opened Then the host cookie for that game is set, the response redirects to `/games/<id>/host` (a page that shows the host controls and not the token), or, since spec 028, to `/games/<id>` when the browser holds the host's own seat, and carries `Referrer-Policy: no-referrer`
 - [ ] **AC-2.2** Given a host link with a wrong token, an empty token, or a game that does not exist When it is opened Then the response is the stranger page of FR-6 and no cookie is set
 - [ ] **AC-2.3** Given a phone with the host cookie When it opens `/games/<id>/host` Then the host controls show. Given a phone without it, or with a cookie that does not match, or one for another game, Then the stranger page shows (FR-6)
 - [ ] **AC-2.5** Given a phone with a valid host cookie and a valid seat cookie for a game When it requests a bad-token `host-link` or `seat-link` of that game, or the other kind's page (the seat cookie at `/games/<id>/host`) Then it gets the stranger page and both its cookies are still valid afterwards
@@ -264,7 +265,7 @@ Every screen is a normal page with its own URL, and works without JavaScript.
 
 | Path | Method | What it is |
 |---|---|---|
-| `/` | GET | The home page: its existing text, then two buttons: "Create a game" and "Join a game" |
+| `/` | GET | The home page: its existing text, the games this browser's cookies verify for (spec 028), then two buttons: "Create a game" and "Join a game", then the lost-seat line |
 | `/games/new` | GET | The passphrase field and the seven power tiles |
 | `/games` | POST | Create a game |
 | `/games/<id>` | GET | The player's page. Needs the seat cookie |
@@ -345,7 +346,7 @@ In these ACs, "no cookie is set" means the response carries no `Set-Cookie` that
 
 ### FR-6: Strangers
 
-The stranger page is a page that says "We can't find that page.", with status 404 and a link to the home page. It is one page, shown for every request that has no right to a game page, host page or link (D4).
+The stranger page is a page that says "We can't find that page.", with status 404 and a link to the home page, and the lost-seat line of spec 028. It is one page, shown for every request that has no right to a game page, host page or link (D4).
 
 **Must:**
 - Show it identically for an unknown game, a known game with no cookie, a cookie that does not match, a host cookie on a seat page and the reverse, a bad link token and a missing token.

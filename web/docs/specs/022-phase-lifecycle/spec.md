@@ -1,7 +1,7 @@
 # Feature 022: The phase lifecycle, open until the host reveals
 
 **Status:** Approved
-**Version:** 1.7.0
+**Version:** 1.8.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #22
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.8.0 | 2026-11-26 | Amended by spec 028 (resuming a game, #28). **FR-9:** the route table's row for `GET /` no longer says "no game data": it lists the games the request's cookies verify for, each as a start date, an open phase's title and the viewer's power, and never an order, a count or a submitted state. The sweep and `spec/requests/resume_secrecy_spec.rb` prove it. |
 | 1.7.0 | 2026-11-26 | Amended by spec 027 (the position editor, #27).<br>• The note that #27 "must re-check or clear" saved orders is decided (spec 027 D3, AC-5.1): an edit that moves units (add, move, remove) clears every seat's saved orders and submission for the open phase, in the edit's transaction, with the same `Seat#clear_orders!` the reissue uses; an ownership or date edit clears nothing. Nothing is re-checked, because a re-check would show through the status stream which seats had ordered.<br>• Dislodged units stay a matter for the retreat and adjustment phases of gem 0.3.0 (spec 027 Non-Goals); #27 edits the open movement phase's units and ownership only.<br>• `Phase` refuses a changed `position` once `revealed_at` is set (spec 027 D7, AC-7.13); `reveal!` writes with `update_all` and is unaffected.<br>• The seat page and the seat's own order screen each draw one notice that the host moved units (spec 027 D3, AC-5.6): a time only, the same for every seat, so FR-9 and AC-7.x hold. |
 | 1.6.0 | 2026-11-26 | Amended by spec 029 (gem 0.2.0, #29).<br>• The Non-Goal that keeps the app on gem 0.1.0 and the stand-in, AC-5.2's "stand-in's result" and the closing line that #29 "changes only `RulesEngine`" are read as: adjudication is the real engine, and #29 also edits the views, specs and docs listed in spec 029 D6. Every other mention of the stand-in (D3, the performance note) is read as the real engine too.<br>• `RulesEngine.next_movement_position` is unchanged and stays until 1.0. |
 | 1.5.0 | 2026-11-26 | Amended by spec 025 (reveal results to every phone, #25).<br>• AC-6.3 and FR-6 are read as: a `GET` of a revealed phase's orders URL, on a seat's own address, is a 303 to that phase's results page (spec 025 D5), so a phone that was looking at its orders when the host revealed lands on the results. A `PUT` keeps its 409 and its sentence (AC-6.1, AC-6.2), and a stepped-in URL keeps the 409 page.<br>• AC-7.9 ("no page shows an order or an outcome after a reveal") is replaced by spec 025 Story 5: after a reveal, every seat and the host read every power's orders and outcomes for the revealed phase; the open phase's orders stay secret (the AC-7.2 sweep is run again after a reveal); a stranger sees nothing.<br>• The FR-9 route table gains `GET /games/:id/phases/:n/results` (a seat) and `GET /games/:id/host/phases/:n/results` (the host), both the stranger response for a phase that is not revealed, and its rows for the seat page and the host page add the latest revealed phase's results. Each entry now says whether it can show a revealed phase's orders (`revealed:`). The seat page and the host page now always send `Cache-Control: no-store`.<br>• Spec 024's Known limit "after a reveal the seat page is half stale" is closed: the reveal refreshes every subscribed page (spec 025 D1).<br>• AC-5.4's banners are drawn by spec 025's results section, once each, for the latest revealed phase only.<br>• Every other criterion holds unchanged. |
@@ -339,7 +340,8 @@ As in D3, built by `RulesEngine.next_movement_position(position)`: the position 
 
 | Route | Can it show orders? |
 |---|---|
-| `GET /up`, `GET /`, `GET /styleguide` | No. Static, no game data |
+| `GET /up`, `GET /styleguide` | No. Static, no game data |
+| `GET /` | No order. Lists the games the request's cookies verify for (spec 028) |
 | `GET /games/new`, `POST /games` | No. A form, and a redirect to the host page |
 | `GET /join`, `POST /join`, `GET /join/:code`, `POST /join/:code/seat` | No. Codes and open powers only |
 | `GET /games/:id` (seat page) | **Own state and own count only** ("Not submitted", "2 of 3 ordered"); never the content of an order |
