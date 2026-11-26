@@ -1,0 +1,8 @@
+# Bundler
+/.bundle/
+/vendor/bundle/
+
+# Build output
+*.gem
+/pkg/
+/tmp/
