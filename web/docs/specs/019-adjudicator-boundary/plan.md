@@ -13,7 +13,7 @@ All paths are relative to `web/`. Nothing outside `web/` changes.
 - The name: no file name, class, method or word matches `diplomacy` or a word starting with `dip`, or `Dip` inside a CamelCase name (the existing `spec/styles/words_spec.rb` scans `app/`, `lib/`, `spec/`). Avoid words such as "dip", "dips", "dipped" in comments.
 - Test first, RSpec. Every phase writes its specs, sees them fail for the right reason, then writes the code. Run `bundle exec rspec` from `web/` before every push.
 - No new gem. Standard library and Rails defaults only. No migration and no file in `db/`. (AC-4.10)
-- Commit messages: a plain imperative sentence, ending with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. One git operation per shell call.
+- Commit messages: a plain imperative sentence, ending with the `Co-Authored-By` trailer the session's attribution reminder gives. One git operation per shell call.
 - Specs that need gem objects build them with `RulesEngine.load_position` and `RulesEngine.load_order` from hand-written string-keyed hashes (helper in Phase 3).
 
 ## Goal
@@ -103,7 +103,7 @@ RSpec.describe "The gem pin (AC-1.1, AC-2.8a)" do
 end
 ```
 
-To keep each `gem` call on one logical line for this check, the Gemfile writes each gem call on a single line with trailing keyword arguments broken after a comma is not used; see 2b.
+Each `gem` call for the adjudicator stays on one line in the Gemfile, because this spec counts lines (see 2b). The comment above the block must not contain the text `path:` or the gem's name followed by `gem `.
 
 ### 2b. The Gemfile
 
@@ -120,7 +120,7 @@ else
 end
 ```
 
-Then, from `web/`, with the variable unset: `bundle install` (writes the GIT section of `Gemfile.lock`). Check `git diff Gemfile.lock` shows only the new GIT block (remote, revision, tag, glob, the gem) and the DEPENDENCIES line. Commit: "Pin the adjudicator gem to adjudicator-v0.1.0".
+Then, from `web/`, with the variable unset: `bundle install` (writes the GIT section of `Gemfile.lock`). Check `git diff Gemfile.lock`: expect the new GIT block (remote, revision, tag, glob, the gem), the DEPENDENCIES line and a CHECKSUMS line for the gem. Stop and investigate if any existing `GEM` version line changes (a plain `bundle install` keeps locked versions) or a platform is added. Commit: "Pin the adjudicator gem to adjudicator-v0.1.0".
 
 ### 2c. The boundary (calls, loaders, error alias)
 
@@ -259,6 +259,11 @@ Extend `spec/models/rules_engine_spec.rb` (written before the code that needs it
       [ 5, "hold", [], rules_order(:hold, :england, :lon) ].each do |bad|
         expect { RulesEngine.load_position(bad) }.to raise_error(RulesEngine::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
       end
+      [ 5, "x", [], start ].each do |bad|
+        expect { RulesEngine.load_order(bad) }.to raise_error(RulesEngine::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
+        expect { RulesEngine.load_check_result(bad) }.to raise_error(RulesEngine::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
+      end
+      expect(RulesEngine.load_check_result(nil)).to be_nil
     end
 
     it "raises InvalidInput for a bad hash (AC-2.6)" do
@@ -279,8 +284,8 @@ Add `require_relative "../support/rules_helpers"` and `include RulesHelpers` at 
 Run each from `web/` and record the output for the pull request:
 
 1. `ADJUDICATOR_PATH= BUNDLE_FROZEN=true bundle install` succeeds, then `git diff --exit-code Gemfile.lock`. (AC-1.2)
-2. `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle exec rspec spec/models spec/config`, then `git checkout -- Gemfile.lock`, then rerun step 1. (AC-1.3, AC-1.4)
-3. Read `Dockerfile`: the build stage's `apt-get install` list holds `git` (line 36). No Dockerfile change. (AC-1.5)
+2. `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle exec rspec spec/models spec/config` (the full suite is run this way in Phase 6), then `git checkout -- Gemfile.lock`, then rerun step 1. (AC-1.3, AC-1.4)
+3. Read `Dockerfile`: the build stage's `apt-get install` list holds `git` (line 35). No Dockerfile change. (AC-1.5)
 
 Commit: "Add the RulesEngine boundary with checking, legal orders and loaders". (Pin spec, helpers, loaders, the Phase 1 spec turning green.)
 
@@ -305,7 +310,7 @@ RSpec.describe "The gem boundary (AC-2.7, AC-2.8, AC-5.1)" do
   ]
   stand_in_pattern = /StandInAdjudication|StandInOutcome/
 
-  app_files = Dir.glob(File.join(root, "{app,lib,config,db,bin}/**/*"), File::FNM_DOTMATCH)
+  app_files = Dir.glob(File.join(root, "{app,lib,config,db,bin}/**/*"), File::FNM_DOTMATCH).reject { |p| p.end_with?(".enc") }
                  .push(File.join(root, "config.ru"), File.join(root, "Rakefile"))
   spec_files = Dir.glob(File.join(root, "spec/**/*"), File::FNM_DOTMATCH).reject { |p| p == __FILE__ }
 
@@ -400,12 +405,12 @@ RSpec.describe "RulesEngine.adjudicate, the stand-in (spec 019 FR-3; outcomes ar
   # AC-3.5 to AC-3.6g: one example each, each with a small hand-built position:
   #  3.5  a move into a province whose unit holds / is void / supports / convoys / has a bounced move -> :bounced, no standoff
   #  3.6  a move into a province whose unit moves away -> both :succeeded
-  #  3.6a a swap (par<->bur armies) and a rotation (par->bur->mar->par armies) -> all :succeeded
-  #  3.6b chain: A->B, B->C, C holds: A->B, B->C both :bounced
+  #  3.6a a swap (armies par<->bur) and a rotation (armies par->bur, bur->gas, gas->par) -> all :succeeded
+  #  3.6b chain of three: armies par->bur, bur->mun, mun->boh with a unit holding boh -> all three :bounced
   #  3.6c three armies (a, b, c) into one empty province -> three :bounced, province once in standoffs
-  #  3.6d fleet MAO->spa/nc keeps :nc; fleet stp/sc -> bar loses coast
-  #  3.6e move_via_convoy lon->wal -> unit ends in wal with coast nil
-  #  3.6g two moves into a province whose occupant leaves: both :bounced, leaver :succeeded, province in standoffs once
+  #  3.6d fleet mao->spa/nc keeps :nc; fleet stp/sc -> bot ends with coast nil
+  #  3.6e England army lon + England fleet eng: move_via_convoy lon->wal -> :succeeded, unit ends in wal with coast nil
+  #  3.6g two moves into a province whose occupant leaves: armies boh->mun and sil->mun while the army in mun moves mun->ber: the two entering moves :bounced, mun->ber :succeeded, mun in standoffs once
   # AC-3.7: no outcome dislodged, dislodged_units [], same season/year/ownership, phase :retreat
   # AC-3.8: order of outcomes; every result in the nine documented symbols
   # AC-3.9: retreat-phase position, two orders from one power for one unit -> InvalidInput; non-position or non-array argument -> InvalidInput
@@ -438,6 +443,37 @@ Each outline line becomes a full example in the real file (concrete provinces, n
   end
 ```
 
+`load_adjudication` gets the same loader cases as the others (AC-2.5, 2.5a, 2.5b, 2.6), in this file:
+
+```ruby
+  describe "load_adjudication (AC-2.5, 2.5a, 2.5b, 2.6)" do
+    let(:adj) { RulesEngine.adjudicate(start, [ move(:england, :lon, :nth) ]) }
+    let(:good) { JSON.parse(JSON.generate(adj.to_h)) }
+
+    it "round-trips, and returns an adjudication or nil as it is" do
+      expect(RulesEngine.load_adjudication(good)).to eq(adj)
+      expect(RulesEngine.load_adjudication(adj)).to equal(adj)
+      expect(RulesEngine.load_adjudication(nil)).to be_nil
+    end
+
+    it "raises InvalidInput naming a wrong kind of value" do
+      [ 5, "x", [], start ].each do |bad|
+        expect { RulesEngine.load_adjudication(bad) }.to raise_error(RulesEngine::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
+      end
+    end
+
+    it "raises InvalidInput for each kind of bad hash" do
+      outcome = good["outcomes"].first
+      bad = [ good.merge("format" => 2), good.except("format"), good.transform_keys(&:to_sym), good.merge("extra" => 1),
+              good.except("paradox"), good.merge("format" => 1, :mixed => 1), good.merge("outcomes" => "none"),
+              good.merge("paradox" => "no"), good.merge("position" => nil), good.merge("position" => 5),
+              good.merge("outcomes" => [ outcome.merge("format" => 1) ]), good.merge("outcomes" => [ outcome.merge("result" => "won") ]),
+              good.merge("outcomes" => [ outcome.merge("submitted" => "yes") ]), good.merge("outcomes" => [ outcome.except("order") ]) ]
+      bad.each { |h| expect { RulesEngine.load_adjudication(h) }.to raise_error(RulesEngine::InvalidInput) }
+    end
+  end
+```
+
 **Verify:** `bundle exec rspec spec/models/rules_engine_stand_in_spec.rb` fails with `NoMethodError`/`NameError` (`StandIn`) for the right reason.
 
 ### 4b. The code
@@ -446,28 +482,39 @@ Add to `app/models/rules_engine.rb` inside `module RulesEngine`, after the `clas
 
 ```ruby
   RESULTS = %w[void held no_route bounced succeeded unmatched cut given disrupted].freeze
-  private_constant :RESULTS
+  OUTCOME_KEYS = %w[order result submitted dislodged].to_set.freeze
+  ADJUDICATION_KEYS = %w[format outcomes paradox position].to_set.freeze
+  private_constant :RESULTS, :OUTCOME_KEYS, :ADJUDICATION_KEYS
 
   # STAND-IN, until gem 0.2.0 (#29). Its outcomes are FAKE. It answers in the documented shape of
-  # TA.adjudicate (interface.md, "Adjudicating a movement phase") with only these rules:
-  #  1. The position must be in the movement phase, and no power gives two orders for one province.
-  #  2. An order that fails check is :void.
-  #  3. A legal hold is :held. A legal support or convoy is :given and has no other effect.
-  #  4. A legal move succeeds unless another legal move targets the same province, or its target
-  #     holds a unit that is not making a move that still succeeds (worked out until nothing
-  #     changes). Swaps and rotations succeed: that is fake, and 0.2.0 corrects it.
-  #  5. A unit with no legal order from its owner holds. No unit is ever dislodged. No paradox.
-  #  6. The next position keeps season, year and ownership, has phase :retreat, moves the units that
-  #     succeeded, and lists each province two or more moves targeted and that is empty afterward.
-  # Supports, convoys, strength and cuts are not looked at. At 0.2.0 delete this and the two
-  # classes below, and let adjudicate and load_adjudication call TA.
+  # TA.adjudicate (interface.md, "Adjudicating a movement phase") and follows exactly these rules
+  # (spec 019, FR-3):
+  #  1. The position must be in the movement phase, and one power may not give two orders for units
+  #     in the same province. Otherwise InvalidInput is raised.
+  #  2. Each submitted order is checked with check. An order that fails is :void.
+  #  3. A legal hold is :held. A legal support or convoy is :given. Supports and convoys have no
+  #     other effect.
+  #  4. A legal move (Move or MoveViaConvoy) targets a province. Every legal move starts as
+  #     :succeeded. Every move whose target is also the target of another legal move becomes
+  #     :bounced. Then, repeatedly, a move still :succeeded becomes :bounced when its target holds a
+  #     unit that is not making a move that still succeeds. Swaps and rotations succeed: that is a
+  #     fake result, and 0.2.0 corrects it. A convoy chain is not looked at.
+  #  5. A unit stays when its order is a hold, a support, a convoy, is void, or is a bounced move. A
+  #     unit with no legal order from its owner gets an implied hold.
+  #  6. The outcome list is the submitted orders in the order given, then one implied hold per
+  #     remaining unit sorted by province, submitted false. No outcome is dislodged. paradox is false.
+  #  7. The next position keeps season, year and ownership, has phase :retreat, moves each unit whose
+  #     move succeeded (an army keeps no coast, a fleet takes the destination's coast), has no
+  #     dislodged units, and lists in standoffs, once each, every province that two or more legal
+  #     moves targeted and that is empty afterward.
+  #  8. The result's to_h is the documented form, with format 1.
+  # No support is counted, no convoy route is worked out, no strength is compared, no unit is
+  # dislodged. At 0.2.0 delete this, and let adjudicate and load_adjudication call TA.
   StandInOutcome = Data.define(:order, :result, :submitted, :dislodged) do
-    KEYS = %w[order result submitted dislodged].freeze
-
     def self.from_h(hash)
       raise InvalidInput, "an outcome must be a Hash, got #{hash.inspect}" unless hash.is_a?(Hash)
-      unless hash.keys.sort == KEYS.sort
-        raise InvalidInput, "an outcome needs exactly the keys #{KEYS.inspect}, got #{hash.keys.inspect}"
+      unless hash.keys.to_set == OUTCOME_KEYS
+        raise InvalidInput, "an outcome needs exactly the keys #{OUTCOME_KEYS.to_a.inspect}, got #{hash.keys.inspect}"
       end
       unless RESULTS.include?(hash["result"])
         raise InvalidInput, "\"result\" must be one of #{RESULTS.inspect}, got #{hash["result"].inspect}"
@@ -489,12 +536,13 @@ Add to `app/models/rules_engine.rb` inside `module RulesEngine`, after the `clas
 
     def self.from_h(hash)
       raise InvalidInput, "an adjudication must be a Hash, got #{hash.inspect}" unless hash.is_a?(Hash)
-      unless hash.keys.sort == %w[format outcomes paradox position]
-        raise InvalidInput, "an adjudication needs exactly the keys format, outcomes, paradox and position, got #{hash.keys.inspect}"
+      unless hash.keys.to_set == ADJUDICATION_KEYS
+        raise InvalidInput, "an adjudication needs exactly the keys #{ADJUDICATION_KEYS.to_a.inspect}, got #{hash.keys.inspect}"
       end
       raise InvalidInput, "\"format\" must be 1, got #{hash["format"].inspect}" unless hash["format"] == 1
       raise InvalidInput, "\"outcomes\" must be an Array, got #{hash["outcomes"].inspect}" unless hash["outcomes"].is_a?(Array)
       raise InvalidInput, "\"paradox\" must be true or false, got #{hash["paradox"].inspect}" unless [ true, false ].include?(hash["paradox"])
+      raise InvalidInput, "\"position\" must be a Hash, got #{hash["position"].inspect}" unless hash["position"].is_a?(Hash)
 
       new(outcomes: hash["outcomes"].map { |h| StandInOutcome.from_h(h) }, paradox: hash["paradox"],
           position: RulesEngine.load_position(hash["position"]))
@@ -576,10 +624,11 @@ Add to `app/models/rules_engine.rb` inside `module RulesEngine`, after the `clas
 
     private_class_method :reject_duplicates, :target_of, :surviving_moves, :result_for, :outcome, :next_position
   end
+  private_constant :StandIn, :StandInOutcome, :StandInAdjudication
 ```
 
 Notes for the implementer:
-- `TA` is a private constant of `RulesEngine`, readable lexically inside the nested module and `Data.define` blocks. A constant assigned inside a `Data.define` block lands on `RulesEngine` (the block's lexical scope), so `KEYS` becomes `RulesEngine::KEYS`; make it `OUTCOME_KEYS` and `private_constant` it, next to `RESULTS`.
+- `TA`, `RESULTS`, the key sets and the three stand-in constants are private constants of `RulesEngine`, readable lexically from the nested module, the `Data.define` blocks and the `class << self` methods. Keep the key sets at module level (a constant assigned inside a `Data.define` block would land on `RulesEngine` anyway). Keys are compared as sets because a hash with mixed String and Symbol keys cannot be sorted.
 - `reject_duplicates` runs after `TA.check` has run on every element, so a non-order element raises the gem's own `InvalidInput` first.
 - The head comment's rule list must match FR-3 in the spec exactly; FR-3 is the reference.
 
@@ -601,14 +650,12 @@ RSpec.describe "Stored gem objects (spec 019, Story 4)" do
   include RulesHelpers
 
   before(:all) do
-    ActiveRecord::Schema.define do
-      create_table :rules_storage_rows, force: true do |t|
-        t.string :label
-        t.json :board
-        t.json :move
-        t.json :verdict
-        t.json :result
-      end
+    ApplicationRecord.connection.create_table(:rules_storage_rows, force: true) do |t|
+      t.string :label
+      t.json :board
+      t.json :move
+      t.json :verdict
+      t.json :result
     end
     @model = Class.new(ApplicationRecord) do
       self.table_name = "rules_storage_rows"
@@ -620,7 +667,11 @@ RSpec.describe "Stored gem objects (spec 019, Story 4)" do
     end
   end
 
-  after(:all) { ActiveRecord::Schema.define { drop_table :rules_storage_rows, if_exists: true } }
+  # Fails the run if the table survives, which is what AC-4.10 asks for.
+  after(:all) do
+    ApplicationRecord.connection.drop_table(:rules_storage_rows, if_exists: true)
+    raise "rules_storage_rows was not dropped" if ApplicationRecord.connection.table_exists?(:rules_storage_rows)
+  end
 
   let(:model) { @model }
   let(:start) { RulesEngine.starting_position }
@@ -645,7 +696,7 @@ Examples (each is a full `it`, one per AC):
 - AC-4.9: the raised message includes `2` (the bad value): `/2/`.
 - AC-4.9a: `insert_raw("board", "not json")` raises `JSON::ParserError`; `insert_raw("board", "[]")` raises `InvalidInput`; `insert_raw("board", "null")` loads as nil.
 - AC-4.9b: a row with a bad `board`; `record = model.find(id); record.update!(label: "x")` does not raise and `raw(record, "board")` is unchanged.
-- AC-4.10: after the group, the table is dropped: checked by a separate trailing `after(:all)` expectation is not possible, so verify with `git status --porcelain db` in the phase's verify step, and with an example that asserts `ActiveRecord::Base.connection.table_exists?("rules_storage_rows")` is true *inside* the group (it exists during, and `after(:all)` removes it).
+- AC-4.10: the `after(:all)` hook above drops the table and raises if it still exists, so a surviving table fails the run. The test database lives in `storage/`, so `git status --porcelain db` is also run in the verify step to show that no file appeared in `db/`.
 
 **Verify:** red with `uninitialized constant RulesObjectType`.
 
@@ -674,19 +725,19 @@ class RulesObjectType < ActiveRecord::Type::Value
   def type = :"rules_#{kind}"
 
   # A bad value fails at assignment, not on a later read (ActiveModel otherwise casts lazily).
-  def assert_valid_value(value) = load(value)
+  def assert_valid_value(value) = load_value(value)
 
-  def cast(value) = load(value)
+  def cast(value) = load_value(value)
 
   def serialize(value)
-    object = load(value)
+    object = load_value(value)
     object && JSON.generate(object.to_h)
   end
 
   def deserialize(raw)
     return nil if raw.nil?
 
-    load(JSON.parse(raw))
+    load_value(JSON.parse(raw))
   end
 
   # The objects are immutable, so a save never re-reads an untouched column.
@@ -698,7 +749,7 @@ class RulesObjectType < ActiveRecord::Type::Value
 
   private
 
-  def load(value) = RulesEngine.public_send(:"load_#{kind}", value)
+  def load_value(value) = RulesEngine.public_send(:"load_#{kind}", value)
 end
 ```
 
@@ -718,7 +769,7 @@ Then, from `web/`:
 
 1. `bundle exec rspec` passes (record the counts).
 2. `BUNDLE_FROZEN=true bundle install` with the variable unset succeeds and `git diff --exit-code Gemfile.lock` is clean. (AC-1.2)
-3. `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && ... bundle exec rspec`, then `git checkout -- Gemfile.lock`. (AC-1.3)
+3. `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle exec rspec`, then `git checkout -- Gemfile.lock`. (AC-1.3)
 4. `git diff --name-only main...HEAD` lists only `web/` paths.
 5. `bin/rubocop` on the changed Ruby files, and `bin/brakeman -q` if the app already runs it in CI (it does not; skip if not configured).
 
@@ -740,7 +791,7 @@ The pull request description lists, for the maintainer, the stale lines that nam
 | Spec item | Phase |
 |---|---|
 | FR-1, AC-1.1 to 1.5 | 2 |
-| FR-2, AC-2.1 to 2.6, 2.5a, 2.5b | 1, 2 |
+| FR-2, AC-2.1 to 2.6, 2.5a, 2.5b | 1, 2 (position, order, check result), 4 (adjudication) |
 | FR-7, AC-2.7, 2.8, 2.8a, AC-5.1 | 2 (require: false), 3, 4 |
 | FR-3, AC-3.1 to 3.11 | 4 |
 | FR-4, FR-5, FR-6, AC-4.1 to 4.10 | 5 |
