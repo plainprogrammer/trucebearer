@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "The rules engine behind Trucebearer."
   spec.description = "Checks orders and adjudicates each phase of a game turn. " \
-                     "Plain Ruby, with maps as data and no dependency on Rails."
+                     "Plain Ruby, with maps as data and no runtime dependencies."
   spec.homepage = "https://github.com/plainprogrammer/trucebearer"
   spec.license = "AGPL-3.0-or-later"
 
