@@ -15,6 +15,12 @@ RSpec.describe Datc do
 
   def parse(data, name = "6.X.1") = described_class.parse(data, name)
 
+  # `good` with the keys of its one order changed and an `after` that holds its unit.
+  def with_after(data, entry)
+    data.merge("orders" => [(data["orders"][0].reject { |key, _| %w[result dislodged].include?(key) }).merge(entry)],
+               "after" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "lon" }] })
+  end
+
   it "builds the position and the orders of a case, expanding short locations" do
     data = good.merge("position" => { "units" => [{ "power" => "france", "type" => "fleet", "at" => "spa/nc" }] },
                       "orders" => [{ "order" => { "type" => "move", "power" => "france", "at" => "spa", "destination" => "gol" },
@@ -33,14 +39,42 @@ RSpec.describe Datc do
     expect(kase.departure).to be(true)
   end
 
-  it "ignores the keys reserved for #14, and an order with no check (AC-8.5)" do
-    data = good.merge("after" => { "units" => [] })
-    data["orders"] = [
-      { "order" => { "type" => "hold", "power" => "england", "at" => "lon" }, "check" => { "legal" => true }, "result" => "held" },
-      { "order" => { "type" => "hold", "power" => "england", "at" => "lon" }, "result" => "held" }
-    ]
+  it "takes an order with no check when the case has no \"after\" (AC-8.5)" do
+    data = good.merge("orders" => [{ "order" => { "type" => "hold", "power" => "england", "at" => "lon" } }])
+    expect(parse(data).entries.map(&:expected)).to eq([nil])
+  end
+
+  it "reads each result, each dislodged mark and the position after the moves (AC-11.1)" do
+    data = good.merge(
+      "position" => { "units" => [{ "power" => "austria", "type" => "army", "at" => "vie" },
+                                  { "power" => "germany", "type" => "army", "at" => "boh" },
+                                  { "power" => "germany", "type" => "fleet", "at" => "bal" }] },
+      "orders" => [{ "order" => { "type" => "hold", "power" => "austria", "at" => "vie" }, "check" => { "legal" => true },
+                     "result" => "held", "dislodged" => true },
+                   { "order" => { "type" => "move", "power" => "germany", "at" => "boh", "destination" => "vie" },
+                     "check" => { "legal" => true }, "result" => "succeeded" }],
+      "after" => { "units" => [{ "power" => "germany", "type" => "army", "at" => "vie" },
+                               { "power" => "germany", "type" => "fleet", "at" => "bal" }],
+                   "dislodged" => [{ "power" => "austria", "type" => "army", "at" => "vie", "from" => "boh" }],
+                   "standoffs" => ["gal"] }
+    )
     kase = parse(data)
-    expect(kase.entries.map(&:expected)).to eq([TA::CheckResult.new(legal: true, reasons: []), nil])
+    expect(kase.entries.map { [_1.result, _1.dislodged] }).to eq([[:held, true], [:succeeded, false]])
+    expect(kase.after.phase).to eq(:retreat)
+    expect(kase.after.units.map { _1.location.province }).to eq(%i[bal vie])
+    expect(kase.after.dislodged_units.first.attacker_from).to eq(:boh)
+    expect(kase.after.dislodged_units.first.by_convoy).to be(false)
+    expect(kase.after.standoffs).to eq([:gal])
+    expect(described_class.expected_outcomes(kase).map { [_1.order.at, _1.result, _1.submitted, _1.dislodged] })
+      .to eq([[:vie, :held, true, true], [:boh, :succeeded, true, false], [:bal, :held, false, false]])
+  end
+
+  it "works out an implied hold for a unit whose only order is illegal (AC-11.1)" do
+    data = good.merge("orders" => [{ "order" => { "type" => "hold", "power" => "france", "at" => "lon" },
+                                     "check" => { "legal" => false, "reason" => "foreign_unit" }, "result" => "void" }],
+                      "after" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "lon" }] })
+    outcomes = described_class.expected_outcomes(parse(data))
+    expect(outcomes.map { [_1.order.power, _1.result, _1.submitted] }).to eq([[:france, :void, true], [:england, :held, false]])
   end
 
   it "refuses a malformed fixture, naming the file (AC-8.6)" do
@@ -56,7 +90,23 @@ RSpec.describe Datc do
       "a missing summary" => good.reject { |key, _| key == "summary" },
       "a case id that doesn't match the file" => good.merge("case" => "6.X.2"),
       "an order that can't be built" => good.merge("orders" => [{ "order" => { "type" => "hold", "power" => "england" } }]),
-      "a unit that can't be built" => good.merge("position" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "xyz" }] })
+      "a unit that can't be built" => good.merge("position" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "xyz" }] }),
+      "an unknown result" => with_after(good, "result" => "won"),
+      "a result with no after" => good.merge("orders" => [good["orders"][0].merge("result" => "held")]),
+      "a dislodged mark that isn't true or false" => with_after(good, "result" => "held", "dislodged" => "yes"),
+      "an after with an order that has no result" => with_after(good, {}),
+      "an after with an order that has no check" => with_after(good.merge("orders" => [{ "order" => good["orders"][0]["order"], "result" => "held" }]), "result" => "held"),
+      "an unknown key in after" => good.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                              "after" => { "units" => [], "surprise" => 1 }),
+      "an after with no units" => good.merge("orders" => [good["orders"][0].merge("result" => "held")], "after" => {}),
+      "an after unit that can't be built" => good.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                                         "after" => { "units" => [{ "power" => "england", "type" => "army", "at" => "nth" }] }),
+      "a dislodged unit with no attacker" => good.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                                        "after" => { "units" => [], "dislodged" => [{ "power" => "england", "type" => "fleet", "at" => "lon" }] }),
+      "a dislodged unit whose attacker isn't a province" => good.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                                                       "after" => { "units" => [], "dislodged" => [{ "power" => "england", "type" => "fleet", "at" => "lon", "from" => "xyz" }] }),
+      "an unknown standoff province" => good.merge("orders" => [good["orders"][0].merge("result" => "held")],
+                                                    "after" => { "units" => [{ "power" => "england", "type" => "fleet", "at" => "lon" }], "standoffs" => ["xyz"] })
     }
     bad.each do |label, data|
       expect { parse(data) }.to raise_error(Datc::FormatError, /6\.X\.1/), "expected #{label} to be refused"

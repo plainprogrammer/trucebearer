@@ -9,20 +9,40 @@ require_relative "board"
 #
 # Short notation, expanded here: a location is "spa/nc" or "par"; an order is the hash
 # form of docs/interface.md without "format", which is added; `destination` is a location.
-# `check:` is {legal: true} or {legal: false, reason: <symbol text>}. `result:` and `after:`
-# are reserved for the adjudication specs (#14) and ignored here.
+# `check:` is {legal: true} or {legal: false, reason: <symbol text>}. `result:` (an outcome
+# symbol text) and `dislodged:` (true when the unit that followed the order was dislodged) go
+# beside each `check:`, and `after:` holds the position after the moves: `units` (each
+# {power, type, at}), `dislodged` (each {power, type, at, from, by_convoy}) and `standoffs`.
+# A case with `after:` is adjudicated (spec/datc/datc_adjudicate_spec.rb). Every order of such
+# a case carries a `check:` and a `result:`, and the implied holds are worked out from the
+# checks, so the expectation doesn't depend on the engine.
 module Datc
   class FormatError < StandardError; end
 
-  Case = Data.define(:id, :departure, :position, :entries)
-  Entry = Data.define(:order, :expected)
+  Case = Data.define(:id, :departure, :position, :entries, :after)
+  Entry = Data.define(:order, :expected, :result, :dislodged)
 
   DIR = File.expand_path("../datc", __dir__)
   TOP_KEYS = %w[case summary departure position orders after].freeze
   TOP_REQUIRED = %w[case summary position orders].freeze
   POSITION_KEYS = %w[units phase].freeze
   UNIT_KEYS = %w[power type at].freeze
-  ENTRY_KEYS = %w[order check result].freeze
+  ENTRY_KEYS = %w[order check result dislodged].freeze
+  AFTER_KEYS = %w[units dislodged standoffs].freeze
+  DISLODGED_KEYS = %w[power type at from by_convoy].freeze
+  RESULTS = %w[void held no_route bounced succeeded unmatched cut given disrupted].freeze
+
+  # The cases that carry `after:`: the ones adjudicated. The checking runner expects these
+  # files and the three that are encoded for checking only (6.B.18, 6.B.19, 6.G.19).
+  ADJUDICATED = (
+    (1..12).map { |n| "6.A.#{n}" } +
+    [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17].map { |n| "6.B.#{n}" } +
+    [1, 2, 3, 8, 9].map { |n| "6.C.#{n}" } +
+    ((1..35).to_a - [6, 16]).map { |n| "6.D.#{n}" } +
+    ((1..15).to_a - [11]).map { |n| "6.E.#{n}" } +
+    %w[6.F.1]
+  ).sort.freeze
+  CHECKING_ONLY = %w[6.B.18 6.B.19 6.G.19].freeze
   CHECK_KEYS = %w[legal reason].freeze
   PHASES = %w[movement retreat adjustment].freeze
 
@@ -42,9 +62,11 @@ module Datc
     fail!(name, "\"case\" is #{data["case"].inspect}, which doesn't match the file name") unless data["case"] == name
     departure = data.fetch("departure", false)
     fail!(name, "\"departure\" must be true or false, got #{departure.inspect}") unless [true, false].include?(departure)
-    Case.new(id: name, departure: departure,
-             position: build_position(data["position"], name),
-             entries: Array(data["orders"]).map { |entry| build_entry(entry, name) })
+    position = build_position(data["position"], name)
+    entries = Array(data["orders"]).map { |entry| build_entry(entry, name) }
+    after = data.key?("after") ? build_after(data["after"], position, entries, name) : nil
+    fail!(name, "an order has a \"result\" but the case has no \"after\"") if after.nil? && entries.any?(&:result)
+    Case.new(id: name, departure: departure, position: position, entries: entries, after: after)
   end
 
   def build_position(data, name)
@@ -69,7 +91,54 @@ module Datc
   def build_entry(entry, name)
     fail!(name, "an order entry must be a mapping, got #{entry.inspect}") unless entry.is_a?(Hash)
     keys!(entry, ENTRY_KEYS, %w[order], name, "an order entry")
-    Entry.new(order: build_order(entry["order"], name), expected: build_check(entry["check"], name))
+    result = entry["result"]
+    fail!(name, "unknown result #{result.inspect}") unless result.nil? || RESULTS.include?(result)
+    dislodged = entry.fetch("dislodged", false)
+    fail!(name, "\"dislodged\" must be true or false, got #{dislodged.inspect}") unless [true, false].include?(dislodged)
+    Entry.new(order: build_order(entry["order"], name), expected: build_check(entry["check"], name),
+              result: result&.to_sym, dislodged: dislodged)
+  end
+
+  # The position after the moves, as the retreat-phase position adjudication gives. A case
+  # with `after:` needs a `check:` and a `result:` on every order.
+  def build_after(data, position, entries, name)
+    fail!(name, "\"after\" must be a mapping") unless data.is_a?(Hash)
+    keys!(data, AFTER_KEYS, %w[units], name, "\"after\"")
+    entries.each do |entry|
+      fail!(name, "an order of a case with \"after\" has no \"result\": #{entry.order.inspect}") if entry.result.nil?
+      fail!(name, "an order of a case with \"after\" has no \"check\": #{entry.order.inspect}") if entry.expected.nil?
+    end
+    units = Array(data["units"]).map { |unit| build_unit(unit, name).to_h }
+    dislodged = Array(data["dislodged"]).map { |entry| build_dislodged(entry, name) }
+    TA::Position.from_h(position.to_h.merge("phase" => "retreat", "units" => units, "dislodged_units" => dislodged,
+                                            "standoffs" => Array(data["standoffs"]).map(&:to_s)))
+  rescue TA::InvalidInput => e
+    fail!(name, "bad \"after\": #{e.message}")
+  end
+
+  def build_dislodged(entry, name)
+    fail!(name, "a dislodged unit must be a mapping, got #{entry.inspect}") unless entry.is_a?(Hash)
+    keys!(entry, DISLODGED_KEYS, %w[power type at from], name, "a dislodged unit")
+    unit = build_unit(entry.slice("power", "type", "at"), name)
+    { "unit" => unit.to_h, "attacker_from" => entry["from"].to_s, "by_convoy" => entry.fetch("by_convoy", false) }
+  end
+
+  # What adjudicating the case must give, worked out from the fixture alone: the submitted
+  # orders as written, then an implied hold for each unit that has no legal order from its
+  # owner, sorted by province.
+  def expected_outcomes(kase)
+    submitted = kase.entries.map do |entry|
+      TA::Outcome.new(order: entry.order, result: entry.result, submitted: true, dislodged: entry.dislodged)
+    end
+    legal = kase.entries.select { |entry| entry.expected.legal }.map(&:order)
+    implied = kase.position.units.reject do |unit|
+      legal.any? { |order| order.at == unit.location.province && order.power == unit.power }
+    end
+    submitted + implied.sort_by { |unit| unit.location.province }.map do |unit|
+      province = unit.location.province
+      TA::Outcome.new(order: TA::Order::Hold.new(power: unit.power, at: province), result: :held, submitted: false,
+                      dislodged: kase.after.dislodged_units.any? { |entry| entry.unit.location.province == province })
+    end
   end
 
   def build_order(hash, name)
