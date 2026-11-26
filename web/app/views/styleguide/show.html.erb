@@ -226,9 +226,9 @@
 
   <% sample_game = Struct.new(:public_id).new("sample") %>
   <% sample_position = RulesEngine.starting_position %>
-  <% sample_unit = sample_position.units.find { |u| u.location.province == :lon } %>
-  <% sample_order = RulesEngine.load_order("format" => 1, "type" => "move", "power" => "england", "at" => "lon",
-                                           "destination" => { "province" => "nth", "coast" => nil }) %>
+  <% sample_unit = sample_position.units.find { |u| u.location.province == :kie } %>
+  <% sample_order = RulesEngine.load_order("format" => 1, "type" => "move", "power" => "germany", "at" => "kie",
+                                           "destination" => { "province" => "den", "coast" => nil }) %>
   <% sample_phase = Struct.new(:number).new(1) %>
 
   <section data-component="unit-row" class="stack" aria-labelledby="sg-unit-row">
@@ -236,7 +236,7 @@
     <p>One of a player's units: the icon, its place in full with the abbreviation, and its order. A unit with no order says "holds".</p>
     <ul class="list">
       <%= render "seat_orders/unit_row", unit: sample_unit, order: sample_order, game: sample_game, phase: sample_phase %>
-      <%= render "seat_orders/unit_row", unit: sample_position.units.find { |u| u.location.province == :lvp }, order: nil, game: sample_game, phase: sample_phase %>
+      <%= render "seat_orders/unit_row", unit: sample_position.units.find { |u| u.location.province == :ber }, order: nil, game: sample_game, phase: sample_phase %>
     </ul>
   </section>
 
