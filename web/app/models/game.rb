@@ -99,7 +99,9 @@ class Game < ApplicationRecord
     withdrew = transaction do
       phase = phases.lock.find_by!(revealed_at: nil) # read under the lock, so a reveal can't slip in between
       seat.update!(token_digest: Token.digest(token))
-      seat.clear_orders!(phase)
+      withdrawn = seat.clear_orders!(phase)
+      Reissue.record!(phase: phase, seat: seat) # spec 026 D10: the reissue and its record stand or fall together
+      withdrawn # the block's value, as before: whether a submission was removed (spec 024 D3)
     end
     broadcast_seat_status if withdrew # the seat had submitted and no longer has (spec 024 D3)
     token

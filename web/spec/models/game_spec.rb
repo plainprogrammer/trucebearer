@@ -122,6 +122,33 @@ RSpec.describe Game do
       expect(game.reload.seat_for(started.seat_token)).to be_nil
       expect(game.seat_for(new_token)).to eq(seat)
     end
+
+    context "with a seat to reissue" do
+      let(:game) { described_class.start!(power: "germany").game }
+      let!(:france) { game.take_seat!("france").first }
+
+      it "writes one reissues row for the open phase and the seat, one for each reissue (AC-10.2)" do
+        game.reissue_seat!(france)
+        game.reissue_seat!(france)
+
+        expect(Reissue.where(seat: france, phase: game.current_phase).count).to eq(2)
+      end
+
+      it "writes a row for the host's own seat too (AC-10.3)" do
+        game.reissue_seat!(game.host_seat)
+
+        expect(Reissue.where(seat: game.host_seat).count).to eq(1)
+      end
+
+      it "leaves the old token and no row when the row can't be written (AC-10.2)" do
+        digest = france.token_digest
+        allow(Reissue).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)
+
+        expect { game.reissue_seat!(france) }.to raise_error(ActiveRecord::RecordInvalid)
+        expect(france.reload.token_digest).to eq(digest)
+        expect(Reissue.count).to eq(0)
+      end
+    end
   end
 
   describe "#close_joining!" do
