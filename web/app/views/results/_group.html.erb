@@ -1,0 +1,7 @@
+<%# One power's rows (spec 025 D8). locals: group (PhaseResults::Group), reading (true in the host's reading view) %>
+<section class="result-group<%= " result-group--reading" if reading %>" data-power="<%= group.power %>">
+  <h3 class="result-group__title"><%= power_badge(group.power) %></h3>
+  <ul class="list result-group__rows">
+    <%= render partial: "results/row", collection: group.rows, as: :row %>
+  </ul>
+</section>

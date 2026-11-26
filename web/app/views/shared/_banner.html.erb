@@ -1,4 +1,5 @@
-<%# The one place a banner is written, so a glyph can be added here later (#82). locals: kind ("info", "warning" or "danger"), text.
-    Words carry the kind, so colour is never the only signal. %>
+<%# The one place a banner is written, so a glyph can be added here later (#82). locals: kind ("info", "warning" or "danger"), text, and
+    optionally marker, a literal word written as a data attribute so a page can tell one banner from another (spec 025: "paradox",
+    "dislodged"); it is never given user input. Words carry the kind, so colour is never the only signal. %>
 <% lead = { "warning" => "Warning: ", "danger" => "Error: " }.fetch(kind.to_s, "") %>
-<p class="banner banner--<%= kind %>" role="<%= kind.to_s == "info" ? "status" : "alert" %>"><%= lead %><%= text %></p>
+<p class="banner banner--<%= kind %>" role="<%= kind.to_s == "info" ? "status" : "alert" %>"<%= " data-#{marker}".html_safe if local_assigns[:marker] %>><%= lead %><%= text %></p>

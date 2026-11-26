@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
-                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status]
+                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status results]
   # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
@@ -100,6 +100,17 @@ RSpec.describe "Style guide", type: :request do
       host = page.css("section[data-component=host-section] .host-section")
       expect(host.size).to eq(1)
       expect(host.first.css(".button, a").size).to be >= 4
+    end
+
+    it "shows results: a player group, a reading group with a dislodged row, every tag, and the practice note (spec 025 AC-8.1)" do
+      section = page.at_css("section[data-component=results]")
+
+      expect(section.css(".result-group").size).to eq(2)
+      expect(section.css(".result-group--reading").size).to eq(1)
+      expect(section.css(".result-group--reading .result-row--dislodged")).not_to be_empty
+      expect(section.css(".outcome-tag").map(&:text).uniq).to include("Succeeded", "Bounced", "Support cut", "Dislodged", "Not a legal order")
+      expect(section.css(".outcome-tag").map(&:text).uniq).to match_array(OutcomeHelper::OUTCOME_WORDS.values)
+      expect(section.at_css(".practice-note")).to be_present
     end
 
     it "shows the seat status with all submitted, none submitted and a mix, each list with an id of its own (spec 024 AC-8.1)" do

@@ -547,6 +547,70 @@
     display: inline;
   }
 
+  /* ---- Results (#25): .result-group of .result-row, each with .outcome-tag words. Rows are text, not controls ---- */
+  .result-group__title {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-base);
+  }
+
+  .result-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-surface);
+  }
+
+  .result-row__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 12rem;
+    overflow-wrap: anywhere;
+  }
+
+  .result-row__order {
+    font-weight: var(--weight-strong);
+  }
+
+  .result-row__note {
+    color: var(--color-text-muted);
+  }
+
+  .result-row__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .outcome-tag {
+    padding: 0 var(--space-2);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-ice-pale);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+  }
+
+  .outcome-tag--dislodged {
+    border-color: var(--color-danger);
+    background: var(--color-surface);
+    color: var(--color-danger);
+  }
+
+  .result-group--reading {
+    font-size: var(--text-lg);
+  }
+
+  .result-group--reading .result-row {
+    padding-block: var(--space-3);
+  }
+
+  .result-group--reading .outcome-tag {
+    font-size: var(--text-base);
+  }
+
   /* ---- Reduced motion: no transition runs ---- */
   @media (prefers-reduced-motion: reduce) {
     .button {

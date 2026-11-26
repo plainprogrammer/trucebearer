@@ -1,0 +1,10 @@
+<%# One outcome (spec 025 D8). locals: row (PhaseResults::Row). The unit has an icon only when it stood there and was this power's. %>
+<li class="result-row<%= " result-row--dislodged" if row.dislodged %>" data-power="<%= row.power %>" data-province="<%= row.province %>">
+  <% if row.unit %><%= unit_icon(row.power, row.unit.type, size: 32, decorative: true) %><% end %>
+  <span class="result-row__body">
+    <span class="result-row__unit"><%= row.unit ? "#{row.unit.type.to_s.capitalize} in " : "Order for " %><%= province_label(row.province) %></span>
+    <span class="result-row__order"><%= order_words(row.order, row.unit) %></span>
+    <% unless row.submitted %><span class="result-row__note"><%= row.dislodged ? "No valid order" : "No valid order, so it held" %></span><% end %>
+  </span>
+  <span class="result-row__tags"><% outcome_tags(row).each do |kind| %><%= render "results/outcome_tag", kind: kind %> <% end %></span>
+</li>
