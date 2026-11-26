@@ -55,7 +55,8 @@ RSpec.describe "Stylesheet rules" do
 
   it "has no stray colors, banned properties, px font sizes, imports, fonts or url( in any file (AC-2.4, 2.5, 2.8, 1.5, 6.2, 4.4)" do
     problems = files.flat_map do |f|
-      Stylesheets.violations(Stylesheets.read(f), File.basename(f), token_file: f == Stylesheets::TOKENS)
+      Stylesheets.violations(Stylesheets.read(f), File.basename(f), token_file: f == Stylesheets::TOKENS,
+                             font_face: File.basename(f) == "base.css")
     end
     expect(problems).to be_empty, problems.join("\n")
   end
@@ -151,10 +152,14 @@ RSpec.describe "Stylesheet rules" do
       expect(found("a { font-size: var(--text-base); }")).to be_empty
     end
 
-    it "flags imports, font rules and url( (AC-6.2)" do
+    it "flags imports, a second font face and url( (AC-6.2)" do
       expect(found("@import 'x.css';")).not_to be_empty
       expect(found("@font-face { font-family: X; }")).not_to be_empty
       expect(found("a { background: url(x.png); }")).not_to be_empty
+      one = '@font-face { font-family: "Plex Mono"; src: url("a.woff2"); }'
+      expect(Stylesheets.violations(one, "x.css", font_face: true)).to be_empty
+      expect(Stylesheets.violations("#{one} #{one}", "x.css", font_face: true)).not_to be_empty
+      expect(Stylesheets.violations("#{one} a { background: url(x.png); }", "x.css", font_face: true)).not_to be_empty
     end
 
     it "lets the token file hold hex only in --color-* tokens (AC-2.5)" do

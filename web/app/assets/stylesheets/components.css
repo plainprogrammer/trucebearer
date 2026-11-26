@@ -295,6 +295,12 @@
   .supply-center-icon--russia { --_owner: var(--color-power-russia); }
   .supply-center-icon--turkey { --_owner: var(--color-power-turkey); }
 
+  /* ---- Mono text: the face for codes, abbreviations and tags ---- */
+  .mono {
+    font-family: var(--font-mono);
+    font-weight: var(--weight-regular);
+  }
+
   /* ---- Reduced motion: no transition runs ---- */
   @media (prefers-reduced-motion: reduce) {
     .button {

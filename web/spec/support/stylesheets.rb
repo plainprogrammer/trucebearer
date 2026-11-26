@@ -32,6 +32,7 @@ module Stylesheets
     infobackground infotext inactivecaption inactivecaptiontext appworkspace activeborder
     inactiveborder activecaption
   ].freeze
+  FONT_FACE = /@font-face\s*\{[^{}]*\}/m
   VENDOR_COLOR = /-(?:webkit|moz)-(?:link|activelink|focus-ring-color|any-link|hyperlinktext|activehyperlinktext|visitedhyperlinktext)\b/i
   COLOR_FUNCTION = /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\(/i
   HEX_COLOR = /#[0-9a-f]{3,8}\b/i
@@ -75,7 +76,8 @@ module Stylesheets
 
   # Problems with a stylesheet. Each is "file:line: what". In the token file, a
   # --color-* token may hold a six-digit hex value (and nothing else may hold a color).
-  def violations(css, label, token_file: false)
+  def violations(css, label, token_file: false, font_face: false)
+    css = css.sub(FONT_FACE, "") if font_face # the one block; font_spec holds its exact shape
     out = []
     px_props = declarations(css).select { |p, v, _| p.start_with?("--") && v.match?(/\d\s*px/i) }.map(&:first)
     declarations(css).each do |prop, value, line|
