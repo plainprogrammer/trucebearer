@@ -8,6 +8,6 @@ class HostLinksController < ApplicationController
     return stranger!(game) unless game&.host_token?(params[:token])
 
     remember(:host, game, params[:token])
-    redirect_to game_host_path(game.public_id)
+    redirect_to own_seat_target(game) # the seat page when this browser holds the host's own seat, else the host page (spec 028 D5)
   end
 end

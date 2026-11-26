@@ -183,4 +183,43 @@ RSpec.describe "Resuming a game", type: :request do
       expect(old_phone.response).to have_http_status(:not_found)
     end
   end
+
+  describe "the host link (D5)" do
+    let(:host_token) { started.host_token }
+
+    it "sends a fresh browser to the host page (AC-5.1)" do
+      phone = open_session
+      phone.get "/games/#{id}/host-link", params: { token: host_token }
+
+      expect(phone.response.location).to eq("http://www.example.com/games/#{id}/host")
+      expect(phone.response.headers["Referrer-Policy"]).to eq("no-referrer")
+    end
+
+    it "sends a browser that holds the host's own seat to the seat page, which has the host controls (AC-5.2)" do
+      phone = open_session
+      phone.get "/games/#{id}/seat-link", params: { token: started.seat_token }
+      phone.get "/games/#{id}/host-link", params: { token: host_token }
+
+      expect(phone.response.location).to eq("http://www.example.com/games/#{id}")
+      phone.get "/games/#{id}"
+      expect(Nokogiri::HTML5(phone.response.body).at_css("a[href='/games/#{id}/host']").text).to eq("Host controls")
+    end
+
+    it "sends a browser that holds another seat to the host page (AC-5.3)" do
+      _france, token = game.take_seat!("france")
+      phone = open_session
+      phone.get "/games/#{id}/seat-link", params: { token: token }
+      phone.get "/games/#{id}/host-link", params: { token: host_token }
+
+      expect(phone.response.location).to eq("http://www.example.com/games/#{id}/host")
+    end
+
+    it "leaves a wrong token as the stranger page (AC-5.4)" do
+      phone = england_phone
+      phone.get "/games/#{id}/host-link", params: { token: Token.generate }
+
+      expect(phone.response).to have_http_status(:not_found)
+      expect(cookie_lines(phone.response).grep(/\A(?:host|seat)_/)).to be_empty
+    end
+  end
 end
