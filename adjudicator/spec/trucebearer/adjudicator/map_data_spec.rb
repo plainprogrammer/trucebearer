@@ -28,6 +28,16 @@ RSpec.describe "data/maps/classic.yml" do
     expect(identifiers(raw)).to all(be_a(String))
   end
 
+  it "lists no province or location twice as a key in armies or fleets" do
+    text = File.read(data_path)
+    %w[armies fleets].each do |section|
+      body = text[/^#{section}:\n(.*?)(?:\n\n|\z)/m, 1]
+      keys = body.scan(/^  "([^"]+)":/).flatten
+      expect(keys).not_to be_empty
+      expect(keys.uniq).to eq(keys), "#{section} repeats a key"
+    end
+  end
+
   it "ships in the gem" do
     spec = Gem::Specification.load(File.expand_path("../../../trucebearer-adjudicator.gemspec", __dir__))
     expect(spec.files).to include("data/maps/classic.yml")

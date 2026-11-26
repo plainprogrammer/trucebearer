@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "yaml"
-require "set"
 
 module Trucebearer
   module Adjudicator
@@ -22,7 +21,8 @@ module Trucebearer
         private
 
         def from_file(path)
-          raw = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+          # freeze: true makes every string in the map immutable, names included.
+          raw = YAML.safe_load_file(path, permitted_classes: [], aliases: false, freeze: true)
           starting_units = raw["starting_units"].map do |u|
             { power: u["power"].to_sym, type: u["type"].to_sym,
               province: u["province"].to_sym, coast: u["coast"]&.to_sym }.freeze
@@ -51,7 +51,7 @@ module Trucebearer
         # "spa/nc" -> [:spa, :nc]; "alb" -> [:alb, nil]
         def fleet_key(text)
           province, coast = text.split("/")
-          [province.to_sym, coast&.to_sym]
+          [province.to_sym, coast&.to_sym].freeze
         end
       end
 

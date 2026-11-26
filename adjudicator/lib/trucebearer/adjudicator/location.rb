@@ -33,6 +33,13 @@ module Trucebearer
         raise InvalidInput, "\"province\" must be a String, got #{province.inspect}" unless province.is_a?(String)
         raise InvalidInput, "\"coast\" must be a String or nil, got #{coast.inspect}" unless coast.nil? || coast.is_a?(String)
 
+        # Checked here, before any symbol is made, so the message shows the caller's own strings.
+        known = Map.classic.provinces.find { |candidate| candidate.id.to_s == province }
+        raise InvalidInput, "unknown province #{province.inspect}" unless known
+        if coast && known.coasts.none? { |known_coast| known_coast.to_s == coast }
+          raise InvalidInput, "province #{province.inspect} has no coast #{coast.inspect}"
+        end
+
         new(province: province.to_sym, coast: coast&.to_sym)
       end
     end

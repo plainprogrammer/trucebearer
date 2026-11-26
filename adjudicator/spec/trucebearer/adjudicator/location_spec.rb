@@ -73,11 +73,12 @@ RSpec.describe Trucebearer::Adjudicator::Location do
     end
 
     it "rejects provinces and coasts that cannot exist" do
-      expect { L.from_h({ "province" => "xyz", "coast" => nil }) }.to raise_error(TA::InvalidInput, /xyz/)
-      expect { L.from_h({ "province" => "par", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /nc/)
-      expect { L.from_h({ "province" => "spa", "coast" => "xx" }) }.to raise_error(TA::InvalidInput, /xx/)
-      expect { L.from_h({ "province" => "bul", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /nc/)
-      expect { L.from_h({ "province" => "spa", "coast" => "ec" }) }.to raise_error(TA::InvalidInput, /ec/)
+      # The caller passed strings, so the message shows the strings, in inspect form.
+      expect { L.from_h({ "province" => "xyz", "coast" => nil }) }.to raise_error(TA::InvalidInput, /"xyz"/)
+      expect { L.from_h({ "province" => "par", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /"nc"/)
+      expect { L.from_h({ "province" => "spa", "coast" => "xx" }) }.to raise_error(TA::InvalidInput, /"xx"/)
+      expect { L.from_h({ "province" => "bul", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /"nc"/)
+      expect { L.from_h({ "province" => "spa", "coast" => "ec" }) }.to raise_error(TA::InvalidInput, /"ec"/)
     end
 
     it "rejects a missing key, an unknown key, symbol keys and a non-hash, naming the item" do
@@ -85,7 +86,7 @@ RSpec.describe Trucebearer::Adjudicator::Location do
       expect { L.from_h({ "province" => "spa" }) }.to raise_error(TA::InvalidInput, /"coast"/)
       expect { L.from_h({ "province" => "spa", "coast" => nil, "extra" => 1 }) }
         .to raise_error(TA::InvalidInput, /"extra"/)
-      expect { L.from_h({ province: "spa", coast: nil }) }.to raise_error(TA::InvalidInput)
+      expect { L.from_h({ province: "spa", coast: nil }) }.to raise_error(TA::InvalidInput, /"province"/)
       expect { L.from_h("spa") }.to raise_error(TA::InvalidInput, /"spa"/)
     end
   end

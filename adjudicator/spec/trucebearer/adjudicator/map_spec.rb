@@ -40,6 +40,7 @@ RSpec.describe Trucebearer::Adjudicator::Map do
       expect(described_class).not_to respond_to(:new)
     end
 
+    # The map loads when the gem is required, so this holds by construction.
     it "gives every thread the same object" do
       maps = Array.new(8) { Thread.new { described_class.classic } }.map(&:value)
       expect(maps.uniq(&:object_id).size).to eq(1)
@@ -62,6 +63,12 @@ RSpec.describe Trucebearer::Adjudicator::Map do
       expect(map.provinces.map(&:id)).to eq(map.provinces.map(&:id).sort)
       expect(map.provinces).to be_frozen
       expect(map.provinces).to all(be_frozen)
+    end
+
+    it "has frozen names, so nobody can change the shared map through a record" do
+      expect(map.provinces.map(&:name)).to all(be_frozen)
+      expect(map.powers.map(&:name)).to all(be_frozen)
+      expect(map.id).to be_frozen
     end
   end
 
@@ -373,6 +380,7 @@ RSpec.describe Trucebearer::Adjudicator::Map do
 
     it "is not mentioned in the interface document, and starting_position is not built here" do
       expect(File.read(INTERFACE_DOC)).not_to include("starting_units")
+      expect(map).not_to respond_to(:starting_position)
     end
   end
 end
