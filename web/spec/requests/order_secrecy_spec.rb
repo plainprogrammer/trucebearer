@@ -337,7 +337,7 @@ RSpec.describe "Order secrecy", type: :request do
       created.session.post "/games/#{id}/host/phases/1/reveal"
 
       england_phone.get "/games/#{id}/phases/1/orders"
-      expect(england_phone.response).to have_http_status(:conflict)
+      expect(england_phone.response).to have_http_status(:see_other) # to the results page (spec 025 D5)
       seats = [ "another seat", "the host, with a seat of its own" ]
       hosts = [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ]
       entitled = { "GET /games/:public_id" => seats, "GET /games/:public_id/phases/:number/results" => seats,

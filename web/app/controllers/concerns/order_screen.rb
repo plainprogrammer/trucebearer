@@ -10,6 +10,14 @@ module OrderScreen
     stranger!(@game) unless @phase && @phase.number <= @game.current_phase.number
   end
 
+  # A GET for a revealed phase's own orders URL is sent to that phase's results (spec 025 D5), so a phone that was looking at its orders
+  # when the host revealed lands on the results. A stepped-in URL keeps the 409 page (spec 026 AC-3.8), and a PUT keeps it too.
+  def revealed_get
+    return render_revealed if @stepped_in_page
+
+    redirect_to game_seat_results_path(@game.public_id, @phase.number), status: :see_other
+  end
+
   def render_revealed
     @step_in = nil # a refusal page has no bar (spec 026 D7); its link still follows the stepped-in URLs
     render("seat_orders/revealed", status: :conflict)

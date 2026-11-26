@@ -98,10 +98,13 @@ RSpec.describe "The picker steps", type: :request do
     expect(SavedOrder.count).to eq(0)
   end
 
-  it "gives the 409 page for a revealed phase (AC-2.13)" do
+  it "sends a revealed phase's step URL to that phase's results, before it looks at the province (spec 025 D5; AC-2.13 was a 409 page)" do
     created.session.post "/games/#{id}/host/phases/1/reveal"
-    phone.get "#{base}/lvp"
-    expect(phone.response).to have_http_status(:conflict)
+    [ "#{base}/lvp", "#{base}/par", "#{base}/lvp?draft%5Bkind%5D=move" ].each do |path| # par is not the seat's unit: still the redirect
+      phone.get path
+      expect(phone.response).to have_http_status(:see_other), path
+      expect(phone.response.headers["Location"]).to end_with("/games/#{id}/phases/1/results"), path
+    end
   end
 
   it "carries no-store, the Turbo no-cache meta and no-referrer (AC-2.15, AC-3.7)" do

@@ -167,8 +167,8 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(page(england_phone).at_css("a.button[href='/games/#{id}/phases/2/orders']")).to be_present
       expect(SavedOrder.count).to eq(0)
       expect(Submission.count).to eq(0)
-      england_phone.get "/games/#{id}/phases/1/orders"
-      expect(england_phone.response).to have_http_status(:conflict)
+      england_phone.get "/games/#{id}/phases/1/orders" # a read is sent to the results (spec 025 D5); the refused write above keeps its 409
+      expect(england_phone.response).to have_http_status(:see_other)
     end
   end
 
