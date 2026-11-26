@@ -1,0 +1,49 @@
+case: "6.F.6"
+summary: A dislodged convoying fleet cancels the convoy, so the army it carried cuts no support
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: army, at: hol}
+    - {power: germany, type: army, at: bel}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: france, type: army, at: pic}
+    - {power: france, type: army, at: bur}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: hol}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: move, power: england, at: lon, destination: hol}
+    check: {legal: true}
+    result: no_route
+  - order: {type: support_hold, power: germany, at: hol, target: bel}
+    check: {legal: true}
+    result: given
+  - order: {type: support_hold, power: germany, at: bel, target: hol}
+    check: {legal: true}
+    result: cut
+  - order: {type: support_move, power: germany, at: hel, from: ska, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: france, at: pic, destination: bel}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: bur, from: pic, to: bel}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: germany, type: army, at: bel}
+    - {power: france, type: army, at: bur}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: army, at: hol}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: nth}
+    - {power: france, type: army, at: pic}
+  dislodged:
+    - {power: england, type: fleet, at: nth, from: ska}

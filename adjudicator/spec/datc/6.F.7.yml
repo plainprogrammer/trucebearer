@@ -1,0 +1,29 @@
+case: "6.F.7"
+summary: A dislodged convoying fleet leaves the landing province uncontested (movement step)
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: hol}
+    check: {legal: true}
+    result: disrupted
+    dislodged: true
+  - order: {type: move, power: england, at: lon, destination: hol}
+    check: {legal: true}
+    result: no_route
+  - order: {type: support_move, power: germany, at: hel, from: ska, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: germany, type: fleet, at: hel}
+    - {power: england, type: army, at: lon}
+    - {power: germany, type: fleet, at: nth}
+  dislodged:
+    - {power: england, type: fleet, at: nth, from: ska}

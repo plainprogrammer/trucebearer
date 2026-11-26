@@ -1,0 +1,32 @@
+case: "6.F.19"
+summary: "A convoy with two routes: the other route decides, so no paradox"
+position:
+  units:
+    - {power: france, type: army, at: tun}
+    - {power: france, type: fleet, at: tys}
+    - {power: france, type: fleet, at: ion}
+    - {power: italy, type: fleet, at: nap}
+    - {power: italy, type: fleet, at: rom}
+orders:
+  - order: {type: move, power: france, at: tun, destination: nap}
+    check: {legal: true}
+    result: bounced
+  - order: {type: convoy, power: france, at: tys, from: tun, to: nap}
+    check: {legal: true}
+    result: given
+  - order: {type: convoy, power: france, at: ion, from: tun, to: nap}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: italy, at: nap, from: rom, to: tys}
+    check: {legal: true}
+    result: cut
+  - order: {type: move, power: italy, at: rom, destination: tys}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: france, type: fleet, at: ion}
+    - {power: italy, type: fleet, at: nap}
+    - {power: italy, type: fleet, at: rom}
+    - {power: france, type: army, at: tun}
+    - {power: france, type: fleet, at: tys}

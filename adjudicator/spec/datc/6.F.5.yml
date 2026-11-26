@@ -1,0 +1,37 @@
+case: "6.F.5"
+summary: A convoying fleet in a beleaguered province is not dislodged
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: fleet, at: bel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: germany, type: fleet, at: den}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: hol}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: lon, destination: hol}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: france, at: eng, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: france, at: bel, from: eng, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: den, from: ska, to: nth}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: france, type: fleet, at: bel}
+    - {power: germany, type: fleet, at: den}
+    - {power: france, type: fleet, at: eng}
+    - {power: england, type: army, at: hol}
+    - {power: england, type: fleet, at: nth}
+    - {power: germany, type: fleet, at: ska}
