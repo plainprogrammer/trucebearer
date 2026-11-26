@@ -16,7 +16,7 @@
 - Run every command from `adjudicator/`. Spec files begin with `require "trucebearer/adjudicator"` and a `require_relative` of the support file they use. `.rspec` already loads `spec_helper`. Code files begin with `# frozen_string_literal: true`.
 - `TA`, `L` and `O` stand for `Trucebearer::Adjudicator`, `TA::Location` and `TA::Order`, as in `interface.md` (`spec/support/board.rb` defines them for the specs).
 - `Check` and `Reach` are **not edited**. The resolver uses `Check.reason_for` (to void orders), `Check::ORDERS` and `Reach.reaches?`. The only existing spec changed in a way that matters is the public-surface spec of #12 (Phase 4), which pins the list of public names and has to list the three new ones.
-- Commit messages are plain imperative sentences, one commit per phase (plus the red first commit, and one for each batch of fixtures), each ending with the attribution line the session gives (`Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` in this run). One git operation per shell call.
+- Commit messages are plain imperative sentences, one commit per phase (plus the red first commit, and one for each batch of fixtures), each ending with the attribution line the session gives. One git operation per shell call.
 - **The code in this plan was run.** It was written and run in a scratch copy of the gem (outside the repository) before this plan was written: the full suite there is 1750 examples, 0 failures, 2 pending, the 80 hand-derived DATC results all match, and four deliberate bugs were each caught by the specs (the owner's own supports counting toward a dislodgement: 38 failures; no exception for a supported move's destination when cutting: 18; no "province must be empty" condition for standoffs: 9; a circle that fails instead of succeeding: 8). A step that shows a different result than the plan says is a bug to find, not a number to edit.
 
 ## Goal
@@ -42,7 +42,8 @@
 | Outcome checks | `Outcome::ALLOWED` maps each order class to its results; `Outcome::RESULTS` is the contract's order. Checks live in `Outcome.check_combination!` and `Adjudication.check_list!` | AC-2.4, AC-3.4 |
 | Where the impossible-object examples go in the contract | `### Impossible objects`, labelled "From 0.2.0", as the spec's AC-3.5 says. #87 now marks `## Value objects` as "0.1.0, except `TA::Outcome` and `TA::Adjudication`", so this is inside the 0.2.0 material, as Gate A ruled | AC-3.5, AC-14.3 |
 | The last-resort branch | `Resolver#last_resort` fails the moves on the cycles that are stuck (any size), or every undecided move if no cycle is found, and sets `paradox`. Unreachable without convoys | AC-12.2 |
-| Commits that are red | None: Phase 5 adds a loader and runners that have no cases yet; Phase 6 adds the fixtures and the file-set examples in one commit | |
+| Commits that are red | None after Phase 1's deliberate red first spec: Phase 5 adds a loader and a runner that have no cases yet; Phase 6 adds the fixtures and the file-set examples in one commit | |
+| A failure that `main` already has | `spec/trucebearer/adjudicator_spec.rb` pins `VERSION` to `0.0.0`, and the 0.1.0 release moved it to `0.1.0`; the `Adjudicator` job fails on `main`'s release commit for that reason alone. **If the coordinator approves (Gate B), the Preliminary step fixes it first**, in its own commit; if `main` gets the fix another way, merge it instead | `Done when`: the CI job is green |
 | Error message for a duplicate | `"england gave two orders for the province lon"` | AC-5.2 |
 | Fixtures | Written by a throwaway script from the table in Phase 6 (kept out of the repository), then checked by the runner and the checking runner. The table is the hand-derived expectation, in this plan | AC-11.1 |
 | Extending #12's public-surface spec | In step with the code: `:Outcome` joins `TA.constants` in Phase 2, `:Adjudication` in Phase 3, and in Phase 4 `:adjudicate` joins `TA.singleton_methods` and `Adjudicate` and `Resolver` are checked private | spec 012 AC-7.5 |
@@ -51,6 +52,7 @@
 
 | Phase | Delivers | Commit |
 |---|---|---|
+| Prelim. | The version spec that `main` already fails (if approved) | "Let the version spec follow releases" |
 | 1 | The first spec, red | "Add the first adjudication spec, which fails until TA.adjudicate exists" |
 | 2 | `TA::Outcome` | "Add TA::Outcome" |
 | 3 | `TA::Adjudication` and the `Marshal` examples | "Add TA::Adjudication and keep both through Marshal" |
@@ -60,7 +62,30 @@
 | 7 | Random boards and the conditions | "Check the results against the DATC conditions on random boards" |
 | 8 | Contract examples, `ruleset.md`, CHANGELOG, final checks | "Record the adjudication choices and the contract's impossible objects" |
 
-**Size.** 8 phases, about 560 lines of code and 1,300 lines of specs, plus 53 new and 27 changed fixture files of 10 to 40 lines. **Recommendation (Open Question 4): one pull request.** The resolver can't be split by DATC section (the same algorithm decides all of them), and every phase ends green, so each commit can be reviewed on its own. If it is thought too large, the fallback split is: pull request 1 = the engine, the random boards and the contract (Phases 1 to 4, 7 and 8); pull request 2 = the DATC runner and the fixtures (Phases 5 and 6, "Closes #14"). The review suggested this cut, which keeps the specs that share the resolver together. Both follow this one spec. (A split by DATC section would separate specs that share one resolver.)
+**Size.** 8 phases (and the one-commit preliminary), about 560 lines of code and 1,300 lines of specs, plus 53 new and 27 changed fixture files of 10 to 40 lines. **Recommendation (Open Question 4): one pull request.** The resolver can't be split by DATC section (the same algorithm decides all of them), and every phase ends green, so each commit can be reviewed on its own. If it is thought too large, the fallback split is: pull request 1 = the engine, the random boards and the contract (Phases 1 to 4, 7 and 8); pull request 2 = the DATC runner and the fixtures (Phases 5 and 6, "Closes #14"). The review suggested this cut, which keeps the specs that share the resolver together. Both follow this one spec. (A split by DATC section would separate specs that share one resolver.)
+
+---
+
+## Preliminary: the version spec that `main` already fails
+
+*Only if the coordinator approves it at Gate B.* `bundle exec rspec` on the merged branch, before any change of this feature, gives 742 examples, 1 failure, 1 pending: the failure is `spec/trucebearer/adjudicator_spec.rb`, which expects `VERSION` to be `"0.0.0"`. The release script bumps the version and doesn't touch that spec, so every release would break it. The `Adjudicator` job on `main`'s release commit fails for this reason. The proof the Issue asks for ("`bundle exec rspec` passes", the CI job green) can't hold without it.
+
+- [ ] **Step 1: change the spec** so that it follows releases:
+
+```ruby
+# frozen_string_literal: true
+
+require "trucebearer/adjudicator"
+
+RSpec.describe Trucebearer::Adjudicator do
+  it "has a version number" do
+    expect(Trucebearer::Adjudicator::VERSION).to match(/\A\d+\.\d+\.\d+\z/)
+  end
+end
+```
+
+- [ ] **Step 2: run** `bundle exec rspec spec/trucebearer/adjudicator_spec.rb`. Expected: 1 example, 0 failures. Then `bundle exec rspec`: 742 examples, 0 failures, 1 pending.
+- [ ] **Step 3: commit** "Let the version spec follow releases".
 
 ---
 
@@ -1760,7 +1785,7 @@ end
 
 - [ ] **Step 9: run, see them pass.**
   Command: `bundle exec rspec`
-  Expected: 0 failures, 2 pending (the two convoy examples, `convoys: #15`), and the first spec of Phase 1 green. The DATC specs are not changed yet and pass as before.
+  Expected: 0 failures, 3 pending (the two convoy examples, `convoys: #15`, and the `changelog_spec` example that skips while "Unreleased" is empty, which ends in Phase 8), and the first spec of Phase 1 green. The DATC specs are not changed yet and pass as before.
 - [ ] **Step 10: commit** "Adjudicate movement phases without convoys".
 
 ---
@@ -2409,7 +2434,7 @@ puts "done"
   Expected: it prints only `done`: every existing file is reproduced exactly, so nothing but the additions will show in a diff.
 - [ ] **Step 6: generate and run.** `ruby $S/gen.rb spec/datc`, then `bundle exec rspec spec/datc`.
   Expected: 0 failures. The adjudication runner has one example per order, plus three per case (implied holds, position, any order of the orders) and its two file-set examples; the checking runner runs all 83 files.
-- [ ] **Step 7: run everything.** `bundle exec rspec` → 1750 examples, 0 failures, 2 pending in the scratch run (counts after Phase 8; at this point 1748). If yours differ by a few, look at the spec files before the number.
+- [ ] **Step 7: run everything.** `bundle exec rspec` → 1748 examples, 0 failures, 3 pending (the scratch run: 1750 after Phase 8, and 2 pending once the CHANGELOG entry ends the `changelog_spec` skip). If yours differ by a few, look at the spec files before the number.
 - [ ] **Step 8: verify the fixtures don't just mirror the engine.** They were derived from the DATC text, not from the output. As a spot check, change one expected result in a copy of one fixture and see the runner fail (the scratch run did this for three cases).
 - [ ] **Step 9: commit** the generated files, the table's consumers and the two spec changes in one commit: `git add spec/datc` and commit "Encode the DATC cases of 6.A to 6.E and 6.F.1 with results". (53 new and 27 changed fixtures; reviewing them by section is `git diff --stat -- spec/datc/6.D.*`.)
 
@@ -2897,7 +2922,7 @@ TA::Adjudication.new(outcomes: [held.(:france, :bre, false), held.(:england, :be
 TA::Adjudication.new(outcomes: [held.(:england, :lon, true), held.(:england, :lon, true)], paradox: false, position: a)
 ````
 
-  The section's opening sentence says each object "can't exist on the classic map"; add "(or, from 0.2.0, can't be the result of an adjudication)" after it. Nothing else in the file changes: `git diff docs/interface.md` shows only these lines.
+  The section's opening sentence says each object "can't exist on the classic map"; add "(or, from 0.2.0, can't be the result of an adjudication)" after it. Nothing else in the file changes: `git diff docs/interface.md` shows only these lines and that clause.
 - [ ] **Step 4: `docs/ruleset.md`.** Amend the existing 4.D.3 row and add the rows below after the 4.E.1 row, in this wording, and no other change. The 4.D.3 row becomes:
 
 ```markdown
@@ -2915,7 +2940,7 @@ and the new rows are:
 | 4.A.1, 4.A.3 | (Temporary) Does a convoy route work in this build? | No. Until convoys arrive (#15), a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`. This is replaced before 0.2.0 ships | Scaffolding in an unreleased build |
 ```
 
-- [ ] **Step 5: `CHANGELOG.md`.** Under "Unreleased", "Added", add this entry at the end of the list (and keep it there when `main` is merged in):
+- [ ] **Step 5: `CHANGELOG.md`.** Under "Unreleased", "Added" (empty since the 0.1.0 release), add this entry as its first item (and keep it there when `main` is merged in). It also ends the `changelog_spec` skip:
 
 ```markdown
 - `TA::Outcome`, `TA::Adjudication` and `TA.adjudicate(position, orders)`: adjudicating a movement phase with no convoys, following the decision-based approach of Kruijswijk's "The Math of Adjudication". Every order gets an outcome; a unit with no legal order holds and can be supported; each dislodged unit records the province its attacker came from; and `position` is the retreat-phase snapshot of `docs/interface.md`. The DATC cases of 6.A to 6.E that need no convoy, and 6.F.1, are fixtures in `spec/datc/` with their results; every result is also checked against the DATC's conditions on seeded random boards. `docs/interface.md` now names the impossible `TA::Outcome` and `TA::Adjudication`. **Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`. (#14)
