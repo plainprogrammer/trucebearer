@@ -24,6 +24,8 @@ RSpec.describe "The player's page and seat links", type: :request do
       expect(page.css(".power-badge--france").size).to eq(1) # France is only a row of the status list
       expect(page.css("#seat-status .power-badge--france").size).to eq(1)
       expect(page.css("a").map { |link| link["href"] }.grep(/france/)).to be_empty
+      page.at_css("#seat-status").remove
+      expect(page.text).not_to include("France")
       expect(page.css("title").text).to eq("Your seat")
     end
 

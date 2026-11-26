@@ -23,6 +23,8 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
       # Another power appears only as a row of the status list (spec 024 AC-2.1): never an order, a count or a link of its own.
       expect(page.css(".power-badge--france").size).to eq(1)
       expect(page.css("#seat-status .power-badge--france").size).to eq(1)
+      page.at_css("#seat-status").remove
+      expect(page.text).not_to include("France")
     end
 
     it "links to the orders page of the current phase and shows the seat's own count, never an order (AC-1.5)" do

@@ -3,8 +3,9 @@
 module CableOrigins
   ENV_NAME = "TRUCEBEARER_CABLE_ORIGINS".freeze
 
-  # "https://a.example/, https://b.example" becomes ["https://a.example", "https://b.example"]. Blank entries and repeats are dropped.
+  # "https://a.example/, https://b.example" becomes ["https://a.example", "https://b.example"]. Blank entries and repeats are
+  # dropped, and each origin is lowercased, because that is how a browser writes the Origin header it sends.
   def self.parse(value)
-    value.to_s.split(/[\s,]+/).map { |origin| origin.chomp("/") }.reject(&:empty?).uniq
+    value.to_s.split(/[\s,]+/).map { |origin| origin.chomp("/").downcase }.reject(&:empty?).uniq
   end
 end

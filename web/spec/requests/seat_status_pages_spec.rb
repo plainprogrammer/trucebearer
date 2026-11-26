@@ -83,6 +83,20 @@ RSpec.describe "The status list on the pages", type: :request do
     end
   end
 
+  it "answers a submit the same when the cable call fails, and still stores it (D7, AC-5.4)" do
+    path = "/games/#{id}/phases/1/orders"
+    created.session.put path, params: { submit: "1" }
+    expected = [ created.session.response.status, created.session.response.location, created.session.flash.to_h ]
+
+    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(IOError, "down")
+    phone = open_session
+    phone.get "/games/#{id}/seat-link", params: { token: england.last }
+    phone.put path, params: { submit: "1" }
+
+    expect([ phone.response.status, phone.response.location, phone.flash.to_h ]).to eq(expected)
+    expect(england.first.submitted?(phase)).to be(true)
+  end
+
   it "does not let Turbo keep a snapshot of either page (D9, AC-5.2)" do
     [ "/games/#{id}", "/games/#{id}/host" ].each do |path|
       metas = page_of(created.session, path).css("meta[name='turbo-cache-control']")

@@ -263,9 +263,13 @@ RSpec.describe "Order secrecy", type: :request do
 
     it "puts the signed stream name only on the pages of the viewers who may see the status (spec 024 AC-4.5)" do
       set_orders(:none)
-      carrying = snapshot.flat_map do |viewer, routes|
+      shot = snapshot
+      carrying = shot.flat_map do |viewer, routes|
         routes.select { |_key, (_status, body)| body.include?("signed-stream-name") }.keys.map { |key| [ viewer, key ] }
       end
+      # Nor in a header or a cookie line, on any page.
+      in_headers = shot.values.flat_map(&:values).select { |_status, _body, headers, cookies| (headers + cookies).join.include?("seat_status") }
+      expect(in_headers).to be_empty
 
       expect(carrying).to match_array([
         [ "another seat", "GET /games/:public_id" ],

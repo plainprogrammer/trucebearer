@@ -12,6 +12,10 @@ RSpec.describe CableOrigins do
     expect(CableOrigins.parse("https://a.example https://a.example")).to eq([ "https://a.example" ])
   end
 
+  it "writes each origin in lowercase, as a browser's Origin header is" do
+    expect(CableOrigins.parse("HTTPS://Play.Example.org/")).to eq([ "https://play.example.org" ])
+  end
+
   it "names the variable that production.rb reads" do
     expect(CableOrigins::ENV_NAME).to eq("TRUCEBEARER_CABLE_ORIGINS")
   end
