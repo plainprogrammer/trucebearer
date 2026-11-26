@@ -1,12 +1,14 @@
 class HostsController < ApplicationController
   before_action :require_host
+  before_action :no_store # the page can carry the orders of a revealed phase (spec 025 D9), and the host link once (spec 021 D6)
 
   def show
     @host_token = flash[:host_token]
     @seats = @game.seats.index_by(&:power)
     @phase = @game.current_phase
     @history = @game.history.to_a
-    @dislodged = @history.last&.adjudication&.position&.dislodged_units || []
-    no_store if @host_token # the one page that shows the host link, once (spec D6)
+    latest = @history.last
+    @results = latest && PhaseResults.new(latest)
+    @earlier = @history.reverse.drop(1)
   end
 end

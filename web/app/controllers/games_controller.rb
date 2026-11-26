@@ -30,6 +30,10 @@ class GamesController < ApplicationController
     @phase = @game.current_phase
     @units = @phase.position.units.count { |unit| unit.power.to_s == @seat.power }
     @ordered = @seat.ordered_count(@phase)
+    no_store # the page can carry the orders of a revealed phase (spec 025 D9); set after the access checks above
+    latest = @game.history.last
+    @results = latest && PhaseResults.new(latest)
+    @earlier = @game.history.reorder(number: :desc).offset(1).to_a
   end
 
   private

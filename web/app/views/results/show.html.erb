@@ -1,0 +1,7 @@
+<% content_for :title, "Results" %>
+
+<div class="stack">
+  <h1>Results</h1>
+  <%= render "results/section", results: @results, kind: :seat, game: @game, earlier: [], banners: false, skip: false %>
+  <%= link_to "Your seat", game_path(@game.public_id), class: "button button--secondary" %>
+</div>

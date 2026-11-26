@@ -5,7 +5,10 @@
 # `sweep` gives the path the invariance sweep requests for a readable GET; `fresh` means each request is made in a session of its
 # own, because the route sets a cookie.
 module SecrecyRoutes
-  Context = Struct.new(:id, :code, :host_token, :france_token, keyword_init: true)
+  # open: the open phase's number; revealed: the revealed phase's, when a sweep also asks for it (spec 025).
+  Context = Struct.new(:id, :code, :host_token, :france_token, :open, :revealed, keyword_init: true) do
+    def initialize(open: 1, revealed: nil, **rest) = super(open: open, revealed: revealed, **rest)
+  end
 
   APP = {
     "GET /up" => { shows: :none, sweep: ->(_c) { "/up" }, why: "health check" },
@@ -49,6 +52,8 @@ module SecrecyRoutes
                        "france par" => "/games/#{c.id}/host/seats/france/phases/1/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
       why: "one seat's picker steps for the host inside a step-in into that seat"
     },
+    "GET /games/:public_id/phases/:number/results" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/phases/#{c.open}/results" }, why: "every power's orders of a revealed phase, to a seat; the open phase is the stranger page (spec 025)" },
+    "GET /games/:public_id/host/phases/:number/results" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/#{c.open}/results" }, why: "the reading view of a revealed phase, to the host; the open phase is the stranger page (spec 025)" },
     "GET /games/:public_id/host/phases/:number/reveal" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/1/reveal" }, why: "names the powers that have not submitted" },
     "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, why: "reveals; redirects to the host page" },
     "MOUNT /cable" => { shows: :none, why: "state-only stream of the seven submitted states (spec 024): its signed name is only in pages behind a seat or the host cookie" }

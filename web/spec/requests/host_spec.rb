@@ -6,7 +6,7 @@ RSpec.describe "The host page and host links", type: :request do
   let(:label) { "QR code to join the game" }
 
   describe "the one-time host link (AC-1.8)" do
-    it "shows the link once, uncached, and never again" do
+    it "shows the link once, uncached, and never again (the page is no-store always since spec 025 D9)" do
       post "/games", params: { passphrase: GameFlow::PASSPHRASE, power: "england" }
       game = Game.last
       follow_redirect!
@@ -25,7 +25,7 @@ RSpec.describe "The host page and host links", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include(token)
       expect(Nokogiri::HTML5(response.body).at_css("#host-link")).to be_nil
-      expect(response.headers["Cache-Control"]).not_to include("no-store")
+      expect(response.headers["Cache-Control"]).to include("no-store") # always: it can carry a revealed phase's orders (spec 025 D9)
     end
   end
 

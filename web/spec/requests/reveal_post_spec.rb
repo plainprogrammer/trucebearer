@@ -140,6 +140,8 @@ RSpec.describe "Revealing a phase", type: :request do
       expect(phase_routes).to match_array([
         [ "GET", "/games/:public_id/phases/:number/orders" ], [ "PUT", "/games/:public_id/phases/:number/orders" ],
         [ "GET", "/games/:public_id/phases/:number/orders/:province" ],
+        # Spec 025: the results of a revealed phase, read-only pages for a seat and for the host.
+        [ "GET", "/games/:public_id/phases/:number/results" ], [ "GET", "/games/:public_id/host/phases/:number/results" ],
         [ "GET", "/games/:public_id/host/phases/:number/reveal" ], [ "POST", "/games/:public_id/host/phases/:number/reveal" ],
         # Spec 026: the step-in confirmation and its record carry the phase number, and neither touches a phase.
         [ "GET", "/games/:public_id/host/seats/:power/phases/:number/step-in" ], [ "POST", "/games/:public_id/host/seats/:power/phases/:number/step-in" ],
@@ -173,7 +175,9 @@ RSpec.describe "Revealing a phase", type: :request do
   describe "dislodged units (AC-5.4)" do
     def stub_result_with_dislodged_unit
       result = RulesEngine.adjudicate(RulesEngine.starting_position, []).to_h
-      result["position"]["dislodged_units"] = [ { "unit" => unit_hash(:austria, :army, :ser), "attacker_from" => "bul", "by_convoy" => false } ]
+      # The position and the outcome's flag agree (spec 025 D8): the army in VIE was dislodged, so its implied hold says so too.
+      result["position"]["dislodged_units"] = [ { "unit" => unit_hash(:austria, :army, :vie), "attacker_from" => "gal", "by_convoy" => false } ]
+      result["outcomes"].find { |outcome| outcome["order"]["at"] == "vie" }["dislodged"] = true
       allow(RulesEngine).to receive(:adjudicate).and_return(RulesEngine.load_adjudication(result))
     end
 
@@ -183,7 +187,8 @@ RSpec.describe "Revealing a phase", type: :request do
       host.post reveal_path
       host.get "/games/#{id}/host"
 
-      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in SER was dislodged. Settle it by hand." ])
+      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in VIE was dislodged. Settle it by hand." ])
+      expect(page.css("[data-dislodged]").size).to eq(page.css(".outcome-tag--dislodged").size) # one banner for each Dislodged tag (spec 025 AC-2.2)
       expect(game.current_phase.position.dislodged_units).to be_empty
       expect(game.history.first.adjudication.position.dislodged_units.size).to eq(1)
     end

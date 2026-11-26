@@ -332,20 +332,30 @@ RSpec.describe "Order secrecy", type: :request do
       expect(host.response.body).not_to match(/\bordered\b/)
     end
 
-    it "shows nobody an order or an outcome after the reveal, in this feature (AC-7.9)" do
+    it "shows a revealed phase's results only to the viewers with a right to them, and no order of the open phase (spec 025 AC-5.7, replacing spec 022 AC-7.9)" do
       set_orders(:all)
       created.session.post "/games/#{id}/host/phases/1/reveal"
 
       england_phone.get "/games/#{id}/phases/1/orders"
       expect(england_phone.response).to have_http_status(:conflict)
-      snapshot.each do |viewer, routes|
+      seats = [ "another seat", "the host, with a seat of its own" ]
+      hosts = [ "the host, with a seat of its own", "the host, with no seat", "the host, with France's seat cookie", "the host, stepped into France" ]
+      entitled = { "GET /games/:public_id" => seats, "GET /games/:public_id/phases/:number/results" => seats,
+                   "GET /games/:public_id/host" => hosts, "GET /games/:public_id/host/phases/:number/results" => hosts }
+      shot = snapshot
+      shot.each do |viewer, routes|
         routes.each do |key, (_status, body)|
           next if key == "GET /styleguide" # static samples with made-up orders, no game data
 
-          expect(Nokogiri::HTML5(body).css(".unit-row__order")).to be_empty, "#{viewer} on #{key}"
-          expect(body).not_to match(/\b(?:Succeeded|Bounced|Held)\b/), "#{viewer} on #{key}"
+          page = Nokogiri::HTML5(body)
+          expect(page.css(".unit-row__order")).to be_empty, "#{viewer} on #{key}"
+          expect(page.css(".result-row").any?).to eq(entitled.fetch(key, []).include?(viewer)), "#{viewer} on #{key}"
         end
       end
+      # The positive control: an entitled viewer reads England's order, with the stand-in's outcome for it.
+      row = Nokogiri::HTML5(shot.fetch("another seat").fetch("GET /games/:public_id")[1]).css(".result-group[data-power=england] .result-row")
+             .find { |r| r.text.include?("Move to North Sea (NTH)") }
+      expect(row.at_css(".outcome-tag").text).to eq("Succeeded")
     end
 
     # Spec 026: the one sanctioned way for the host to see or change another seat's orders before the reveal.
