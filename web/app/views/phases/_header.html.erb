@@ -1,0 +1,6 @@
+<%# The phase header (spec 022 FR-10): season, year and phase type in mono capitals, the viewer's power badge at the end.
+    locals: phase, power (optional) %>
+<div class="phase-header">
+  <p class="phase-header__title mono"><%= phase.title %></p>
+  <%= power_badge(power) if local_assigns[:power] %>
+</div>

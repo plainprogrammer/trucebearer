@@ -79,9 +79,10 @@ RSpec.describe "Stylesheet rules" do
     end
   end
 
-  it "keeps total weight within 24 KB and the style guide within 4 KB (FR-1)" do
-    expect(files.sum { |f| File.size(f) }).to be <= 24 * 1024
-    expect(File.size?(File.join(Stylesheets::DIR, "styleguide.css")).to_i).to be <= 4 * 1024
+  # The limits were 24 KB and 4 KB until spec 022 (changelog 1.2.0) raised them for the screen components the catalog plans.
+  it "keeps total weight within 32 KB and the style guide within 6 KB (FR-1)" do
+    expect(files.sum { |f| File.size(f) }).to be <= 32 * 1024
+    expect(File.size?(File.join(Stylesheets::DIR, "styleguide.css")).to_i).to be <= 6 * 1024
   end
 
   it "sets touch-action and safe-area insets, and sizes fields at 1rem (AC-1.4, 1.6, 3.5)" do

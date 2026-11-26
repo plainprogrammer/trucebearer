@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
-                join-code qr-card power-tile host-section]
+                join-code qr-card power-tile host-section phase-header banner confirm]
   # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 

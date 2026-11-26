@@ -43,6 +43,67 @@ RSpec.describe "Style guide layout", type: :system do
     end
   end
 
+  describe "the phase header, banner and confirmation page (spec 022)" do
+    it "sets the phase header in mono capitals with the badge at the end of the row, and nothing scrolls sideways (AC-8.1)" do
+      with_viewport(360) do
+        visit "/styleguide"
+        expect(page).to have_css(".phase-header .power-badge")
+
+        read = evaluate_script(<<~JS)
+          (() => {
+            const header = Array.from(document.querySelectorAll(".phase-header")).find((el) => el.querySelector(".power-badge"));
+            const title = header.querySelector(".phase-header__title");
+            const badge = header.querySelector(".power-badge");
+            const style = getComputedStyle(title);
+            return {
+              transform: style.textTransform,
+              family: style.fontFamily,
+              source: title.textContent,
+              titleRight: title.getBoundingClientRect().right,
+              badgeLeft: badge.getBoundingClientRect().left,
+              badgeRight: badge.getBoundingClientRect().right,
+              rowRight: header.getBoundingClientRect().right,
+              scroll: document.documentElement.scrollWidth,
+              client: document.documentElement.clientWidth
+            };
+          })()
+        JS
+
+        expect(read["transform"]).to eq("uppercase")
+        expect(read["family"]).to include("Plex Mono")
+        expect(read["source"]).to eq("Spring 1901 · Movement") # sentence case in the source; the stylesheet draws capitals
+        expect(read["badgeLeft"]).to be >= read["titleRight"] - 0.5
+        expect(read["badgeRight"]).to be <= read["rowRight"] + 0.5
+        expect(read["scroll"]).to be <= read["client"]
+      end
+    end
+
+    it "gives every confirmation button and link at least 44 by 44 pixels, and draws the banner kinds apart (AC-8.3, 8.2)" do
+      with_viewport(360) do
+        visit "/styleguide"
+        expect(page).to have_css(".confirm .button")
+        expect(page).to have_css(".banner--info")
+
+        sizes = evaluate_script(<<~JS)
+          Array.from(document.querySelectorAll(".confirm .button")).map((el) => {
+            const r = el.getBoundingClientRect();
+            return { width: r.width, height: r.height };
+          })
+        JS
+        expect(sizes).not_to be_empty
+        expect(sizes.select { |s| s["width"] < 43.5 || s["height"] < 43.5 }).to be_empty
+
+        edges = evaluate_script(<<~JS)
+          ["info", "warning", "danger"].map((kind) => {
+            const style = getComputedStyle(document.querySelector(".banner--" + kind));
+            return { kind: kind, border: style.borderTopColor, background: style.backgroundColor };
+          })
+        JS
+        expect(edges.map { |e| [ e["border"], e["background"] ] }.uniq.size).to eq(3)
+      end
+    end
+  end
+
   describe "the join code, power tiles and QR card (spec 021)" do
     it "sets the join code in mono at least as large as the 2xl step, on one line that fits (AC-9.7)" do
       with_viewport(360) do
