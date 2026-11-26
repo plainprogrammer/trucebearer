@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   rspec:
+    # A distinct display name: the gem job's check is already called "rspec".
+    name: Web specs
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
