@@ -10,10 +10,10 @@ module GameAccess
 
   def cookie_name(kind, public_id) = "#{kind}_#{public_id}"
 
-  # Signed, permanent, httponly and lax. Secure when force_ssl is on, which production sets (spec FR-2, AC-11.4).
+  # Signed, permanent, httponly and lax. Secure when force_ssl is on or in production, which sets it (spec FR-2, AC-11.4).
   def remember(kind, game, token)
     cookies.signed.permanent[cookie_name(kind, game.public_id)] =
-      { value: token, httponly: true, same_site: :lax, secure: Rails.configuration.force_ssl ? true : false }
+      { value: token, httponly: true, same_site: :lax, secure: !!(Rails.configuration.force_ssl || Rails.env.production?) }
   end
 
   def find_game = Game.find_by(public_id: params[:public_id])
