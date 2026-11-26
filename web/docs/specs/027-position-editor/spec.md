@@ -1,7 +1,7 @@
 # Feature 027: The host's position editor
 
 **Status:** Approved
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #27
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.5 | 2026-11-26 | Found at the implementation review: spec 029 (#29) took spec 022's 1.6.0 first, so spec 022 is amended as 1.7.0 and AC-10.1 reads so; the amended specs' version lines are checked as "at least the row's version" in `spec_amendments_spec.rb`, because later amendments move them on (AC-10.5); spec 023's row says the order screen gains the notice. |
 | 1.0.4 | 2026-11-26 | Approved at Gate B (the maintainer's delegate): the app's coast labels are the existing `OrderLabelHelper::COASTS` ("north coast", ...), so `RulesEngine.coast_name` is not built and D5's `coast_name` is struck; `RulesEngine.coasts` returns the three identifiers. Fewer moving parts: one coast-label table in the app, not two. |
 | 1.0.3 | 2026-11-26 | Approved at Gate A (the maintainer's delegate): D2 option (a), D3, D4, D5, the screens and the amendments. Option (c) of D2, the host-toggled hold, is follow-up Issue #113, the first remedy if the repeated wipes hurt at the table. The engine's new methods are kept in one contiguous block of `rules_engine.rb`, because #29 edits that file. |
 | 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): the "Choose ..." checks run before any gem call and unknown identifiers are `other` (D5); `RulesEngine.coast_name` added; AC-1.5 and AC-1.9 agree with the stage order; the unit that vanishes under the lock is the stranger response (D7, AC-7.12); AC-3.3 covers a non-province value; spec 023's note is amended too (AC-10.2); stale Open Question references and the status-scan wording corrected. |
@@ -364,11 +365,11 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 
 **Acceptance criteria:**
 
-- [ ] **AC-10.1** Given spec 022 When this feature ships Then it is version 1.6.0 and its new changelog row names spec 027 and AC-5.1, and its notes on the editor ("re-checks or clears" and "dislodged units, later") say what this spec decided (clear for units that move; dislodged units left to gem 0.3.0)
+- [ ] **AC-10.1** Given spec 022 When this feature ships Then it is the next free version after spec 029's 1.6.0 (1.7.0) and its new changelog row names spec 027 and AC-5.1, and its notes on the editor ("re-checks or clears" and "dislodged units, later") say what this spec decided (clear for units that move; dislodged units left to gem 0.3.0)
 - [ ] **AC-10.3** Given spec 024 When this feature ships Then it is version 1.2.0 and its new changelog row names spec 027 and AC-7.9 (`Game#edit_position!` is a third caller of `broadcast_seat_status`), and its AC-2.7(b) is amended to add `Game#edit_position!` to the callers of `broadcast_seat_status` in `game.rb`, and the status scan's example title and its `reissue_seat!` body check stand, with only the count hash going to three
 - [ ] **AC-10.2** Given spec 023 When this feature ships Then it is version 1.2.0 and its new changelog row names spec 027 and AC-5.1, and its line about #27 "re-check or clear" says what this spec decided
 - [ ] **AC-10.4** Given spec 026 When this feature ships Then it is version 1.2.0 and its new changelog row says its Seat history also lists position edits (spec 027 D4) and its Out of Scope line for #27 now says orders are cleared by edits that move units
-- [ ] **AC-10.5** Given `spec/docs/spec_amendments_spec.rb` When this feature ships Then its version assertions for specs 022, 023 and 024 (1.5.0, 1.1.0 and 1.1.0) are changed to the new versions, and examples for the rows of AC-10.1 to AC-10.4 are added
+- [ ] **AC-10.5** Given `spec/docs/spec_amendments_spec.rb` When this feature ships Then its version assertions for specs 023 and 024 (1.1.0 each) become "at least 1.1.0", and the helper for spec 029's rows accepts a later version line, and examples for the rows of AC-10.1 to AC-10.4 are added
 - [ ] **AC-10.6** Given `web/docs/design-system.md` When this feature ships Then the catalog line for `.segmented` says "built" with #27 and its partial `shared/_segmented`, and the design-system spec checks it
 - [ ] **AC-10.7** Given `web/README.md` When this feature ships Then it tells the host where the editor is and that an edit that moves units clears everyone's orders
 

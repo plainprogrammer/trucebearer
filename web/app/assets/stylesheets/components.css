@@ -250,7 +250,7 @@
     pointer-events: none;
   }
 
-  /* ---- Segmented toggle (#27): a radio group as joined buttons; the radios stay real. No opacity: the input is clipped, not faded ---- */
+  /* ---- Segmented toggle (#27): a radio group as joined buttons; the radios stay real: the input is clipped to a pixel, not faded ---- */
   .segmented {
     border: 0;
     margin: 0;

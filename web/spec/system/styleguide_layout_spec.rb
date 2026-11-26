@@ -12,6 +12,16 @@ RSpec.describe "Style guide layout", type: :system do
   tolerance = 0.5
 
   [ 360, 768 ].each do |width|
+    it "shows a focus ring on the keyboard-focused segmented option at #{width} pixels wide (spec 027 AC-9.4)" do
+      with_viewport(width) do
+        visit "/styleguide"
+        find("section[data-component=segmented] input[value=army]", match: :first, visible: :all).send_keys(:tab)
+        ring = evaluate_script("(() => { const input = document.querySelector('section[data-component=segmented] input:focus'); return input && getComputedStyle(input.nextElementSibling).outlineStyle; })()")
+
+        expect(ring).to eq("solid")
+      end
+    end
+
     it "makes every tappable control at least 44 by 44 pixels at #{width} pixels wide (AC-1.2)" do
       with_viewport(width) do
         visit "/styleguide"

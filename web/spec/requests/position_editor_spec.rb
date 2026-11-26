@@ -425,6 +425,18 @@ RSpec.describe "The position editor", type: :request do
       expect(host.response).to have_http_status(:see_other)
     end
 
+    it "sends the host to the host page when the phase is revealed under the edit's lock (AC-7.11)" do
+      allow_any_instance_of(Game).to receive(:edit_position!).and_raise(Phase::Revealed) # rubocop:disable RSpec/AnyInstance
+
+      add
+
+      expect(host.response).to have_http_status(:see_other)
+      expect(URI(host.response.location).path).to eq("/games/#{id}/host")
+      host.follow_redirect!
+      expect(banner(:info)).to include("That phase was already revealed.")
+      expect(PositionEdit.count).to eq(0)
+    end
+
     it "edits the open phase when its own number is given after a reveal" do
       game.current_phase.reveal!
 

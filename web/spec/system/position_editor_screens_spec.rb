@@ -64,6 +64,9 @@ RSpec.describe "The position editor screens", type: :system do
       find("#unit-power").send_keys(:tab)
       ring = evaluate_script("getComputedStyle(document.querySelector('input[name=\"unit[type]\"]:focus + .segmented__label')).outlineStyle")
       expect(ring).to eq("solid")
+      ring_color = evaluate_script("getComputedStyle(document.querySelector('input[name=\"unit[type]\"]:focus + .segmented__label')).outlineColor")
+      focus_color = evaluate_script("(() => { const probe = document.createElement('i'); probe.style.color = 'var(--color-focus)'; document.body.appendChild(probe); return getComputedStyle(probe).color; })()")
+      expect(ring_color).to eq(focus_color)
 
       select "France", from: "Power"
       select "Burgundy (BUR)", from: "Province"
@@ -71,6 +74,7 @@ RSpec.describe "The position editor screens", type: :system do
       expect(page).to have_css(".banner--danger", text: "A fleet can't stand in Burgundy: it is inland.")
       expect(find("input[value=fleet]", visible: :all)).to be_checked # what the host picked is kept
       measure("the add form, refused")
+      button_in_view("Add unit")
       screenshot("03-add-unit-refused")
 
       find(".segmented__label", text: "Army").click
