@@ -70,3 +70,13 @@ Everything that crosses the boundary is an immutable value object built on Ruby'
 - **Order secrecy.** No one sees an order before the reveal, and that includes the host. The host can step into another seat after a prominent confirmation. The step-in is recorded, the seat's owner is told, and the game history keeps it.
 - **Phase lifecycle.** A phase stays open until the host reveals it. Submitting doesn't lock anything: if a seat edits its orders after submitting, it goes back to "not submitted". Revealing locks the phase, adjudicates it and shows the results on every phone at the same time.
 - **Order entry.** Players pick orders from lists rather than typing them, choosing the unit first, and only legal orders are offered. A unit without an order holds.
+
+## Design system
+
+The visual decisions the app's screens build to. The details (every color value, the contrast pairs, the helper rules and the component catalog) live in `web/docs/design-system.md`, which the foundation Issue for the re-theme writes. If that page and this section disagree, say so in an Issue.
+
+- **Visual direction.** The look is light only and comes from the logo's Cold War palette. The pale blue "Ice" and its tints make up the light end of the palette, the dark "Iron" is for text, a darker "Steel" blue marks the main action, and signal amber marks focus. Re-theming means changing the app's `tokens.css` and its documented contrast pairs. Dark mode stays out.
+- **Power colors.** The seven powers get seven muted, original colors: olive, oxblood, plum, teal, ochre, rust and cobalt. Each is a different hue from the power's familiar board color, on purpose. A power color is always shown together with the power's name or initial, never alone.
+- **Units.** The whole game uses one army icon (a chevron shield) and one fleet icon (a warship), each colored by power and carrying a power-initial tag, plus a roundel supply-center icon. The master drawings are in `assets/icons/`, licensed CC BY-SA 4.0 under `assets/LICENSE`, and `assets/icons/README.md` names their parts. In the app, `unit_icon` and `supply_center_icon` are the only way to draw them. Icons that only a map needs come in 1.x.
+- **Typography.** Body text uses the system sans. One self-hosted monospace, IBM Plex Mono Medium in a single WOFF2 file, is used for phase headers, join codes, province abbreviations and outcome tags.
+- **Delivery.** A foundation Issue comes first and covers the palette, the font, the unit icons and `web/docs/design-system.md`. Each screen Issue then builds its components to that catalog. Glyphs and the rest of the catalog come in 1.0, and the map-only icons in 1.x.
