@@ -57,14 +57,13 @@ function measure(win) {
     if (b.top < a.bottom - 0.5) out.problems.push('choice rows overlap');
   }
 
-  // AC-1.3: at least 8px between separate controls
-  for (const row of d.querySelectorAll('.sg-row, .app-actions__inner')) {
-    const k = [...row.children].map((el) => el.getBoundingClientRect());
-    for (let i = 0; i < k.length; i++) for (let j = i + 1; j < k.length; j++) {
-      const dx = Math.max(k[j].left - k[i].right, k[i].left - k[j].right);
-      const dy = Math.max(k[j].top - k[i].bottom, k[i].top - k[j].bottom);
-      if (Math.max(dx, dy) < 7.5) out.problems.push(`gap under 8px in ${row.className}`);
-    }
+  // AC-1.3: at least 8px between every two separate controls (buttons and fields).
+  // Rows of one list, and rows of one group of choices, touch on purpose and are not compared.
+  const sep = [...d.querySelectorAll('.button, .control')].filter((el) => el.getClientRects().length);
+  for (let i = 0; i < sep.length; i++) for (let j = i + 1; j < sep.length; j++) {
+    const a = sep[i].getBoundingClientRect(), b = sep[j].getBoundingClientRect();
+    const dx = Math.max(b.left - a.right, a.left - b.right), dy = Math.max(b.top - a.bottom, a.top - b.bottom);
+    if (Math.max(dx, dy) < 7.5) out.problems.push(`gap under 8px between ${sep[i].className} and ${sep[j].className}`);
   }
 
   // AC-1.1 and AC-1.4: text sizes
@@ -106,30 +105,38 @@ function measure(win) {
 7. `/` at 360 (AC-3.7): no `.app-actions`.
 8. Network (AC-6.3): load `/styleguide` in the tab, and read the network log.
 
-## Results (2026-11-25, Chrome, `bin/rails server`, development)
+## Results (2026-11-25, Chrome, `bin/rails server`, development, after the review fixes)
+
+The snippet above was run in headless Chrome from a scratch page, at each width, against the final stylesheets.
 
 | Width x height | Problems found | Position | `barBottomGap` top / middle / end | Clear of bar at end | Header scrolled away | Main width |
 |---|---|---|---|---|---|---|
 | 320 x 800 | none | sticky | 0 / 0 / 0.1 | yes | yes | 305 (scrollbar takes 15) |
-| 360 x 800 | none | sticky | 0 / 0 / 0.2 | yes | yes | 345 |
-| 390 x 800 | none | sticky | 0 / 0 / 0.2 | yes | yes | 375 |
-| 768 x 800 | none | sticky | 0 / 0 / 0.2 | yes | yes | 640 |
-| 1024 x 800 | none | sticky | 0 / 0 / 0.2 | yes | yes | 640 |
+| 360 x 800 | none | sticky | 0 / 0 / 0 | yes | yes | 345 |
+| 390 x 800 | none | sticky | 0 / 0 / 0 | yes | yes | 375 |
+| 768 x 800 | none | sticky | 0 / 0 / 0 | yes | yes | 640 |
+| 1024 x 800 | none | sticky | 0 / 0 / 0 | yes | yes | 640 |
 
-"None" means: no sideways scroll, every target at least 44 by 44, at least 8 pixels between separate controls, body text 16 pixels, no text under 14 pixels, controls at 16 pixels. The 0.1 and 0.2 are sub-pixel rounding at the very end of the page.
+"None" means: no sideways scroll, every target at least 44 by 44, at least 8 pixels between every two separate controls (buttons and fields, all pairs), body text 16 pixels, no text under 14 pixels, controls at 16 pixels. The 0.1 is sub-pixel rounding at the very end of the page.
 
 | Check | Result |
 |---|---|
-| Short viewport (AC-3.9) | 800 x 400: `static`. 800 x 480: `sticky`. At 400 high the bar sits at the very end of the page |
-| Short content (AC-3.4) | At 360 x 800 with the content removed: the page is exactly 800 high and `barBottomGap` is 0 |
-| Focus (AC-3.6) | 21 controls in the main content, each focused from the top of the page: all clear of the action area. The two buttons inside the action area are the area itself. The focus ring is `solid 3px`, offset `2px` |
+| Short viewport (AC-3.9) | 800 x 400: `static`. 800 x 480: `sticky`. At 400 high the bar sits at the very end of the page (measured before the review fixes; the rule did not change) |
+| Short content (AC-3.4) | At 360 x 800 with the content removed: the page is exactly 800 high and `barBottomGap` is 0 (measured before the review fixes; the rule did not change) |
+| Focus behind the bar (AC-3.6) | For each of 20 controls in the main content, the page was scrolled so the control sat 10 pixels below the top of the action area, hidden behind it, and then `el.focus()` was called. With the stylesheet as written, 0 of 20 stayed hidden. With `scroll-padding-bottom` set to 0, 20 of 20 stayed hidden. So the check can fail, and the padding is what makes it pass |
+| Tab order | No element has a `tabindex` other than 0 or -1, so the order is the order of the page. A real Tab-key pass was not made: the browser tooling's key input was not usable for it |
 | One / two / three / four buttons at 360 | One: 313 x 44, full width. Two: 153 x 44 each, side by side with 8 between. Three: two on a row and the third full width. Four: two rows of two. A `button_to` form wrapper: the buttons sit as the flex items (two side by side) |
+| 200 percent text (AC-1.5, WCAG 1.4.4), at 360 | With the root size set to 200 percent: two buttons ("Back", "Send orders") stack to full width, 88 high, no label spills; one long label wraps; `/` and `/styleguide` have no sideways scroll. One limit: a single word wider than the whole column (for example a 20 letter word at 200 percent) still makes its button wider than the screen, because a minimum width of "min-content" cannot also let a word break |
 | `/` at 360 (AC-3.7) | No `.app-actions`, no sideways scroll, header 46 high (a 44 link and a 2 border), `h1` 32 pixels |
 | Network (AC-6.3) | 14 requests: the page, six stylesheets from `127.0.0.1:3020`, and the app's own Turbo and Stimulus scripts. No font request |
+| Pressed look | The `.button:active` declarations were applied to a primary button by hand (the `:active` state itself cannot be forced here): the fill becomes `rgb(22, 58, 105)` and the inset ring is `rgb(255, 255, 255)` 2 pixels, so the thicker edge shows. Danger buttons use `on-danger` for the ring in the same way. Secondary buttons, list rows and choices use `border` |
+| Disabled shape (AC-2.7) | Disabled buttons, a disabled link-button, a disabled field and a disabled choice row all have a `dashed` border, so a disabled control differs by shape as well as color |
 
 ## Not checked here
 
-- **Hover, pressed (`:active`), forced colors and reduced motion.** The browser tooling in this environment cannot force a pseudo-class state or a media feature. The rules were read instead: the pressed state changes fill and draws an inset ring (`.button:active`), hover is inside `@media (hover: hover)`, borders are real borders, and `.button` loses its transition under `prefers-reduced-motion: reduce`.
+- **Hover, real `:active`, forced colors and reduced motion.** The browser tooling in this environment cannot force a pseudo-class state or a media feature. The rules were read, and the pressed values were applied by hand as above. The spec's Verification row names Chrome's emulation for these, so this is a deviation, recorded in the pull request. Issue #71 asks the phone pass to look at pressed feedback.
+- **A real Tab-key pass.** See the Tab order row.
+- **Other browsers.** Only Chrome was used. Safari and Firefox are not checked, apart from what #71 covers on an iPhone.
 - **Pinch and double-tap zoom, real safe-area insets, the iOS toolbar, and `:active` on touch.** These need a real iPhone. They are owed to the maintainer in Issue #71 (AC-1.4, 1.6, 3.2 and 3.5).
 
 ## Screenshots

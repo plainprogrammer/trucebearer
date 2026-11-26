@@ -49,7 +49,11 @@ RSpec.describe "Stylesheet rules" do
 
   it "does not set a root font size, or block zoom" do
     css = files.map { |f| Stylesheets.read(f) }.join("\n")
-    expect(css).not_to match(/(?:html|:root)\s*\{[^}]*font-size/)
+    Stylesheets.rules(css).each do |selector, body|
+      roots = selector.split(",").map(&:strip) & %w[html :root]
+      next if roots.empty?
+      expect(body).not_to match(/(?<![\w-])font(?:-size)?\s*:/), "#{selector} sets a font size"
+    end
     expect(css).not_to include("user-scalable")
   end
 
@@ -68,7 +72,11 @@ RSpec.describe "Stylesheet rules" do
 
   it "sets touch-action and safe-area insets, and sizes fields at 1rem (AC-1.4, 1.6, 3.5)" do
     css = files.map { |f| Stylesheets.read(f) }.join("\n")
-    expect(css).to include("touch-action: manipulation")
+    components = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "components.css")))
+    [ ".button", "a.list__row", ".choice" ].each do |selector|
+      rule = components.find { |sel, _| sel.split(",").map(&:strip).include?(selector) && sel.exclude?(":") }
+      expect(rule&.last).to include("touch-action: manipulation"), "#{selector} needs touch-action: manipulation"
+    end
     expect(css).to include("safe-area-inset-bottom")
     expect(css).to include("safe-area-inset-top")
     expect(css).to include("color-scheme: light")
@@ -108,6 +116,18 @@ RSpec.describe "Stylesheet rules" do
       expect(found("a { opacity: 1; }")).to be_empty
     end
 
+    it "reads a var() fallback, vendor colors, and old system colors, but not quoted text (AC-2.4)" do
+      expect(found("a { color: var(--color-text, black); }")).not_to be_empty
+      expect(found("a { color: Window; }")).not_to be_empty
+      expect(found("a { color: -webkit-link; }")).not_to be_empty
+      expect(found('a::after { content: "Error: field required"; }')).to be_empty
+    end
+
+    it "flags a px size reached through a font custom property (AC-1.5)" do
+      expect(found(":root { --text-xs: 12px; }")).not_to be_empty
+      expect(found(":root { --tap-min: max(44px, 2.75rem); }")).to be_empty
+    end
+
     it "flags px font sizes (AC-1.5)" do
       expect(found("a { font-size: 16px; }")).not_to be_empty
       expect(found("a { font: 16px/1.5 sans-serif; }")).not_to be_empty
@@ -130,6 +150,7 @@ RSpec.describe "Stylesheet rules" do
     it "allows a power token only inside a power badge rule (AC-4.4)" do
       expect(found(".power-badge--austria { --_fill: var(--color-power-austria); }")).to be_empty
       expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".power-badge--austria, .button { color: var(--color-power-austria); }")).not_to be_empty
     end
   end
 end

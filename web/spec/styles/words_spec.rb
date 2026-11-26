@@ -3,11 +3,20 @@ require "spec_helper"
 RSpec.describe "Words and names (AC-6.5)" do
   root = File.expand_path("../..", __dir__)
   # Built from pieces so this file does not contain the words it forbids.
-  forbidden = Regexp.new("diplo" + "macy|\\bd" + "ip[a-z]*", Regexp::IGNORECASE)
+  # The full word in any case, a word starting with the three letters (after a
+  # non-letter, so "x_..." counts), and the three letters inside a CamelCase name.
+  forbidden = Regexp.new("(?i:diplo" + "macy)|(?<![A-Za-z])[Dd][Ii][Pp]|(?<=[a-z])D" + "ip")
 
-  paths = (Dir[File.join(root, "{app,lib,spec}/**/*")] + [ File.join(root, "config/routes.rb") ])
+  paths = (Dir.glob(File.join(root, "{app,lib,spec}/**/*"), File::FNM_DOTMATCH) + [ File.join(root, "config/routes.rb") ])
           .select { |p| File.file?(p) }
           .reject { |p| p == __FILE__ }
+
+  it "catches the word in the forms the root rules forbid" do
+    [ "Diplo" + "macy", "TrucebearerD" + "ip", "x_d" + "ip", "d" + "ipped" ].each do |sample|
+      expect(sample).to match(forbidden)
+    end
+    expect("adipose").not_to match(forbidden)
+  end
 
   it "finds files to scan" do
     expect(paths.size).to be > 10

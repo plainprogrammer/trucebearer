@@ -4,7 +4,7 @@ require_relative "../support/stylesheets"
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text]
   # The documented pairs other than the power pairs (spec FR-3): 25 of them.
-  non_power_pair_count = 25
+  non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
   def flag = Rails.configuration.x.styleguide
 
@@ -31,7 +31,7 @@ RSpec.describe "Style guide", type: :request do
       expect(page.css(".button[disabled], .button[aria-disabled=true]").size).to be >= 2
       expect(page.css(".control[aria-invalid=true]").size).to be >= 1
       expect(page.css(".field__error").map(&:text)).to all(start_with("Error:"))
-      expect(page.css(".choice[aria-disabled=true]").size).to be >= 1
+      expect(page.css(".choice--disabled input[disabled]").size).to be >= 1
     end
 
     it "ties every error to its control (AC-2.7)" do
@@ -51,6 +51,15 @@ RSpec.describe "Style guide", type: :request do
       samples = page.css(".sg-sample")
       expect(samples.size).to eq(non_power_pair_count)
       expect(samples.map { |s| s.at_css(".sg-sample__meta").text }).to all(match(/\S+ on \S+ \(min \d(\.\d)?\)/))
+    end
+
+    it "shows exactly the documented pairs, and every class it uses exists (AC-5.4)" do
+      shown = StyleguideHelper::PAIRS.map { |fg, bg, min| [ fg, bg, min.to_f ] }
+      expect(shown).to eq(Contrast::DOCUMENTED_PAIRS)
+      css = File.read(File.join(Stylesheets::DIR, "styleguide.css"))
+      used = page.css("[class*=sg-]").flat_map { |e| e["class"].split }.grep(/\Asg-(?:bg|fg)-/).uniq
+      missing = used.reject { |klass| css.include?(".#{klass} ") }
+      expect(missing).to be_empty, "styleguide.css lacks: #{missing.join(', ')}"
     end
 
     it "shows the type scale and the spacing scale (AC-5.4)" do

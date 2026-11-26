@@ -11,9 +11,9 @@
 
   <section data-component="heading-text" class="stack" aria-labelledby="sg-text">
     <h2 id="sg-text">Headings and text</h2>
-    <h1>Heading one</h1>
-    <h2>Heading two</h2>
-    <h3>Heading three</h3>
+    <h1 role="none">Heading one</h1>
+    <h2 role="none">Heading two</h2>
+    <h3 role="none">Heading three</h3>
     <p>Body text is one rem. <span class="text-muted">Muted text is for hints.</span> <small>Small text is the smallest step.</small></p>
     <ul class="sg-type">
       <% StyleguideHelper::TYPE_STEPS.each do |step| %>
@@ -46,7 +46,7 @@
     </div>
     <div class="sg-row">
       <a href="#sg-button" class="button">Link as button</a>
-      <a class="button button--secondary" aria-disabled="true" tabindex="-1">Disabled link</a>
+      <a class="button button--secondary" role="link" aria-disabled="true">Disabled link</a>
       <input type="submit" class="button" value="Submit input">
     </div>
   </section>
@@ -107,7 +107,7 @@
       <legend>Pick any</legend>
       <label class="choice"><input type="checkbox"> First option</label>
       <label class="choice"><input type="checkbox" checked> Second option</label>
-      <label class="choice" aria-disabled="true"><input type="checkbox" disabled> Not available</label>
+      <label class="choice choice--disabled"><input type="checkbox" disabled> Not available</label>
     </fieldset>
     <fieldset class="choices">
       <legend>Pick one</legend>

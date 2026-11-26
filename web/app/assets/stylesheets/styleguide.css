@@ -28,6 +28,8 @@
 
   .sg-power { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; }
   .sg-swatch { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; }
+  .sg-power__token,
+  .sg-swatch__name { min-width: 0; overflow-wrap: anywhere; }
   .sg-chip { flex: none; width: var(--tap-min); height: var(--tap-min); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
 
   .sg-sample { display: flex; flex-direction: column; margin-bottom: var(--space-2); padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }

@@ -54,6 +54,7 @@
     font-size: var(--text-base);
     font-weight: var(--weight-regular);
     line-height: var(--leading-normal);
+    overflow-wrap: break-word;
   }
 
   h1,

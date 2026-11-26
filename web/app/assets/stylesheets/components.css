@@ -8,14 +8,14 @@
     --_fill: var(--color-primary);
     --_fill-pressed: var(--color-primary-pressed);
     --_edge: var(--color-primary);
-    --_edge-pressed: var(--color-primary-pressed);
+    --_edge-pressed: var(--color-on-primary);
     --_ink: var(--color-on-primary);
 
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    min-width: var(--tap-min);
+    min-width: var(--_min-width, var(--tap-min));
     min-height: var(--tap-min);
     padding: var(--space-2) var(--space-4);
     border: var(--border-width) solid var(--_edge);
@@ -27,6 +27,7 @@
     line-height: var(--leading-tight);
     text-align: center;
     text-decoration: none;
+    overflow-wrap: break-word;
     cursor: pointer;
     touch-action: manipulation;
     transition: background-color 120ms ease, box-shadow 120ms ease;
@@ -44,7 +45,7 @@
     --_fill: var(--color-danger);
     --_fill-pressed: var(--color-danger-pressed);
     --_edge: var(--color-danger);
-    --_edge-pressed: var(--color-danger-pressed);
+    --_edge-pressed: var(--color-on-danger);
     --_ink: var(--color-on-danger);
   }
 
@@ -64,6 +65,7 @@
     --_fill: var(--color-disabled-fill);
     --_edge: var(--color-disabled-text);
     --_ink: var(--color-disabled-text);
+    border-style: dashed;
     pointer-events: none;
   }
 
@@ -170,6 +172,7 @@
   }
 
   .control:disabled {
+    border-style: dashed;
     border-color: var(--color-disabled-text);
     background: var(--color-disabled-fill);
     color: var(--color-disabled-text);
@@ -223,7 +226,8 @@
     box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
   }
 
-  .choice[aria-disabled="true"] {
+  .choice--disabled {
+    border-style: dashed;
     border-color: var(--color-disabled-text);
     background: var(--color-disabled-fill);
     color: var(--color-disabled-text);

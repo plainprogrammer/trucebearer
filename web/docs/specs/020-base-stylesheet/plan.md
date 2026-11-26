@@ -1892,3 +1892,22 @@ From `web/`: `bin/rails server`, then open `http://localhost:3000/styleguide` on
 | 1.4 (zoom), 1.6 (touch), 3.2 (toolbar), 3.5 (insets) on a real phone | Owed to the maintainer, Issue #71 |
 
 Placeholder scan: none. Names used across phases agree: `Stylesheets`, `Contrast`, `power_badge`, `PowerBadgeHelper::POWER_NAMES`, `StyleguideHelper::{COLOR_TOKENS, PAIRS, TYPE_STEPS, SPACE_STEPS, POWER_IDS}`, `.app-header`, `.app-main`, `.app-actions`, `.app-column`, `Rails.configuration.x.styleguide`.
+
+---
+
+## Changes made during implementation review
+
+The code in the phases above is what was first written. The independent implementation review (see the pull request) led to these differences in the final code. The spec did not change.
+
+| Change | Why |
+|---|---|
+| `.button` pressed ring is `on-primary` / `on-danger`, not the pressed fill | The ring was the same color as the pressed fill, so the thicker edge could not be seen (AC-1.6) |
+| Disabled buttons, fields and choice rows have a `dashed` border; the disabled choice row is `.choice--disabled`, not `aria-disabled` on a `label` | A disabled state must differ by shape as well as color (AC-2.7). A label has no role for `aria-disabled` |
+| The style guide's disabled link is `<a role="link" aria-disabled="true">`, with no `tabindex` | An `a` with no `href` has no role |
+| Action area items get `min-width: min-content`, through `--_min-width`, which `.button` reads | `.button`'s own `min-width` sits in a later layer and would have won. Without this, two buttons shared a row whatever their labels' width |
+| `body { overflow-wrap: break-word }`, and the style guide's token names break anywhere | At 200 percent text, the root page's heading and a monospace name overflowed the column |
+| `.app-actions { z-index: 1 }` | Later positioned content in `main` must not paint over the bar |
+| The style guide's sample headings have `role="none"` | The page keeps one real heading order |
+| `Contrast::DOCUMENTED_PAIRS` lives in `spec/support/stylesheets.rb`, shared by the contrast spec and the style guide spec, which now compares `StyleguideHelper::PAIRS` to it and checks that every `sg-bg-*` and `sg-fg-*` class used exists | Replaces a count of 25 that could not catch a wrong pair |
+| The scanner reads `var()` fallbacks, old and vendor system colors, ignores quoted text, flags `px` in `--text-*` and `--font-*` tokens, checks root font size through selector lists, requires every selector in a `--color-power-` rule to be a badge variant, and requires `touch-action` on `.button`, `a.list__row` and `.choice` | Gaps the review found by probing |
+| The words check also catches CamelCase and underscore forms, and scans dotfiles | The root rule forbids names that contain or echo the word, in any form |

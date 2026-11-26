@@ -4,23 +4,7 @@ require_relative "../support/stylesheets"
 RSpec.describe "Palette contrast (WCAG 2.2)" do
   powers = %w[austria england france germany italy russia turkey]
 
-  # The documented pairs (spec FR-3). [foreground, background, minimum ratio].
-  # Each pair appears once, with its higher minimum where the spec lists two uses.
-  documented_pairs = [
-    %w[text page 4.5], %w[text surface 4.5],
-    %w[text-muted page 4.5], %w[text-muted surface 4.5],
-    %w[link page 4.5], %w[link surface 4.5],
-    %w[link-visited page 4.5], %w[link-visited surface 4.5],
-    %w[on-primary primary 4.5], %w[on-primary primary-pressed 4.5],
-    %w[primary page 3], %w[primary surface 3],
-    %w[primary-pressed page 3], %w[primary-pressed surface 3],
-    %w[border page 3], %w[border surface 3],
-    %w[danger page 4.5], %w[danger surface 4.5],
-    %w[on-danger danger 4.5], %w[on-danger danger-pressed 4.5],
-    %w[danger-pressed page 3], %w[danger-pressed surface 3],
-    %w[focus page 3], %w[focus surface 3],
-    %w[disabled-text disabled-fill 3]
-  ].map { |fg, bg, min| [ fg, bg, min.to_f ] }
+  documented_pairs = Contrast::DOCUMENTED_PAIRS
 
   power_pairs = powers.flat_map do |id|
     [ [ "on-power", "power-#{id}", 4.5 ], [ "power-#{id}", "page", 3.0 ], [ "power-#{id}", "surface", 3.0 ] ]

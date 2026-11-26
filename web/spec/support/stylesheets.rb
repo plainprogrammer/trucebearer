@@ -27,8 +27,12 @@ module Stylesheets
   SYSTEM_COLORS = %w[
     canvas canvastext linktext visitedtext activetext buttonface buttontext buttonborder field
     fieldtext highlight highlighttext selecteditem selecteditemtext mark marktext graytext
-    accentcolor accentcolortext
+    accentcolor accentcolortext window windowtext windowframe buttonhighlight buttonshadow threedface
+    threeddarkshadow threedhighlight threedlightshadow threedshadow menu menutext captiontext
+    infobackground infotext inactivecaption inactivecaptiontext appworkspace activeborder
+    inactiveborder activecaption
   ].freeze
+  VENDOR_COLOR = /-(?:webkit|moz)-(?:link|activelink|focus-ring-color|any-link)\b/i
   COLOR_FUNCTION = /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\(/i
   HEX_COLOR = /#[0-9a-f]{3,8}\b/i
 
@@ -70,16 +74,18 @@ module Stylesheets
     declarations(css).each do |prop, value, line|
       at = "#{label}:#{line}"
       color_token = token_file && prop.start_with?("--color-") && value.match?(/\A#[0-9a-f]{6}\z/i)
-      plain = value.gsub(/var\([^)]*\)/, "")
+      # Quoted text is not a color. A var() keeps its fallback, which may be a color.
+      plain = value.gsub(/"[^"]*"|'[^']*'/, "").gsub(/var\(\s*--[\w-]+/, "(")
       words = plain.downcase.scan(/[a-z]+/)
       unless color_token
         out << "#{at}: hex color in #{prop}" if value.match?(HEX_COLOR)
         out << "#{at}: color function in #{prop}" if value.match?(COLOR_FUNCTION)
-        out << "#{at}: named or system color in #{prop}" if (words & (NAMED_COLORS + SYSTEM_COLORS)).any?
+        out << "#{at}: named or system color in #{prop}" if (words & (NAMED_COLORS + SYSTEM_COLORS)).any? || plain.match?(VENDOR_COLOR)
       end
       out << "#{at}: banned #{prop}" if prop.match?(/\A(?:-\w+-)?(?:(?:backdrop-)?filter|mix-blend-mode)\z/)
       out << "#{at}: banned opacity" if prop == "opacity" && value != "1"
-      out << "#{at}: px font size in #{prop}" if %w[font font-size].include?(prop) && value.match?(/\d\s*px/i)
+      font_prop = %w[font font-size].include?(prop) || prop.start_with?("--text-", "--font-")
+      out << "#{at}: px font size in #{prop}" if font_prop && value.match?(/\d\s*px/i)
       out << "#{at}: !important" if value.include?("!important")
     end
     out << "#{label}: @import" if css.include?("@import")
@@ -88,13 +94,33 @@ module Stylesheets
     out << "#{label}: color-mix" if css.include?("color-mix(")
     rules(css).each do |selector, body|
       next unless body.include?("var(--color-power-")
-      out << "#{label}: --color-power- used outside a power badge rule (#{selector})" unless selector.match?(/\.power-badge/)
+      next if selector.split(",").all? { |part| part.match?(/\.power-badge--/) }
+      out << "#{label}: --color-power- used outside a power badge rule (#{selector})"
     end
     out
   end
 end
 
 module Contrast
+  # The documented pairs (spec FR-3), other than the power pairs.
+  # [foreground, background, minimum ratio]. Each pair appears once, with its
+  # higher minimum where the spec lists two uses.
+  DOCUMENTED_PAIRS = [
+    [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ],
+    [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ],
+    [ "link", "page", 4.5 ], [ "link", "surface", 4.5 ],
+    [ "link-visited", "page", 4.5 ], [ "link-visited", "surface", 4.5 ],
+    [ "on-primary", "primary", 4.5 ], [ "on-primary", "primary-pressed", 4.5 ],
+    [ "primary", "page", 3.0 ], [ "primary", "surface", 3.0 ],
+    [ "primary-pressed", "page", 3.0 ], [ "primary-pressed", "surface", 3.0 ],
+    [ "border", "page", 3.0 ], [ "border", "surface", 3.0 ],
+    [ "danger", "page", 4.5 ], [ "danger", "surface", 4.5 ],
+    [ "on-danger", "danger", 4.5 ], [ "on-danger", "danger-pressed", 4.5 ],
+    [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
+    [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ],
+    [ "disabled-text", "disabled-fill", 3.0 ]
+  ].freeze
+
   module_function
 
   def channel(value)
