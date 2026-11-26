@@ -265,6 +265,11 @@ RSpec.describe Trucebearer::Adjudicator::Unit do
       before = Marshal.load(Marshal.dump(frozen))
       expect(described_class.from_h(frozen)).to eq(unit)
       expect(frozen).to eq(before)
+      parsed = JSON.parse(JSON.generate(valid))
+      built = described_class.from_h(parsed)
+      parsed["power"] << "x"
+      parsed["location"]["province"] << "x"
+      expect(built).to eq(unit)
     end
 
     it "refuses an impossible unit written as a hash (AC-5.10)" do
@@ -396,7 +401,7 @@ Run:
 bundle exec rspec spec/trucebearer/adjudicator/unit_spec.rb spec/trucebearer/adjudicator/dislodged_unit_spec.rb
 ```
 
-Expected: every example fails with `NameError: uninitialized constant Trucebearer::Adjudicator::Unit` (the interface-examples spec fails the same way). That is the right reason.
+Expected: each spec file fails to load with `NameError: uninitialized constant Trucebearer::Adjudicator::Unit`, and RSpec reports "0 examples, 0 failures, N errors occurred outside of examples" (the interface-examples spec fails the same way, since `describe Unit` is evaluated on load). That is the right reason.
 
 ### Step 4: Code
 
@@ -957,7 +962,7 @@ Run:
 bundle exec rspec spec/trucebearer/adjudicator/position_spec.rb spec/trucebearer/adjudicator/interface_examples_spec.rb
 ```
 
-Expected: fail with `NameError: uninitialized constant Trucebearer::Adjudicator::Position`.
+Expected: the spec files fail to load with `NameError: uninitialized constant Trucebearer::Adjudicator::Position` (reported as errors outside of examples).
 
 ### Step 2: Code
 
@@ -1229,6 +1234,11 @@ RSpec.describe Trucebearer::Adjudicator::Order do
       order = O.from_h(Ractor.make_shareable(parsed))
       expect(parsed).to eq(before)
       expect(order.destination).to eq(L.new(province: :spa, coast: :nc))
+      fresh = JSON.parse(JSON.generate(move))
+      built = O.from_h(fresh)
+      fresh["power"] << "x"
+      fresh["destination"]["province"] << "x"
+      expect(built).to eq(O::Move.new(power: :france, at: :mao, destination: L.new(province: :spa, coast: :nc)))
     end
   end
 
@@ -1663,7 +1673,6 @@ Add to `interface_examples_spec.rb`:
       orders.each { |order| expect(O.from_h(JSON.parse(JSON.generate(order.to_h)))).to eq(order) }
     end
   end
-end
 ```
 
 That nothing else in `interface.md` changes is checked by the `git diff` command in Step 4, not by a spec, since a spec that diffs against `main` would break on a shallow CI checkout.
