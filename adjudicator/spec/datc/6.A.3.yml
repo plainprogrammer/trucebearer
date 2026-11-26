@@ -1,0 +1,8 @@
+case: "6.A.3"
+summary: A fleet may not move to an inland province
+position:
+  units:
+    - {power: germany, type: fleet, at: kie}
+orders:
+  - order: {type: move, power: germany, at: kie, destination: mun}
+    check: {legal: false, reason: not_reachable}

@@ -1,0 +1,8 @@
+case: "6.B.1"
+summary: A fleet that can reach both coasts must name one
+position:
+  units:
+    - {power: france, type: fleet, at: por}
+orders:
+  - order: {type: move, power: france, at: por, destination: spa}
+    check: {legal: false, reason: coast_required}

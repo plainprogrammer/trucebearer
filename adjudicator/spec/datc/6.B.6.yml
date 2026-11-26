@@ -1,0 +1,20 @@
+case: "6.B.6"
+summary: Orders around Spain, where the other coast cuts a support, are all legal
+position:
+  units:
+    - {power: england, type: fleet, at: iri}
+    - {power: england, type: fleet, at: nao}
+    - {power: france, type: fleet, at: "spa/nc"}
+    - {power: france, type: fleet, at: mao}
+    - {power: italy, type: fleet, at: gol}
+orders:
+  - order: {type: support_move, power: england, at: iri, from: nao, to: mao}
+    check: {legal: true}
+  - order: {type: move, power: england, at: nao, destination: mao}
+    check: {legal: true}
+  - order: {type: support_hold, power: france, at: spa, target: mao}
+    check: {legal: true}
+  - order: {type: hold, power: france, at: mao}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: gol, destination: "spa/sc"}
+    check: {legal: true}

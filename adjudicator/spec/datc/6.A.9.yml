@@ -1,0 +1,8 @@
+case: "6.A.9"
+summary: Provinces that touch for an army may not touch for a fleet
+position:
+  units:
+    - {power: italy, type: fleet, at: rom}
+orders:
+  - order: {type: move, power: italy, at: rom, destination: ven}
+    check: {legal: false, reason: not_reachable}

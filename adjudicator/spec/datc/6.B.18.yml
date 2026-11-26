@@ -1,0 +1,11 @@
+case: "6.B.18"
+summary: An army may be convoyed out of a split-coast province, and the convoy order is legal
+position:
+  units:
+    - {power: turkey, type: army, at: bul}
+    - {power: turkey, type: fleet, at: bla}
+orders:
+  - order: {type: move, power: turkey, at: bul, destination: sev}
+    check: {legal: true}
+  - order: {type: convoy, power: turkey, at: bla, from: bul, to: sev}
+    check: {legal: true}

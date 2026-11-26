@@ -1,0 +1,23 @@
+case: "6.D.34"
+summary: A support for a move into the supporter's own province is illegal
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: army, at: sil}
+    - {power: germany, type: fleet, at: bal}
+    - {power: italy, type: army, at: pru}
+    - {power: russia, type: army, at: war}
+    - {power: russia, type: army, at: lvn}
+orders:
+  - order: {type: move, power: germany, at: ber, destination: pru}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: sil, from: ber, to: pru}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: bal, from: ber, to: pru}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: war, from: lvn, to: pru}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: lvn, destination: pru}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: pru, from: lvn, to: pru}
+    check: {legal: false, reason: own_province}

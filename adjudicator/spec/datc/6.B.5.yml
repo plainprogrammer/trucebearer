@@ -1,0 +1,14 @@
+case: "6.B.5"
+summary: A fleet on one coast may not support a move to a province only the other coast touches
+position:
+  units:
+    - {power: france, type: fleet, at: mar}
+    - {power: france, type: fleet, at: "spa/nc"}
+    - {power: italy, type: fleet, at: gol}
+orders:
+  - order: {type: move, power: france, at: mar, destination: gol}
+    check: {legal: true}
+  - order: {type: support_move, power: france, at: spa, from: mar, to: gol}
+    check: {legal: false, reason: not_reachable}
+  - order: {type: hold, power: italy, at: gol}
+    check: {legal: true}

@@ -1,0 +1,9 @@
+case: "6.B.2"
+summary: A fleet that can reach only one coast must still name it
+departure: true
+position:
+  units:
+    - {power: france, type: fleet, at: gas}
+orders:
+  - order: {type: move, power: france, at: gas, destination: spa}
+    check: {legal: false, reason: coast_required}

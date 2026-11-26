@@ -1,0 +1,17 @@
+case: "6.G.19"
+summary: A convoy order from a fleet that no minimal chain needs is illegal
+position:
+  units:
+    - {power: france, type: army, at: mar}
+    - {power: france, type: fleet, at: wes}
+    - {power: italy, type: fleet, at: gol}
+    - {power: italy, type: army, at: spa}
+orders:
+  - order: {type: move, power: france, at: mar, destination: spa}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: wes, from: mar, to: spa}
+    check: {legal: false, reason: not_on_chain}
+  - order: {type: convoy, power: italy, at: gol, from: mar, to: spa}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: spa, destination: mar}
+    check: {legal: true}

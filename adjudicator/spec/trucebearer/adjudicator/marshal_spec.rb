@@ -38,7 +38,7 @@ RSpec.describe "Marshal round trips of the value objects" do
     end
   end
 
-  # [label, object]. Every value object the Issue names; CheckResult joins when #11 lands.
+  # [label, object]. Every value object: the ones the Issue names, and CheckResult (#11).
   objects = [
     ["Location with a coast", -> { L.new(province: :spa, coast: :nc) }],
     ["Location without a coast", -> { L.new(province: :bud) }],
@@ -56,7 +56,9 @@ RSpec.describe "Marshal round trips of the value objects" do
     ["MoveViaConvoy", -> { O::MoveViaConvoy.new(power: :england, at: :lon, to: :wal) }],
     ["SupportHold", -> { O::SupportHold.new(power: :germany, at: :mun, target: :ber) }],
     ["SupportMove", -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) }],
-    ["Convoy", -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) }]
+    ["Convoy", -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) }],
+    ["CheckResult, legal", -> { TA::CheckResult.new(legal: true, reasons: []) }],
+    ["CheckResult, illegal", -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }]
   ]
 
   it "returns an equal position whose units are frozen, for the 1901 start (the Issue's own example)" do
@@ -180,7 +182,10 @@ RSpec.describe "Marshal round trips of the value objects" do
       [O::MoveViaConvoy, ->(h) { h.merge("to" => "xyz") }, /"xyz"/],
       [O::SupportHold, ->(h) { h.merge("target" => "spa/nc") }, /"spa\/nc"/],
       [O::SupportMove, ->(h) { h.merge("to" => "spa/nc") }, /"spa\/nc"/],
-      [O::Convoy, ->(h) { h.merge("from" => "xyz") }, /"xyz"/]
+      [O::Convoy, ->(h) { h.merge("from" => "xyz") }, /"xyz"/],
+      [TA::CheckResult, ->(h) { h.merge("format" => 2) }, /format/],
+      [TA::CheckResult, ->(h) { h.merge("reasons" => ["bogus"]) }, /"bogus"/],
+      [TA::CheckResult, ->(h) { h.merge("legal" => true) }, /no reasons/]
     ]
     bases = {
       TA::Location => -> { L.new(province: :bud) },
@@ -192,7 +197,8 @@ RSpec.describe "Marshal round trips of the value objects" do
       O::MoveViaConvoy => -> { O::MoveViaConvoy.new(power: :england, at: :lon, to: :wal) },
       O::SupportHold => -> { O::SupportHold.new(power: :germany, at: :mun, target: :ber) },
       O::SupportMove => -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) },
-      O::Convoy => -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) }
+      O::Convoy => -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) },
+      TA::CheckResult => -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }
     }
 
     spots.each_with_index do |(klass, change, message), index|

@@ -1,0 +1,8 @@
+case: "6.B.3"
+summary: A fleet naming a coast it can't reach is refused, not corrected
+position:
+  units:
+    - {power: france, type: fleet, at: gas}
+orders:
+  - order: {type: move, power: france, at: gas, destination: "spa/sc"}
+    check: {legal: false, reason: coast_unreachable}

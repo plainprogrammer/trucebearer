@@ -10,10 +10,10 @@ require_relative "../../support/board"
 # under Errors), run as a spec. Each example is built as the document builds it.
 #
 # Excluded, because they belong to later issues (AC-7.3):
-#   - both TA::CheckResult examples, and the three CheckResult lines at the end of
-#     "Impossible objects" (#11);
 #   - the TA::Outcome and TA::Adjudication examples (#14);
-#   - the TA.check, TA.legal_orders and TA.adjudicate calls in their own sections.
+#   - the TA.legal_orders and TA.adjudicate calls in their own sections.
+# The TA::CheckResult examples, the three CheckResult lines at the end of "Impossible
+# objects" and the TA.check examples run in check_examples_spec.rb (#11).
 RSpec.describe "docs/interface.md examples" do
   describe "TA::Location, TA::Unit and TA::DislodgedUnit" do
     it "gives the hash forms the document shows" do
