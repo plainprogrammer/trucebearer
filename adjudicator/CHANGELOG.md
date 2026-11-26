@@ -13,6 +13,7 @@ Releases are git tags named `adjudicator-vX.Y.Z`.
 - `docs/ruleset.md` records the DATC v3.4 options the interface relies on, and where it departs from the preferred results. (#5)
 - `bin/release` releases the gem in one command: it bumps the version, moves the "Unreleased" entries under the new version, regenerates `Gemfile.lock`, commits and tags `adjudicator-vX.Y.Z`. It never pushes or publishes, and `--dry-run` shows the plan. (#8)
 - `docs/reference/datc-v3.4.html`, an unmodified copy of the DATC v3.4, so the section numbers cited in fixtures and `docs/ruleset.md` can be checked. It is for reading only and is not packaged in the gem. (#58)
+- The classic map as a data file, `data/maps/classic.yml` (75 provinces, 34 supply centers, 22 home centers, army and fleet adjacency with split coasts, and the 1901 starting units), with `TA::Map.classic` and its queries, `TA::Location` and `TA::InvalidInput`. `Map#starting_position` arrives with #10; until then the starting units are available through an internal reader. (#9)
 
 ### Changed
 
