@@ -6,8 +6,8 @@
  * cascade order does not depend on that order.
  *
  *   tokens.css      design tokens only
- *   base.css        reset and plain elements
+ *   base.css        reset, plain elements and the one @font-face
  *   layout.css      header, main, action area
- *   components.css  button, list, field, choice, power badge
+ *   components.css  button, list, field, choice, power badge, unit and supply-center icons, .mono
  *   styleguide.css  rules for the development-only /styleguide page
  */

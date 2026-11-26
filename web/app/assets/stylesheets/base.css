@@ -1,5 +1,15 @@
 @layer reset, base, layout, components, styleguide;
 
+/* The one web font: IBM Plex Mono Medium, Latin, served by this app. The face is
+   declared for 400 to 700 so the browser never fakes a bold of it. */
+@font-face {
+  font-family: "Plex Mono";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("IBMPlexMono-Medium-Latin1.woff2") format("woff2");
+}
+
 @layer reset {
   *,
   *::before,

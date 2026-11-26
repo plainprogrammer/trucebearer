@@ -54,6 +54,8 @@ A mobile-first base stylesheet (tokens, layout, buttons, lists, form controls, p
 
 ### The palette (derived once, recorded here)
 
+> **Superseded by spec 2.0.0.** These colors were derived by a method in version 1.2.1. They are replaced by fixed values; see "The palette, final" in the version 2.0 phases below.
+
 No edition of the game was consulted. Hue start 17 degrees, step 51.43 degrees, saturation 60 percent. Lightness is the highest whole percent, at most 50, at which white text reaches at least 4.7 on the fill. Contrast is computed with the WCAG 2.2 formula and shown rounded down.
 
 | Power | Nominal hue | Lightness | Hex | Hue of the hex | White on it | On `page` | On `surface` |
@@ -1914,3 +1916,1113 @@ The code in the phases above is what was first written. The independent implemen
 | `--_min-width` is set only on a button that is a direct item of the action area (or of a `button_to` form there), not on every item | A custom property is inherited, so a button nested deeper in an item would have taken `min-content` instead of `--tap-min` |
 | `Stylesheets.rules` reads a selector as the text after the last `;`; the scanner drops every `--name` before looking for color words, reads `px` through a custom property that a font size uses, and knows the `-moz-` link colors | Round 2 of the review found the `@layer` line before `tokens.css` hid its `:root` from the root font-size check, and some false positives on custom names |
 | The rules spec uses `!sel.include?(":")` instead of ActiveSupport's `exclude?` | `spec/styles` must pass when run on its own, without Rails loaded |
+---
+
+# Version 2.0 phases (added for Issue #81, spec 020 v2.0.2)
+
+> **Execution order: 7, 10, 8, 9, 11, 12, 13.** Phase 7's helper spec stays red until Phase 10 writes the helper, and a red spec file stops a whole `bundle exec rspec` run. Phase 10 needs nothing from Phases 8 and 9, so it runs straight after Phase 7, and nothing is pushed while the suite is red. The phases keep their numbers because the spec coverage table refers to them.
+>
+> Phases 0 to 6 above built version 1.2.1 and stay as the record of that work. Phases 7 to 13 below build version 2.0.x. Where they contradict a phase above, these win. The old derivation under "The palette" is superseded (see Phase 8).
+
+## Global Constraints (2.0)
+
+- Work only in `web/`. The pull request touches nothing else (`git diff --name-only main...HEAD` lists only `web/` paths).
+- Test first: every phase starts with a failing spec that is run and seen to fail. The very first test written is the helper spec of Phase 7.
+- No new gem, pin or Node file. Nokogiri is already in the bundle through Rails and Capybara, and the helper uses it. The font is an asset, not a dependency.
+- Palette and power hexes go in exactly as Issue #81 gives them. If a documented pair fails, stop and ask with the numbers. Never change a value.
+- The Capybara layout specs of #73 must pass unchanged. A failure is a defect to fix in the stylesheet.
+- No request to a third party at runtime. Every file the page uses is served by this app.
+- No text from the game's rulebook or the DATC; nothing named after the game's trademark or its three-letter prefix.
+- Every commit message is a plain imperative sentence and ends with the `Co-Authored-By:` trailer naming the model the session runs on (Claude Sonnet 5.5). One git operation per shell call.
+
+## Goal (2.0)
+
+Replace the #20 palette with the fixed Cold War palette, add one self-hosted monospace, add `unit_icon`, `supply_center_icon` and `.mono`, restyle what #20 built, extend `/styleguide`, and write `web/docs/design-system.md`.
+
+## Pre-implementation gates (2.0)
+
+- **Simplicity:** three parts only: the stylesheets and tokens, one icon helper module, and the documents. No new dependency. The font file is not a dependency: it is one static asset, added because no system monospace looks the same on every phone and a six-character join code is read aloud.
+- **Anti-abstraction:** the helper reads the master drawings and sets attributes on them. It does not wrap them in a component class, a builder or a template engine.
+- **Integration-first:** the contract is the helper's markup (AC-7.1, 7.6), written as a helper spec before the helper.
+
+## Decisions the spec left to the plan
+
+| Decision | Choice | Why |
+|---|---|---|
+| Where the artwork copies live | `web/app/assets/images/icons/`, five files copied byte for byte from `assets/icons/` with `cp` | The Docker build context is `web/`, so the app can never read the root folder. This is the Rails default place for images, so nothing new is configured. Propshaft will also serve them at a digested URL, which is harmless (they are public CC BY-SA files) |
+| How the helper reads them | Read the five files once when the module loads, into a frozen hash. For each icon it parses the stored text with Nokogiri, edits the copy and prints it | No file read per icon, no cache to invalidate, and a missing file stops the app at boot |
+| Where `@font-face` lives | `base.css`, after the layer line, outside every layer | `@font-face` is not a layered rule. `base.css` already holds the element-level rules |
+| The font's URL | `url("IBMPlexMono-Medium-Latin1.woff2")`, a bare file name | Propshaft resolves it to the digested `/assets/...` path, and a bare name can name no scheme or host (AC-6.2) |
+| How the scanner allows exactly one `@font-face` | `Stylesheets.violations(css, label, font_face: true)` removes the first `@font-face { ... }` block before scanning, for `base.css` only. A second block, or a `url(` anywhere else, is still flagged. A separate font spec holds the exact shape of the one block | The scanner stays the one place that bans `url(`; the exception is stated where it is made |
+| Faux bold | The `@font-face` declares `font-weight: 400 700` for the one Medium file | The browser then never fakes a bold of it |
+| Tag geometry | Tile `rect` at x 20.75, y 20.75, 10.5 by 10.5, `stroke-width="1.5"`, so the stroked outer edge is exactly 20 to 32. Initial: `text` at x 26, y 28.8, `text-anchor="middle"`, `font-size="8"` (all in drawing units) | The initial's cap height is about 5.6 units, so it sits centered in the 9-unit inner tile. All of it is inside the corner the artwork leaves empty |
+| Header look | `.app-header` background `ice`, bottom rule `steel` | Spec 2.0.2, FR-2. Maintainer sees it as a design call in the pull request |
+| Font source | `@ibm/plex-mono` 2.5.0 from the npm registry, file `package/fonts/split/woff2/IBMPlexMono-Medium-Latin1.woff2`; license `package/fonts/split/woff2/license.txt` copied as `OFL.txt` | The official IBM Plex release publishes this split file. The tarball's sha1 (`152c0b1dda619ef5f032db258bda798cf278125e`) matches the registry's published value |
+
+### The palette, final (replaces the derivation under "The palette" above)
+
+No method, no tuning: the maintainer's fixed values (decision 42 for powers, decision 41 for the rest). No edition's colors, artwork or fonts were sampled, traced or looked up.
+
+| Power | Token | Value |
+|---|---|---|
+| Austria | `--color-power-austria` | `#586f2a` |
+| England | `--color-power-england` | `#822635` |
+| France | `--color-power-france` | `#744983` |
+| Germany | `--color-power-germany` | `#196666` |
+| Italy | `--color-power-italy` | `#866713` |
+| Russia | `--color-power-russia` | `#994324` |
+| Turkey | `--color-power-turkey` | `#324e8f` |
+
+Checked before any code, with the repo's own `Contrast` module: all 31 non-power pairs and all 28 power pairs pass. Lowest ratios: `steel` on `page` 4.14 (needs 3), `focus` on `ice` 3.19 (needs 3), `power-italy` against `ice-pale` 4.25 (needs 3), `power-austria` against `ice-pale` 4.53 (needs 3), `power-italy` on `surface` 5.30 (needs 4.5). Closest hues: England and Russia 25.68 degrees, Italy and Russia 27.93 (need 25).
+
+---
+
+## Phase 7: The required first test (the helper contract, red)
+
+**Implements:** FR-10 (contract) | **Satisfies:** AC-7.1, AC-7.3 (first two examples) | **Files:** create `spec/helpers/icon_helper_spec.rb` | **Interfaces:** `unit_icon(power, type, size: 32, decorative: false)` in `IconHelper`
+
+- [ ] **Step 1: Write the failing spec.** This is the first test written.
+
+```ruby
+require "rails_helper"
+
+RSpec.describe IconHelper, type: :helper do
+  it "draws an army as an inline svg labelled with its type and power (AC-7.1)" do
+    svg = Nokogiri::HTML5.fragment(helper.unit_icon(:austria, :army)).at_css("svg")
+    expect(svg).not_to be_nil
+    expect(svg["role"]).to eq("img")
+    expect(svg["aria-label"]).to eq("Army, Austria")
+  end
+
+  it "raises ArgumentError for a type that is not army or fleet (AC-7.3)" do
+    expect { helper.unit_icon(:austria, :submarine) }.to raise_error(ArgumentError)
+  end
+end
+```
+
+- [ ] **Step 2: Run it and see it fail.** From `web/`: `bundle exec rspec spec/helpers/icon_helper_spec.rb`. Expected: FAIL at load with `uninitialized constant IconHelper`.
+- [ ] **Step 3: Commit** `Add the failing helper spec for unit_icon`.
+
+---
+
+## Phase 8: The palette, the tokens and the restyled header
+
+**Implements:** FR-2, FR-3, FR-9, FR-5 (header only), Story 2 | **Satisfies:** AC-2.1, 2.2, 2.3, 2.9, 2.10, 4.1, 4.2, 4.6, 5.4 (swatches and samples) | **Files:** modify `spec/support/stylesheets.rb`, `spec/styles/contrast_spec.rb`, `spec/styles/stylesheet_rules_spec.rb`, `spec/requests/styleguide_spec.rb`, `app/assets/stylesheets/tokens.css`, `layout.css`, `styleguide.css`, `app/helpers/styleguide_helper.rb`, `app/views/styleguide/show.html.erb` (swatch list only), `docs/specs/020-base-stylesheet/plan.md` | **Interfaces:** `Contrast::DOCUMENTED_PAIRS` (31 pairs), `Stylesheets.ice_uses(css)`
+
+- [ ] **Step 1: Write the failing specs.**
+
+In `spec/support/stylesheets.rb`, replace `Contrast::DOCUMENTED_PAIRS` with the 31 pairs of spec FR-3 (each once, at its higher minimum), and add the ice scan next to `rules`:
+
+```ruby
+  DOCUMENTED_PAIRS = [
+    [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ], [ "text", "ice", 4.5 ], [ "text", "ice-pale", 4.5 ],
+    [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ], [ "text-muted", "ice-pale", 4.5 ],
+    [ "link", "page", 4.5 ], [ "link", "surface", 4.5 ],
+    [ "link-visited", "page", 4.5 ], [ "link-visited", "surface", 4.5 ],
+    [ "on-primary", "primary", 4.5 ], [ "on-primary", "primary-pressed", 4.5 ],
+    [ "primary", "page", 3.0 ], [ "primary", "surface", 3.0 ],
+    [ "primary-pressed", "page", 3.0 ], [ "primary-pressed", "surface", 3.0 ],
+    [ "border", "page", 3.0 ], [ "border", "surface", 3.0 ],
+    [ "danger", "page", 4.5 ], [ "danger", "surface", 4.5 ],
+    [ "on-danger", "danger", 4.5 ], [ "on-danger", "danger-pressed", 4.5 ],
+    [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
+    [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ], [ "focus", "ice", 3.0 ],
+    [ "steel", "page", 3.0 ], [ "steel", "surface", 3.0 ],
+    [ "disabled-text", "disabled-fill", 3.0 ]
+  ].freeze
+```
+
+```ruby
+  # [[property, line], ...] for each declaration that reads --color-ice (not --color-ice-pale).
+  def ice_uses(css)
+    declarations(css).select { |_, value, _| value.match?(/var\(\s*--color-ice\s*[,)]/) }.map { |prop, _, line| [ prop, line ] }
+  end
+```
+
+In `spec/styles/contrast_spec.rb` replace `power_pairs`, and add the palette, `on-power` and `ice` examples:
+
+```ruby
+  power_pairs = powers.flat_map do |id|
+    [ [ "on-power", "power-#{id}", 4.5 ], [ "power-#{id}", "surface", 4.5 ],
+      [ "power-#{id}", "page", 3.0 ], [ "power-#{id}", "ice-pale", 3.0 ] ]
+  end
+
+  # The Cold War palette (decisions 41 and 42). Held exactly: nobody tunes a value by eye (AC-2.10).
+  palette = {
+    "page" => "#eef3f6", "surface" => "#ffffff", "ice" => "#a7c4d4", "ice-pale" => "#dde8ee", "steel" => "#4f7a93",
+    "text" => "#22262b", "text-muted" => "#4a5560", "border" => "#65727e",
+    "link" => "#2c5873", "link-visited" => "#5b3a7a",
+    "primary" => "#3d6178", "primary-pressed" => "#2b4657", "on-primary" => "#ffffff",
+    "danger" => "#9e2a22", "danger-pressed" => "#7a1f19", "on-danger" => "#ffffff",
+    "focus" => "#a8480a", "disabled-text" => "#56606a", "disabled-fill" => "#d3dce2", "on-power" => "#ffffff",
+    "power-austria" => "#586f2a", "power-england" => "#822635", "power-france" => "#744983",
+    "power-germany" => "#196666", "power-italy" => "#866713", "power-russia" => "#994324", "power-turkey" => "#324e8f"
+  }.transform_keys { |name| "--color-#{name}" }.freeze
+
+  it "holds every palette and power value exactly as the spec writes it (AC-2.10)" do
+    expect(colors).to eq(palette)
+  end
+
+  it "keeps on-power white, the white the artwork's marks are drawn in (AC-2.10)" do
+    expect(colors["--color-on-power"]).to eq("#ffffff")
+  end
+
+  it "reads --color-ice only as a background (AC-2.9)" do
+    Stylesheets.files.each do |file|
+      misuse = Stylesheets.ice_uses(Stylesheets.read(file)).reject { |prop, _| %w[background background-color].include?(prop) }
+      expect(misuse).to be_empty, "#{File.basename(file)} reads --color-ice in #{misuse.map(&:join).join(', ')}"
+    end
+  end
+
+  it "finds a misuse of --color-ice when there is one (the check itself)" do
+    expect(Stylesheets.ice_uses("a { color: var(--color-ice); }")).to eq([ [ "color", 1 ] ])
+    expect(Stylesheets.ice_uses("a { background: var(--color-ice-pale); }")).to be_empty
+  end
+```
+
+In `spec/styles/stylesheet_rules_spec.rb`, add an example for the header (FR-2), then `--font-mono` to the token-group list:
+
+```ruby
+  it "sets the header on ice with a steel rule, and reads steel nowhere else (FR-2)" do
+    layout = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "layout.css")))
+    header = layout.find { |selector, _| selector == ".app-header" }&.last.to_s
+    expect(header).to include("background: var(--color-ice)")
+    expect(header).to match(/border-bottom:[^;]*var\(--color-steel\)/)
+    steel_readers = Stylesheets.files.flat_map { |f| Stylesheets.rules(Stylesheets.read(f)).select { |_, body| body.include?("var(--color-steel)") }.map(&:first) }
+    expect(steel_readers).to eq([ ".app-header" ])
+  end
+```
+
+and then add `--font-mono` to the token-group list and add `expect(t["--font-mono"]).to eq('"Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace')` (AC-8.1).
+
+In `spec/requests/styleguide_spec.rb`, the only hand edit is the comment at the top that says "25 of them", which becomes "31 of them". The examples need no change: it reads `Contrast::DOCUMENTED_PAIRS` and the token file, so the new pairs and swatches fail until the view and helper catch up.
+
+- [ ] **Step 2: Run and see them fail.** `bundle exec rspec spec/styles spec/requests/styleguide_spec.rb`. Expected: FAIL: the palette example (old values), the missing `ice`, `ice-pale`, `steel` tokens (AC-2.3), `--font-mono` missing, the swatch and sample counts.
+- [ ] **Step 3: Write `tokens.css`.** Replace the comment and the color block; keep the type, spacing and sizing blocks, adding `--font-mono`:
+
+```css
+@layer reset, base, layout, components, styleguide;
+
+/*
+ * Design tokens. The only place a color, font stack, size or step is defined.
+ * Every color has a documented pair in spec/styles/contrast_spec.rb, which
+ * computes each ratio from this file on every run.
+ *
+ * The palette is the Cold War palette of the logo, and the seven power colors
+ * are fixed values the maintainer chose (decisions 41 and 42). They are held
+ * exactly by the contrast spec; do not adjust one by eye. See
+ * web/docs/design-system.md.
+ */
+:root {
+  /* Ground: pale blue paper, white surfaces, the Ice tints and the decorative Steel */
+  --color-page: #eef3f6;
+  --color-surface: #ffffff;
+  --color-ice: #a7c4d4;
+  --color-ice-pale: #dde8ee;
+  --color-steel: #4f7a93;
+
+  /* Text and edges: cool Iron ink */
+  --color-text: #22262b;
+  --color-text-muted: #4a5560;
+  --color-border: #65727e;
+
+  /* Links */
+  --color-link: #2c5873;
+  --color-link-visited: #5b3a7a;
+
+  /* Actions */
+  --color-primary: #3d6178;
+  --color-primary-pressed: #2b4657;
+  --color-on-primary: #ffffff;
+  --color-danger: #9e2a22;
+  --color-danger-pressed: #7a1f19;
+  --color-on-danger: #ffffff;
+
+  /* Focus and disabled */
+  --color-focus: #a8480a;
+  --color-disabled-text: #56606a;
+  --color-disabled-fill: #d3dce2;
+
+  /* Powers: shown only with the power's name or initial */
+  --color-on-power: #ffffff;
+  --color-power-austria: #586f2a;
+  --color-power-england: #822635;
+  --color-power-france: #744983;
+  --color-power-germany: #196666;
+  --color-power-italy: #866713;
+  --color-power-russia: #994324;
+  --color-power-turkey: #324e8f;
+
+  /* Type: system sans for text, one self-hosted monospace for codes and tags */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* ...the remaining type, spacing and sizing tokens are unchanged... */
+}
+```
+
+(The unchanged tokens stay exactly as they are in the file; only the lines above are edited. The font family name is the only quoted name not read from a token.)
+
+- [ ] **Step 4: Restyle the header.** In `layout.css`, in `.app-header`:
+
+```css
+  .app-header {
+    padding-top: env(safe-area-inset-top, 0px);
+    background: var(--color-ice);
+    border-bottom: var(--border-width) solid var(--color-steel);
+  }
+```
+
+- [ ] **Step 5: Teach the style guide the new tokens.** In `app/helpers/styleguide_helper.rb` replace `COLOR_TOKENS` and `PAIRS` (same order as `Contrast::DOCUMENTED_PAIRS`):
+
+```ruby
+  COLOR_TOKENS = %w[
+    page surface ice ice-pale steel text text-muted border link link-visited primary primary-pressed on-primary
+    danger danger-pressed on-danger focus disabled-text disabled-fill on-power
+  ].freeze
+
+  PAIRS = [
+    [ "text", "page", "4.5" ], [ "text", "surface", "4.5" ], [ "text", "ice", "4.5" ], [ "text", "ice-pale", "4.5" ],
+    [ "text-muted", "page", "4.5" ], [ "text-muted", "surface", "4.5" ], [ "text-muted", "ice-pale", "4.5" ],
+    [ "link", "page", "4.5" ], [ "link", "surface", "4.5" ],
+    [ "link-visited", "page", "4.5" ], [ "link-visited", "surface", "4.5" ],
+    [ "on-primary", "primary", "4.5" ], [ "on-primary", "primary-pressed", "4.5" ],
+    [ "primary", "page", "3" ], [ "primary", "surface", "3" ],
+    [ "primary-pressed", "page", "3" ], [ "primary-pressed", "surface", "3" ],
+    [ "border", "page", "3" ], [ "border", "surface", "3" ],
+    [ "danger", "page", "4.5" ], [ "danger", "surface", "4.5" ],
+    [ "on-danger", "danger", "4.5" ], [ "on-danger", "danger-pressed", "4.5" ],
+    [ "danger-pressed", "page", "3" ], [ "danger-pressed", "surface", "3" ],
+    [ "focus", "page", "3" ], [ "focus", "surface", "3" ], [ "focus", "ice", "3" ],
+    [ "steel", "page", "3" ], [ "steel", "surface", "3" ],
+    [ "disabled-text", "disabled-fill", "3" ]
+  ].freeze
+```
+
+In `styleguide.css`, add the three missing swatch and ground classes beside the other `.sg-bg-*` lines (each followed by a space before `{`, which the request spec looks for):
+
+```css
+  .sg-bg-ice { background: var(--color-ice); }
+  .sg-bg-ice-pale { background: var(--color-ice-pale); }
+  .sg-bg-steel { background: var(--color-steel); }
+```
+
+- [ ] **Step 6: Mark the old derivation superseded.** In `docs/specs/020-base-stylesheet/plan.md`, under the heading "### The palette (derived once, recorded here)" add as its first line: `> **Superseded by spec 2.0.0.** These colors were derived by a method in version 1.2.1. They are replaced by fixed values; see "The palette, final" in the version 2.0 phases below.`
+- [ ] **Step 7: Run and see them pass.** `bundle exec rspec spec/styles spec/requests` then `bundle exec rspec spec/system`. Expected: PASS, including the #73 layout specs unchanged. If any documented pair fails, stop and ask with the numbers.
+- [ ] **Step 8: Commit** `Replace the palette with the Cold War colors and restyle the header`.
+
+---
+
+## Phase 9: The monospace font, `.mono` and the notices
+
+**Implements:** FR-11, FR-1 (the one `url(`), Story 8, Story 6 (amended) | **Satisfies:** AC-6.2, 6.3, 8.1, 8.2 (static and loading), 8.3, 8.4 | **Files:** create `app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2`, `app/assets/fonts/OFL.txt`, `spec/styles/font_spec.rb`, `spec/requests/font_spec.rb`, `spec/system/font_spec.rb`; modify `spec/support/stylesheets.rb`, `spec/styles/stylesheet_rules_spec.rb`, `app/assets/stylesheets/base.css`, `components.css`, `NOTICE` | **Interfaces:** `Stylesheets.violations(css, label, token_file: false, font_face: false)`, class `.mono`
+
+- [ ] **Step 1: Write the failing specs.**
+
+`spec/styles/font_spec.rb`:
+
+```ruby
+require "spec_helper"
+require "digest"
+require_relative "../support/stylesheets"
+
+RSpec.describe "The self-hosted monospace (AC-6.2, 8.1 to 8.4)" do
+  root = File.expand_path("../..", __dir__)
+  fonts = File.join(root, "app/assets/fonts")
+  file = "IBMPlexMono-Medium-Latin1.woff2"
+  face = /@font-face\s*\{[^{}]*\}/m
+
+  let(:sheets) { Stylesheets.files.to_h { |f| [ File.basename(f), Stylesheets.read(f) ] } }
+  let(:notice) { File.read(File.join(root, "NOTICE")) }
+
+  it "holds exactly one font file and the license beside it (AC-8.3)" do
+    expect(Dir.children(fonts)).to match_array([ file, "OFL.txt" ])
+    expect(File.read(File.join(fonts, "OFL.txt"))).to include("SIL OPEN FONT LICENSE Version 1.1")
+  end
+
+  it "records the file's SHA-256, source and license in NOTICE (AC-8.3, 8.4)" do
+    sha = Digest::SHA256.file(File.join(fonts, file)).hexdigest
+    expect(notice).to include("SHA-256: #{sha}")
+    expect(notice).to include("IBM Plex Mono")
+    expect(notice).to include("https://registry.npmjs.org/@ibm/plex-mono/-/plex-mono-2.5.0.tgz")
+    expect(notice).to include("SIL Open Font License")
+  end
+
+  it "carries the CC BY-SA 4.0 notice for the inlined artwork (AC-8.4)" do
+    expect(notice).to include("app/assets/images/icons")
+    expect(notice).to include("CC BY-SA 4.0")
+  end
+
+  it "has exactly one @font-face, whose one url() is a bare file name, with swap and a weight range (AC-6.2)" do
+    faces = sheets.values.flat_map { |css| css.scan(face) }
+    expect(faces.size).to eq(1)
+    block = faces.first
+    expect(block.scan(/url\(/i).size).to eq(1)
+    expect(block).to match(/url\(\s*"#{Regexp.escape(file)}"\s*\)/) # no scheme, no host, no folder
+    expect(block).to match(/font-family:\s*"Plex Mono"/)
+    expect(block).to match(/font-display:\s*swap/)
+    expect(block).to match(/font-weight:\s*400 700/)
+    expect(sheets.values.join("\n").gsub(face, "")).not_to match(/url\(/i)
+  end
+
+  it "reads --font-mono only in the .mono rule, which uses the regular weight token (AC-8.2)" do
+    css = sheets.values.join("\n")
+    readers = Stylesheets.rules(css).select { |_, body| body.include?("var(--font-mono)") }
+    expect(readers.map(&:first)).to eq([ ".mono" ])
+    expect(readers.first.last).to include("font-weight: var(--weight-regular)")
+  end
+end
+```
+
+`spec/requests/font_spec.rb` (the page really serves the font from this app):
+
+```ruby
+require "rails_helper"
+
+RSpec.describe "The font is served by this app (AC-6.2, 6.3)", type: :request do
+  it "links a stylesheet whose font url is a local path that answers with the file" do
+    get "/styleguide"
+    hrefs = Nokogiri::HTML5(response.body).css("link[rel=stylesheet]").map { |l| l["href"] }
+    expect(hrefs).to all(start_with("/"))
+    css = hrefs.map { |href| get(href) && response.body }.join("\n")
+    path = css[/url\("(\/assets\/IBMPlexMono-Medium-Latin1-[0-9a-f]+\.woff2)"\)/, 1]
+    expect(path).not_to be_nil
+    get path
+    expect(response).to have_http_status(:ok)
+    expect(response.body.b).to eq(File.binread(Rails.root.join("app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2")))
+  end
+end
+```
+
+In `spec/support/stylesheets.rb` change the scanner so one conforming block is allowed where the caller says so:
+
+```ruby
+  FONT_FACE = /@font-face\s*\{[^{}]*\}/m
+
+  def violations(css, label, token_file: false, font_face: false)
+    css = css.sub(FONT_FACE, "") if font_face # one block; font_spec holds its exact shape
+    out = []
+    # ...the rest of the method is unchanged...
+```
+
+In `spec/styles/stylesheet_rules_spec.rb`, the "no stray colors..." example passes `font_face: File.basename(f) == "base.css"`, and the scanner example for AC-6.2 becomes:
+
+```ruby
+    it "flags imports, a second font face and url( (AC-6.2)" do
+      expect(found("@import 'x.css';")).not_to be_empty
+      expect(found("@font-face { font-family: X; }")).not_to be_empty
+      expect(found("a { background: url(x.png); }")).not_to be_empty
+      one = '@font-face { font-family: "Plex Mono"; src: url("a.woff2"); }'
+      expect(Stylesheets.violations(one, "x.css", font_face: true)).to be_empty
+      expect(Stylesheets.violations("#{one} #{one}", "x.css", font_face: true)).not_to be_empty
+      expect(Stylesheets.violations("#{one} a { background: url(x.png); }", "x.css", font_face: true)).not_to be_empty
+    end
+```
+
+`spec/system/font_spec.rb` (the browser half of AC-6.2, 6.3 and 8.2: it needs the font and the stylesheet, not the style guide's new sections):
+
+```ruby
+require "rails_helper"
+
+RSpec.describe "The font in the browser", type: :system do
+  before { visit "/styleguide" }
+
+  def load_font = page.evaluate_async_script(%(const done = arguments[0]; document.fonts.load('1rem "Plex Mono"').then((f) => done(f.length));))
+
+  it "really loads the one face (AC-8.2)" do
+    expect(load_font).to eq(1)
+  end
+
+  it "makes every request to this app, with the one font file as the only font (AC-6.3)" do
+    load_font
+    entries = evaluate_script("performance.getEntriesByType('resource').map((e) => e.name)")
+    origin = evaluate_script("window.location.origin")
+    expect(entries).not_to be_empty
+    expect(entries).to all(start_with(origin))
+    expect(entries.grep(/\.(woff2?|ttf|otf)(\?|\z)/).size).to eq(1)
+    expect(entries.grep(/\.woff2\z/).size).to eq(1)
+  end
+end
+```
+
+- [ ] **Step 2: Run and see them fail.** `bundle exec rspec spec/styles spec/requests/font_spec.rb spec/system/font_spec.rb`. Expected: FAIL: no font folder, no `@font-face`, no `.mono`, no NOTICE text.
+- [ ] **Step 3: Fetch, verify and add the files.** The tarball is untrusted data: it goes in its own new directory and nothing runs from inside it. From the repository root:
+
+```sh
+work="$(mktemp -d)"; mkdir "$work/dl" "$work/out"
+curl -sS -o "$work/dl/plex-mono-2.5.0.tgz" https://registry.npmjs.org/@ibm/plex-mono/-/plex-mono-2.5.0.tgz
+shasum "$work/dl/plex-mono-2.5.0.tgz"        # expect 152c0b1dda619ef5f032db258bda798cf278125e, the sha1 the registry publishes
+tar -xzf "$work/dl/plex-mono-2.5.0.tgz" -C "$work/out" package/fonts/split/woff2/IBMPlexMono-Medium-Latin1.woff2 package/fonts/split/woff2/license.txt
+mkdir -p web/app/assets/fonts
+cp "$work/out/package/fonts/split/woff2/IBMPlexMono-Medium-Latin1.woff2" web/app/assets/fonts/
+cp "$work/out/package/fonts/split/woff2/license.txt" web/app/assets/fonts/OFL.txt
+shasum -a 256 web/app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2
+```
+
+Expected SHA-256: `41201b658a328b9d00368215c2f1102770f80b15952ab82631e4006255e6365d` (17,868 bytes). If either checksum differs, stop and ask.
+
+- [ ] **Step 4: Add the `@font-face` to `base.css`**, after the layer line and before `@layer reset`:
+
+```css
+/* The one web font: IBM Plex Mono Medium, Latin, served by this app. The face is
+   declared for 400 to 700 so the browser never fakes a bold of it. */
+@font-face {
+  font-family: "Plex Mono";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("IBMPlexMono-Medium-Latin1.woff2") format("woff2");
+}
+```
+
+- [ ] **Step 5: Add `.mono` to `components.css`**, inside `@layer components`, after the power badge rules:
+
+```css
+  /* ---- Mono text: the face for codes, abbreviations and tags ---- */
+  .mono {
+    font-family: var(--font-mono);
+    font-weight: var(--weight-regular);
+  }
+```
+
+- [ ] **Step 6: Add the notices to `web/NOTICE`.** In the "Artwork" paragraph, insert the sentence about the inlined copies before the sentence about Fraunces, and add the "Fonts" section after "Artwork" and before the paragraph that begins "Trucebearer is an independent, unofficial companion":
+
+```
+Artwork
+-------
+The Trucebearer logo, wordmark and icons are licensed under the Creative
+Commons Attribution-ShareAlike 4.0 International License
+(https://creativecommons.org/licenses/by-sa/4.0/), (C) 2026 James
+Thompson, wherever they are copied in this repository, including into
+this folder. The unit and supply-center drawings inlined by the app are
+copies of assets/icons/, kept byte for byte in app/assets/images/icons/,
+and are CC BY-SA 4.0 (see assets/LICENSE). The wordmark is set in Fraunces,
+an SIL Open Font License 1.1 typeface by The Fraunces Project Authors,
+outlined to vector shapes.
+
+Fonts
+-----
+The app serves one font, IBM Plex Mono Medium (Latin subset), (C) 2017 IBM
+Corp. with Reserved Font Name "Plex", under the SIL Open Font License 1.1.
+The license text is in app/assets/fonts/OFL.txt. The file is the unmodified
+IBMPlexMono-Medium-Latin1.woff2 from the @ibm/plex-mono package, release
+2.5.0, https://registry.npmjs.org/@ibm/plex-mono/-/plex-mono-2.5.0.tgz
+SHA-256: 41201b658a328b9d00368215c2f1102770f80b15952ab82631e4006255e6365d
+```
+
+(Only the sentence about the copies is new in "Artwork"; the Fraunces sentence is unchanged. "Plex Mono" in the stylesheet is a CSS family name for the unmodified file, not a modified font.)
+
+- [ ] **Step 7: Run and see them pass.** `bundle exec rspec spec/styles spec/requests spec/system`. Expected: PASS, including `words_spec` (the OFL text and file names contain no forbidden word; the `.woff2` content is skipped).
+- [ ] **Step 8: Commit** `Add the self-hosted IBM Plex Mono and the mono class`.
+
+---
+
+## Phase 10: The unit and supply-center helpers and their artwork
+
+**Implements:** FR-10, Story 7, FR-4 (icons), FR-6 (icon rows) | **Satisfies:** AC-4.4, 7.1 to 7.9 (markup and files) | **Files:** create `app/helpers/icon_helper.rb`, `app/assets/images/icons/{army,army-small,fleet,fleet-small,supply-center}.svg`, `spec/assets/icons_spec.rb`; modify `spec/helpers/icon_helper_spec.rb`, `spec/support/stylesheets.rb`, `spec/styles/stylesheet_rules_spec.rb`, `components.css` | **Interfaces:** `unit_icon(power, type, size: 32, decorative: false)`, `supply_center_icon(owner, size: 32, decorative: false)`
+
+- [ ] **Step 1: Finish the helper spec** (Phase 7's two examples stay; these are added in the same file):
+
+```ruby
+RSpec.describe IconHelper, type: :helper do
+  powers = { "austria" => "Austria", "england" => "England", "france" => "France", "germany" => "Germany",
+             "italy" => "Italy", "russia" => "Russia", "turkey" => "Turkey" }
+  initials = { "austria" => "A", "england" => "E", "france" => "F", "germany" => "G",
+               "italy" => "I", "russia" => "R", "turkey" => "T" }
+  icons = File.expand_path("../../app/assets/images/icons", __dir__)
+
+  def svg_of(html) = Nokogiri::HTML5.fragment(html).at_css("svg")
+  def silhouette_path(file) = Nokogiri::XML(File.read(file)).at_css("#silhouette")["d"]
+
+  describe "#unit_icon" do
+    powers.each do |id, name|
+      %w[army fleet].each do |type|
+        it "labels #{type} of #{id} (AC-7.1)" do
+          expect(svg_of(helper.unit_icon(id, type))["aria-label"]).to eq("#{type.capitalize}, #{name}")
+        end
+      end
+    end
+
+    it "is one inline svg with the stated attributes and parts (AC-7.1)" do
+      html = helper.unit_icon(:austria, :army)
+      svg = svg_of(html)
+      expect(svg["viewBox"]).to eq("0 0 32 32")
+      expect([ svg["width"], svg["height"] ]).to eq(%w[32 32])
+      expect(svg["class"]).to eq("unit-icon unit-icon--austria")
+      expect(svg.css("[id]")).to be_empty
+      expect(svg.at_css("path.unit-icon__silhouette")).not_to be_nil
+      expect(svg.at_css("g.unit-icon__marks .mark")).not_to be_nil
+      expect(html).not_to match(/url\(|<style|<image|<script|<title|style=/i)
+    end
+
+    it "sets width and height from size (AC-7.1)" do
+      svg = svg_of(helper.unit_icon(:italy, :fleet, size: 48))
+      expect([ svg["width"], svg["height"] ]).to eq(%w[48 48])
+    end
+
+    it "accepts symbols and strings alike (AC-7.1)" do
+      expect(helper.unit_icon(:england, :fleet)).to eq(helper.unit_icon("england", "fleet"))
+    end
+
+    it "is hidden from assistive technology when decorative (AC-7.2)" do
+      svg = svg_of(helper.unit_icon(:austria, :army, decorative: true))
+      expect(svg["aria-hidden"]).to eq("true")
+      expect([ svg["role"], svg["aria-label"] ]).to eq([ nil, nil ])
+    end
+
+    it "raises ArgumentError for an unknown power, type or size, and renders nothing (AC-7.3)" do
+      [ [ :wales, :army ], [ nil, :army ], [ "", :army ], [ :austria, :submarine ], [ :austria, nil ], [ :austria, "" ] ].each do |power, type|
+        expect { helper.unit_icon(power, type) }.to raise_error(ArgumentError)
+      end
+      [ 0, -1, "32", 32.0, nil ].each do |size|
+        expect { helper.unit_icon(:austria, :army, size: size) }.to raise_error(ArgumentError)
+      end
+    end
+
+    it "uses the small drawing below 24 and the full one from 24 (AC-7.4)" do
+      %w[army fleet].each do |type|
+        small = silhouette_path(File.join(icons, "#{type}-small.svg"))
+        full = silhouette_path(File.join(icons, "#{type}.svg"))
+        expect(small).not_to eq(full)
+        [ 20, 23 ].each { |s| expect(svg_of(helper.unit_icon(:austria, type, size: s)).at_css("path.unit-icon__silhouette")["d"]).to eq(small) }
+        [ 24, 32, 48 ].each { |s| expect(svg_of(helper.unit_icon(:austria, type, size: s)).at_css("path.unit-icon__silhouette")["d"]).to eq(full) }
+      end
+    end
+
+    initials.each do |id, initial|
+      it "puts the initial #{initial} in the tag for #{id}, inside the bottom-right corner (AC-7.5)" do
+        [ 20, 32 ].each do |size|
+          svg = svg_of(helper.unit_icon(id, :army, size: size))
+          tag = svg.at_css("g.unit-icon__tag")
+          expect(tag["aria-hidden"]).to eq("true")
+          tile = tag.at_css("rect.unit-icon__tag-tile")
+          half = tile["stroke-width"].to_f / 2
+          expect(tile["stroke-width"].to_f).to be >= 1.5
+          # The stroked tile spans the corner exactly: outer edges at 20 and 32 on both axes.
+          expect(tile["x"].to_f - half).to eq(20)
+          expect(tile["y"].to_f - half).to eq(20)
+          expect(tile["x"].to_f + tile["width"].to_f + half).to eq(32)
+          expect(tile["y"].to_f + tile["height"].to_f + half).to eq(32)
+          text = tag.at_css("text.unit-icon__tag-initial")
+          expect(text.text).to eq(initial)
+          expect(text["class"].split).to include("mono")
+          expect(text["font-size"]).to eq("8")
+        end
+      end
+    end
+  end
+
+  describe "#supply_center_icon" do
+    it "labels an unowned center and uses the unowned class (AC-7.6)" do
+      svg = svg_of(helper.supply_center_icon(nil))
+      expect(svg["role"]).to eq("img")
+      expect(svg["aria-label"]).to eq("Supply center, unowned")
+      expect(svg["class"]).to eq("supply-center-icon supply-center-icon--unowned")
+      expect([ svg["viewBox"], svg["width"], svg["height"] ]).to eq([ "0 0 32 32", "32", "32" ])
+    end
+
+    powers.each do |id, name|
+      it "labels a center owned by #{id} (AC-7.6)" do
+        svg = svg_of(helper.supply_center_icon(id))
+        expect(svg["aria-label"]).to eq("Supply center, #{name}")
+        expect(svg["class"]).to eq("supply-center-icon supply-center-icon--#{id}")
+      end
+    end
+
+    it "has its parts as classes and no ids or url( (AC-7.1, 7.6)" do
+      html = helper.supply_center_icon(:italy)
+      svg = svg_of(html)
+      expect(svg.css("[id]")).to be_empty
+      %w[disk edge center].each { |part| expect(svg.at_css("path.supply-center-icon__#{part}")).not_to be_nil }
+      expect(html).not_to match(/url\(|<style|<image|<script|<title|style=/i)
+    end
+
+    it "accepts a symbol or a string, and hides when decorative (AC-7.2, 7.6)" do
+      expect(helper.supply_center_icon(:italy)).to eq(helper.supply_center_icon("italy"))
+      svg = svg_of(helper.supply_center_icon(nil, decorative: true))
+      expect(svg["aria-hidden"]).to eq("true")
+      expect([ svg["role"], svg["aria-label"] ]).to eq([ nil, nil ])
+    end
+
+    it "raises ArgumentError for an unknown owner or a bad size, but not for nil (AC-7.3)" do
+      [ "", :wales, "wales" ].each { |owner| expect { helper.supply_center_icon(owner) }.to raise_error(ArgumentError) }
+      [ 0, -1, "32", 32.0, nil ].each { |size| expect { helper.supply_center_icon(:italy, size: size) }.to raise_error(ArgumentError) }
+      expect { helper.supply_center_icon(nil) }.not_to raise_error
+    end
+  end
+end
+```
+
+`spec/assets/icons_spec.rb` (AC-7.8, 7.9):
+
+```ruby
+require "spec_helper"
+
+RSpec.describe "The inlined artwork (AC-7.8, 7.9)" do
+  web = File.expand_path("../..", __dir__)
+  masters = File.expand_path("../assets/icons", web)
+  copies = File.join(web, "app/assets/images/icons")
+  drawings = %w[army army-small fleet fleet-small supply-center]
+
+  it "can see the masters (the whole repository is checked out locally and in CI)" do
+    expect(Dir.exist?(masters)).to be(true)
+  end
+
+  drawings.each do |name|
+    it "keeps #{name}.svg identical to its master" do
+      expect(File.binread(File.join(copies, "#{name}.svg"))).to eq(File.binread(File.join(masters, "#{name}.svg")))
+    end
+  end
+
+  it "has a copy for every master drawing and no other file" do
+    expect(Dir.children(copies).sort).to eq(Dir.children(masters).grep(/\.svg\z/).sort)
+    expect(Dir.children(copies).sort).to eq(drawings.map { |n| "#{n}.svg" }.sort)
+  end
+
+  it "never reads the root assets folder at run time" do
+    files = Dir.glob(File.join(web, "{app,lib,config}/**/*")).select { |f| File.file?(f) && File.extname(f) != ".woff2" }
+    hits = files.select { |f| File.binread(f).force_encoding("UTF-8").scrub.include?("assets/icons") }
+    expect(hits).to be_empty, hits.join(", ")
+  end
+
+  it "draws an svg only in the icon helper (AC-7.8)" do
+    files = Dir.glob(File.join(web, "app/{views,helpers}/**/*")).select { |f| File.file?(f) }
+    hits = files.select { |f| File.read(f).include?("<svg") }.map { |f| f.delete_prefix("#{web}/") }
+    expect(hits - [ "app/helpers/icon_helper.rb" ]).to be_empty
+  end
+end
+```
+
+In `spec/support/stylesheets.rb` and its scanner example, widen the AC-4.4 selector test from `.power-badge--` to the three variants:
+
+```ruby
+      next if selector.split(",").all? { |part| part.match?(/\.(?:power-badge|unit-icon|supply-center-icon)--(?:austria|england|france|germany|italy|russia|turkey)\z/) }
+```
+
+and in `stylesheet_rules_spec.rb` replace the AC-4.4 example with:
+
+```ruby
+    it "allows a power token only inside a badge, unit icon or supply-center icon variant rule (AC-4.4)" do
+      expect(found(".power-badge--austria { --_fill: var(--color-power-austria); }")).to be_empty
+      expect(found(".unit-icon--austria { --_power: var(--color-power-austria); }")).to be_empty
+      expect(found(".supply-center-icon--austria { --_owner: var(--color-power-austria); }")).to be_empty
+      expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".unit-icon { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".power-badge--austria, .button { color: var(--color-power-austria); }")).not_to be_empty
+    end
+```
+
+- [ ] **Step 2: Run and see it fail.** `bundle exec rspec spec/helpers spec/assets spec/styles`. Expected: FAIL (no `IconHelper`, no copies, the selector test).
+- [ ] **Step 3: Copy the artwork, byte for byte,** from the repository root: `mkdir -p web/app/assets/images/icons && for n in army army-small fleet fleet-small supply-center; do cp assets/icons/$n.svg web/app/assets/images/icons/$n.svg; done`.
+- [ ] **Step 4: Write the helper.**
+
+```ruby
+# The only way to draw a unit or a supply center, as power_badge is the only way to draw a
+# badge (spec 020 FR-10). The drawings are copies of the master artwork in the repository's
+# root icons folder, kept in app/assets/images/icons/ (the Docker build context is web/). Each part is named by an id
+# in the artwork; the id becomes a class, so a page with many icons never repeats an id.
+module IconHelper
+  UNIT_TYPES = { "army" => "Army", "fleet" => "Fleet" }.freeze
+  SMALL_BELOW = 24
+  ICON_DIR = Rails.root.join("app/assets/images/icons").freeze
+  SOURCES = %w[army army-small fleet fleet-small supply-center]
+              .to_h { |name| [ name, ICON_DIR.join("#{name}.svg").read.freeze ] }.freeze
+
+  # Bottom-right corner of the unit drawings (x and y from 20 to 32), left empty by the artwork.
+  # The tile's 1.5 stroke is drawn inside it: the tile is inset by half the stroke.
+  TAG = <<~SVG.strip.freeze
+    <g class="unit-icon__tag" aria-hidden="true">
+      <rect class="unit-icon__tag-tile" x="20.75" y="20.75" width="10.5" height="10.5" stroke-width="1.5"/>
+      <text class="unit-icon__tag-initial mono" x="26" y="28.8" text-anchor="middle" font-size="8">%<initial>s</text>
+    </g>
+  SVG
+
+  def unit_icon(power, type, size: 32, decorative: false)
+    key = power_key(power)
+    type_key = type.to_s
+    raise ArgumentError, "unknown unit type: #{type.inspect}" unless UNIT_TYPES.key?(type_key)
+    size = icon_size(size)
+
+    name = PowerBadgeHelper::POWER_NAMES.fetch(key)
+    file = size < SMALL_BELOW ? "#{type_key}-small" : type_key
+    svg = icon_svg(file, "unit-icon", "unit-icon unit-icon--#{key}", size, "#{UNIT_TYPES.fetch(type_key)}, #{name}", decorative)
+    svg.add_child(format(TAG, initial: name[0]))
+    svg_markup(svg)
+  end
+
+  # A nil owner is the unowned look. Anything else must be one of the seven powers.
+  def supply_center_icon(owner, size: 32, decorative: false)
+    key = owner.nil? ? nil : power_key(owner)
+    size = icon_size(size)
+
+    label = "Supply center, #{key ? PowerBadgeHelper::POWER_NAMES.fetch(key) : 'unowned'}"
+    classes = "supply-center-icon supply-center-icon--#{key || 'unowned'}"
+    svg_markup(icon_svg("supply-center", "supply-center-icon", classes, size, label, decorative))
+  end
+
+  private
+
+  def power_key(identifier)
+    key = identifier.to_s
+    PowerBadgeHelper::POWER_NAMES.key?(key) ? key : raise(ArgumentError, "unknown power: #{identifier.inspect}")
+  end
+
+  def icon_size(size)
+    size.is_a?(Integer) && size.positive? ? size : raise(ArgumentError, "size must be an Integer above zero: #{size.inspect}")
+  end
+
+  def icon_svg(file, block, classes, size, label, decorative)
+    svg = Nokogiri::XML(SOURCES.fetch(file)).root
+    svg["class"] = classes
+    svg["width"] = svg["height"] = size.to_s
+    if decorative
+      svg["aria-hidden"] = "true"
+    else
+      svg["role"] = "img"
+      svg["aria-label"] = label
+    end
+    svg.xpath(".//*[@id]").each do |part|
+      id = part["id"]
+      part.remove_attribute("id")
+      part["class"] = [ part["class"], "#{block}__#{id}" ].compact.join(" ")
+    end
+    svg
+  end
+
+  def svg_markup(svg)
+    svg.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML).html_safe
+  end
+end
+```
+
+If Nokogiri's XML serializer or the HTML parser disagrees with this shape (for example an `xmlns=""` on the added group), the spec in Step 1 shows it, and the fix stays inside `icon_svg` and `svg_markup`. That is recorded in the plan's "Changes made during implementation" if it happens.
+
+- [ ] **Step 5: Add the icon rules to `components.css`**, inside `@layer components`, after `.mono`:
+
+```css
+  /* ---- Unit and supply-center icons: made only by the icon helpers ---- */
+  .unit-icon,
+  .supply-center-icon {
+    display: inline-block;
+    flex: none;
+    vertical-align: middle;
+  }
+
+  /* The silhouette is currentColor, so the power's color is the element's color. The marks keep
+     the artwork's white. The tag is a surface tile with a border and an initial in the power's color. */
+  .unit-icon { color: var(--_power, var(--color-text)); }
+  .unit-icon__tag-tile { fill: var(--color-surface); stroke: var(--_power); }
+  .unit-icon__tag-initial { fill: var(--_power); }
+
+  .unit-icon--austria { --_power: var(--color-power-austria); }
+  .unit-icon--england { --_power: var(--color-power-england); }
+  .unit-icon--france { --_power: var(--color-power-france); }
+  .unit-icon--germany { --_power: var(--color-power-germany); }
+  .unit-icon--italy { --_power: var(--color-power-italy); }
+  .unit-icon--russia { --_power: var(--color-power-russia); }
+  .unit-icon--turkey { --_power: var(--color-power-turkey); }
+
+  /* Unowned is the artwork's own look (white disk), with the edge and center in text color. Owned: the
+     disk and edge take the owner's color and the center is white. */
+  .supply-center-icon { color: var(--color-text); }
+
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__disk,
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__edge { fill: var(--_owner); }
+  .supply-center-icon:not(.supply-center-icon--unowned) .supply-center-icon__center { fill: var(--color-on-power); }
+
+  .supply-center-icon--austria { --_owner: var(--color-power-austria); }
+  .supply-center-icon--england { --_owner: var(--color-power-england); }
+  .supply-center-icon--france { --_owner: var(--color-power-france); }
+  .supply-center-icon--germany { --_owner: var(--color-power-germany); }
+  .supply-center-icon--italy { --_owner: var(--color-power-italy); }
+  .supply-center-icon--russia { --_owner: var(--color-power-russia); }
+  .supply-center-icon--turkey { --_owner: var(--color-power-turkey); }
+```
+
+- [ ] **Step 6: Run and see them pass.** `bundle exec rspec spec/helpers spec/assets spec/styles`. Expected: PASS, including Phase 7's two examples (green for the first time).
+- [ ] **Step 7: Commit** `Add the unit and supply-center icon helpers and their artwork`.
+
+---
+
+## Phase 11: The style guide sections and the browser checks
+
+**Implements:** FR-6 (rows), FR-7, Story 5, Story 7 (AC-7.7, 7.10), Story 8 (AC-8.2 browser part), FR-1 | **Satisfies:** AC-5.1, 5.4, 4.5, 7.7, 7.10, 8.2 (computed font) | **Files:** modify `app/views/styleguide/show.html.erb`, `app/helpers/styleguide_helper.rb`, `app/assets/stylesheets/styleguide.css`, `spec/requests/styleguide_spec.rb`; create `spec/system/icons_spec.rb` | **Interfaces:** `StyleguideHelper::UNIT_SIZES`
+
+- [ ] **Step 1: Write the failing specs.** In `spec/requests/styleguide_spec.rb`: `components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text]`, and add:
+
+```ruby
+    it "shows every power's army and fleet at 20, 32 and 48 pixels, one row on ice-pale (AC-7.10, 4.5)" do
+      icons = page.css(".sg-units .unit-icon")
+      expect(icons.size).to eq(42)
+      expect(icons.map { |i| [ i["width"], i["class"][/unit-icon--(\w+)/, 1] ] }.tally.values.uniq).to eq([ 2 ])
+      expect(icons.map { |i| i["width"] }.tally).to eq("20" => 14, "32" => 14, "48" => 14)
+      expect(page.css(".sg-units .sg-bg-ice-pale").size).to eq(1)
+      expect(page.css(".sg-unit__name").map(&:text)).to match_array(%w[Austria England France Germany Italy Russia Turkey])
+    end
+
+    it "shows each owner and the unowned look, named beside each (AC-7.10)" do
+      expect(page.css(".sg-supply .supply-center-icon").map { |i| i["class"][/--(\w+)\z/, 1] })
+        .to match_array(%w[austria england france germany italy russia turkey unowned])
+      expect(page.css(".sg-supply__name").map(&:text)).to include("Unowned", "Austria")
+    end
+
+    it "shows a line of mono text" do
+      expect(page.css("section[data-component=mono-text] .mono").size).to be >= 1
+    end
+```
+
+`spec/system/icons_spec.rb` (AC-7.7 and the computed font of AC-8.2, in real Chrome; the font loading and the request origins are in Phase 9):
+
+```ruby
+require "rails_helper"
+
+RSpec.describe "Icons and the monospace in the browser", type: :system do
+  powers = %w[austria england france germany italy russia turkey]
+
+  def rgb(hex) = "rgb(#{hex.delete('#').scan(/../).map { |c| c.to_i(16) }.join(', ')})"
+
+  # The value of a color token, as the stylesheet declares it, converted to the rgb() the browser reports.
+  def token(name) = rgb(evaluate_script("getComputedStyle(document.documentElement).getPropertyValue('--color-#{name}')").strip)
+
+  def paint(selector, property) = evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json}))[#{property.to_json}]")
+
+  before { visit "/styleguide" }
+
+  powers.each do |id|
+    it "colors a #{id} unit from its power token (AC-7.7)" do
+      icon = ".sg-units .unit-icon--#{id}"
+      expect(paint("#{icon} .unit-icon__silhouette", "fill")).to eq(token("power-#{id}"))
+      expect(paint("#{icon} .mark", "fill")).to eq(rgb("#ffffff"))
+      expect(paint("#{icon} .unit-icon__tag-tile", "fill")).to eq(token("surface"))
+      expect(paint("#{icon} .unit-icon__tag-tile", "stroke")).to eq(token("power-#{id}"))
+      expect(paint("#{icon} .unit-icon__tag-initial", "fill")).to eq(token("power-#{id}"))
+    end
+
+    it "colors a supply center owned by #{id} (AC-7.7)" do
+      icon = ".sg-supply .supply-center-icon--#{id}"
+      expect(paint("#{icon} .supply-center-icon__disk", "fill")).to eq(token("power-#{id}"))
+      expect(paint("#{icon} .supply-center-icon__edge", "fill")).to eq(token("power-#{id}"))
+      expect(paint("#{icon} .supply-center-icon__center", "fill")).to eq(token("on-power"))
+    end
+  end
+
+  it "draws an unowned supply center with a white disk and a text-colored edge and center (AC-7.7)" do
+    icon = ".sg-supply .supply-center-icon--unowned"
+    expect(paint("#{icon} .supply-center-icon__disk", "fill")).to eq(rgb("#ffffff"))
+    expect(paint("#{icon} .supply-center-icon__edge", "fill")).to eq(token("text"))
+    expect(paint("#{icon} .supply-center-icon__center", "fill")).to eq(token("text"))
+  end
+
+  it "sets .mono in Plex Mono (AC-8.2)" do
+    expect(paint("section[data-component=mono-text] .mono", "fontFamily")).to start_with('"Plex Mono"')
+  end
+end
+```
+
+- [ ] **Step 2: Run and see them fail.** `bundle exec rspec spec/requests/styleguide_spec.rb spec/system/icons_spec.rb`. Expected: FAIL (no sections).
+- [ ] **Step 3: Write the sections.** In `StyleguideHelper` add `UNIT_SIZES = [ 20, 32, 48 ].freeze` and `UNIT_TYPES = %w[army fleet].freeze`. In `show.html.erb`, after the power badge section and before Colors:
+
+```erb
+  <section data-component="unit-icon" class="stack" aria-labelledby="sg-unit-icon">
+    <h2 id="sg-unit-icon">Unit icons</h2>
+    <p>An army and a fleet for each power, at 20, 32 and 48 pixels. The tag in the corner holds the power's initial. The first row sits on <code>ice-pale</code>.</p>
+    <ul class="sg-units">
+      <% StyleguideHelper::POWER_IDS.each_with_index do |id, index| %>
+        <li class="sg-unit<%= " sg-bg-ice-pale" if index.zero? %>">
+          <span class="sg-unit__name"><%= PowerBadgeHelper::POWER_NAMES.fetch(id) %></span>
+          <span class="sg-unit__icons">
+            <% StyleguideHelper::UNIT_TYPES.each do |type| %>
+              <% StyleguideHelper::UNIT_SIZES.each do |size| %>
+                <%= unit_icon(id, type, size: size, decorative: true) %>
+              <% end %>
+            <% end %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+    <p>With no name beside it, an icon carries its own label, which a screen reader reads out:</p>
+    <p><%= unit_icon(:austria, :army) %> <%= unit_icon(:england, :fleet) %></p>
+  </section>
+
+  <section data-component="supply-center-icon" class="stack" aria-labelledby="sg-supply-icon">
+    <h2 id="sg-supply-icon">Supply-center icons</h2>
+    <p>A center owned by each power, and an unowned one.</p>
+    <ul class="sg-supply">
+      <% StyleguideHelper::POWER_IDS.each do |id| %>
+        <li class="sg-supply__item"><%= supply_center_icon(id, decorative: true) %> <span class="sg-supply__name"><%= PowerBadgeHelper::POWER_NAMES.fetch(id) %></span></li>
+      <% end %>
+      <li class="sg-supply__item"><%= supply_center_icon(nil, decorative: true) %> <span class="sg-supply__name">Unowned</span></li>
+    </ul>
+  </section>
+
+  <section data-component="mono-text" class="stack" aria-labelledby="sg-mono">
+    <h2 id="sg-mono">Mono text</h2>
+    <p>The <code>mono</code> class sets text in the one self-hosted monospace. It is for codes and tags, not for sentences.</p>
+    <p class="mono">JOIN 4F7-K2Q &middot; PAR &middot; SPRING 1901</p>
+  </section>
+```
+
+In `styleguide.css`, add (inside `@layer styleguide`):
+
+```css
+  .sg-units,
+  .sg-supply { margin: 0; padding: 0; list-style: none; }
+
+  .sg-unit,
+  .sg-supply__item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+  .sg-unit__name { min-width: 5rem; }
+  .sg-unit__icons { display: flex; align-items: center; gap: var(--space-2); }
+```
+
+- [ ] **Step 4: Run and see them pass.** `bundle exec rspec spec/requests spec/system spec/styles`. Expected: PASS, with `styleguide.css` still at or under 4 KB and the folder under 24 KB (the rules spec checks both). If a limit is passed, shrink the new rules first and raise the question before touching the limit.
+- [ ] **Step 5: Commit** `Show the unit, supply-center and mono sections on the style guide`.
+
+---
+
+## Phase 12: The design-system document
+
+**Implements:** FR-12, Story 9, FR-9 (provenance) | **Satisfies:** AC-9.1, 9.2, 4.6 | **Files:** create `docs/design-system.md`, `spec/docs/design_system_spec.rb` | **Interfaces:** none
+
+- [ ] **Step 1: Write the failing spec.**
+
+```ruby
+require "spec_helper"
+require_relative "../support/stylesheets"
+
+RSpec.describe "The design-system document (AC-9.1, 9.2)" do
+  doc = File.read(File.expand_path("../../docs/design-system.md", __dir__))
+
+  it "has the six parts the screens build to (AC-9.1)" do
+    [ "## Palette", "## Power colors", "## Type", "## Units and supply centers", "## Helpers", "## Component catalog" ].each do |heading|
+      expect(doc).to include(heading)
+    end
+  end
+
+  it "names every color token with its hex value on the same line (AC-9.2)" do
+    Stylesheets.color_tokens.each do |name, hex|
+      line = doc.lines.find { |l| l.include?("`#{name}`") && l.downcase.include?(hex.downcase) }
+      expect(line).not_to be_nil, "#{name} #{hex} is not on one line of docs/design-system.md"
+    end
+  end
+
+  it "says the power values are fixed and that no edition was consulted (AC-4.6)" do
+    expect(doc).to match(/fixed/i)
+    expect(doc).to match(/no edition/i)
+  end
+end
+```
+
+- [ ] **Step 2: Run and see it fail.** `bundle exec rspec spec/docs`. Expected: FAIL (no file).
+- [ ] **Step 3: Write `web/docs/design-system.md`** from the Issue's "Design system content", in this order:
+  1. A short opening that says what the page is, that screen Issues build to it, that `docs/architecture.md` records the decisions and `tokens.css` holds the values.
+  2. `## Palette`: a table with one row per color token (`| \`--color-page\` | \`#eef3f6\` | use |`), the Issue's uses, the rule that outcomes and seat states get no hue of their own, and the list of documented pairs (the 31, with their minimum).
+  3. `## Power colors`: a table of the seven (`--color-power-austria` `#586f2a` olive, and so on), the statement that the values are fixed (decision 42), differ in hue from each power's familiar board color on purpose, that England and Russia are 25.7 degrees apart so nobody adjusts them, that no edition was consulted, and the red-green color-blindness note.
+  4. `## Type`: the system sans, `--font-mono`, where mono is used, `.mono`, phase headers as capitals with CSS letter spacing from sentence-case source, and that the face is Medium only (bold and regular look alike; never rely on bold there).
+  5. `## Units and supply centers`: the Issue's rules (one army, one fleet, the power-initial tag, supply-center owned and unowned looks, 32 pixels for rows, about 20 for a future map, small drawings below 24, a visible name beside a unit under 24 in lists and screens).
+  6. `## Helpers`: `unit_icon` and `supply_center_icon` signatures, labels, `decorative`, `ArgumentError`, the only-way rule, where the copies live and that the master is `assets/icons/`.
+  7. `## Component catalog`: the Issue's tables as written (already built, built here, playtest screens, 1.0 screens, glyphs from #82, map-only icons), with `Built by` Issue numbers.
+- [ ] **Step 4: Run and see it pass.** `bundle exec rspec spec/docs`. Expected: PASS.
+- [ ] **Step 5: Commit** `Write the design-system document`.
+
+---
+
+## Phase 13: Integration verification, screenshots and the plan record
+
+**Implements:** FR-1, FR-5, FR-8, Verification rows, NFR | **Satisfies:** AC-1.1 to 1.6, 3.x (the #73 specs and the Chrome pass), 5.x, 6.1 to 6.6, 7.10 | **Files:** modify `docs/specs/020-base-stylesheet/measure.md`, `plan.md` (this file); create `docs/specs/020-base-stylesheet/screenshots/styleguide-360-units.png`, `styleguide-360-supply-mono.png`, `styleguide-360-colors.png`
+
+- [ ] **Step 1: Run the whole suite.** From `web/`: `bundle exec rspec`. Expected: 0 failures. Record the example count.
+- [ ] **Step 2: Run the project's own checks** from `web/`: `bin/rubocop` and `bin/brakeman` (the `html_safe` in the icon helper is new code, and its input is a fixed list and the app's own files). Fix findings in the new files only.
+- [ ] **Step 3: Chrome pass at 360 pixels.** With `bin/rails server -p 3020` and the scratch frame page from `measure.md` (kept out of git), open `/styleguide` at 360 by 800 and read the console snippet's result (no sideways scroll, targets, gaps, text sizes). The snippet lists every tag initial as "text under 14px" (the SVG `text` computes to 8 pixels). That is the AC-1.1 exemption: filter `text.unit-icon__tag-initial` out of the result before reading it, and say so in the record. Look at the unit section at 20, 32 and 48 pixels, the supply-center section and the mono line. Take the three screenshots by the method in `measure.md` ("Method", step 4) and save them in the screenshots folder. Delete `public/frame.html` and its exclude line afterwards.
+- [ ] **Step 4: Check forced colors and reduced motion once** in Chrome's emulation, including that the icons keep their colors, and record the result in `measure.md`, or record that the emulation was not usable, as #20 did.
+- [ ] **Step 5: Record the work.** Append to `measure.md` a dated section "Re-run after the re-theme (2026-11-26, spec 2.0.x)" with the system-spec result and the Chrome pass, and the three screenshot names. Append the Plan Changelog below to the end of `plan.md`.
+
+```markdown
+## Plan Changelog
+
+| Version | Phase | Change |
+|---|---|---|
+| 2.0.0 | Phase 7 | Added: the required first test, the helper contract (AC-7.1, 7.3) |
+| 2.0.0 | Phase 8 | Added: the palette, tokens and header; the old derivation under "The palette" is superseded (FR-2, FR-3, FR-9) |
+| 2.0.0 | Phase 9 | Added: the font, `.mono` and the notices (FR-11) |
+| 2.0.0 | Phase 10 | Added: the icon helpers and the artwork copies (FR-10) |
+| 2.0.0 | Phase 11 | Added: the style guide sections and the browser checks (FR-7) |
+| 2.0.0 | Phase 12 | Added: the design-system document (FR-12) |
+| 2.0.0 | Phase 13 | Added: integration verification and the record |
+```
+
+- [ ] **Step 6: Final proof, from `web/` and the repository root.** `bundle exec rspec` passes with system specs included; `git diff --name-only main...HEAD | grep -v '^web/'` prints nothing; the `Web specs` job is green on the pull request.
+- [ ] **Step 7: Commit** `Record the re-theme measurements and the plan changes`.
+- [ ] **Step 8: Write the pull request description** from `.github/pull_request_template.md`: "Closes #81"; the reason the font is a new asset and not a dependency (no system monospace is the same on every phone, and a six-character join code is read aloud); the font's source URL, release version and SHA-256, also recorded in `web/NOTICE`; where the icon copies live and the spec that guards them; the three style-guide screenshots at 360 pixels; the contrast numbers; the header design call (`ice` fill, `steel` rule) for the maintainer to look at; the AC-1.1 exemption; the owed items (#71 phone pass, #86 CI paths); the implementation review and how each finding was handled; ends with the Claude Code line.
+
+---
+
+## Spec coverage (2.0 self-review)
+
+| Spec item | Phase |
+|---|---|
+| Story 2: AC-2.1, 2.2, 2.3, 2.9, 2.10 | 8 |
+| Story 4: AC-4.1, 4.2, 4.4, 4.5, 4.6 | 8 (values, hues, record), 10 (AC-4.4), 11 (AC-4.5), 12 (AC-4.6) |
+| Story 5: AC-5.1, 5.4 | 8 (swatches, samples), 11 (sections) |
+| Story 6: AC-6.2, 6.3 | 9 (static), 11 (browser) |
+| Story 7: AC-7.1 to 7.6, 7.8, 7.9 | 7 (first two examples), 10 |
+| AC-7.7, 7.10 | 11 |
+| Story 8: AC-8.1, 8.3, 8.4 | 9 |
+| AC-8.2 | 9 (static), 11 (browser) |
+| Story 9: AC-9.1, 9.2 | 12 |
+| AC-1.1 exemption | 10 (the tag text carries `font-size` in drawing units, and the page text rule is unchanged); 13 (Chrome pass) |
+| FR-1 (one `url(`, size limits) | 9, 11 |
+| FR-2, FR-3, FR-9 | 8 |
+| FR-4, FR-6 rows, FR-7 | 10, 11 |
+| FR-5 (header) | 8 |
+| FR-10 | 10 |
+| FR-11 | 9 |
+| FR-12 | 12 |
+| NFR performance (one font, swap) | 9, 11 |
+| Verification rows, the #73 specs | 8 and 11 (run), 13 |
+| Spec 020 amended with a changelog row (Issue "Done when") | Done before planning: spec changelog rows 2.0.0 to 2.0.2 |
+| Reason for the font as an asset, in the pull request (Issue note) | 13, step 8 |
+| Error scenarios (bad args, font missing, copy drift) | 10 (args, drift), 9 (font fallback by `swap`; nothing to test) |
+
+Gaps: none. Placeholder scan: none. Type check: `IconHelper#unit_icon`, `#supply_center_icon`, `Stylesheets.violations(..., font_face:)`, `Stylesheets.ice_uses`, `StyleguideHelper::UNIT_SIZES` and `UNIT_TYPES` are each defined where first used and spelled the same everywhere.
+
+## Plan Changelog
+
+| Version | Phase | Change |
+|---|---|---|
+| 2.0.0 | Phase 7 | Added: the required first test, the helper contract (AC-7.1, 7.3) |
+| 2.0.0 | Phase 8 | Added: the palette, tokens and header; the old derivation under "The palette" is superseded (FR-2, FR-3, FR-9) |
+| 2.0.0 | Phase 9 | Added: the font, `.mono` and the notices (FR-11) |
+| 2.0.0 | Phase 10 | Added: the icon helpers and the artwork copies (FR-10) |
+| 2.0.0 | Phase 11 | Added: the style guide sections and the browser checks (FR-7) |
+| 2.0.0 | Phase 12 | Added: the design-system document (FR-12) |
+| 2.0.0 | Phase 13 | Added: integration verification and the record |
+
+## Changes made during implementation (version 2.0)
+
+| Change | Why |
+|---|---|
+| The rules spec's steel check allows the style guide's own `.sg-bg-steel` swatch class besides `.app-header` | The swatch and the sample ground for the documented `steel` pairs have to read the token. The rule is that no component reads it |
+| `spec/support/stylesheets.rb` gained `FONT_FACE` and the `font_face:` option on `violations`, as Phase 9 planned, plus `Stylesheets.ice_uses` | As planned |
+| The in-browser font checks (the face loads, every request is to this origin) live in `spec/system/font_spec.rb` in Phase 9, not in Phase 11 | The plan review: they depend on the font and the stylesheet, not on the new style guide sections, so they fail first in Phase 9 |
+| Phase 10 ran straight after Phase 7, then 8, 9, 11, 12, 13 | The plan review: Phase 7's spec stays red until the helper exists, and a red file stops a whole run |
+| Screenshot `styleguide-360-top.png` was added beside the three planned ones | It shows the header, which is the maintainer's design call |
+
+## Implementation review (version 2.0)
+
+A read-only Opus review of the whole branch against spec 2.0.2 and these phases. Verdict: GAPS, for one blocking finding. Nothing is left without proof, and the palette and power values match Issue #81 exactly.
+
+| # | Finding | Handling |
+|---|---|---|
+| 1 (blocking) | `.sg-unit__name { min-width: 5rem }` is a raw size outside the token file (FR-2) | Fixed: `calc(var(--space-8) + var(--space-4))`, which is the same 5rem |
+| 2 | New code in `StyleguideHelper`, the style guide request spec and the view was at the wrong indentation | Fixed: re-indented. (My scripted edits had stripped it) |
+| 3 | Two spec table rows were merged into one line, so the 404 row did not render | Fixed |
+| 4 | The AC-4.4 selector check was anchored only at the end, so `.button .unit-icon--austria` passed | Fixed test first: anchored at both ends, with two negative examples |
+| 5 | The unit color checks read only the first icon (always the 20 pixel army) | Fixed: every icon of every power is read (six per power: army and fleet, at 20, 32 and 48) |
+| 6 | The AC-7.10 check did not tie each name to its row's icon | Fixed: all eight supply-center names, and each row's name equals its icon's power |
+| 7 | The tag's initial went through `format` into a raw XML string | Fixed: the tag is parsed first and the initial is set as text |
+| 8 | The artwork's generic `class="mark"` would collide with any future `.mark` rule | Fixed test first: each mark also carries `unit-icon__mark` |
+| 9 | The AC-4.6 doc check (`/fixed/`, `/no edition/`) would pass on almost any text | Fixed: it matches "decision 42", "sampled, traced or looked up" and "no edition was consulted" |
+| 10 | The root `NOTICE` license map does not mention the OFL font or the CC BY-SA copies inside `web/` | Not mine to fix (a root file). The coordinator opened Issue #88 and the pull request cites it |
+| 11 | `unit_icon` draws any size, but the AC-1.1 exemption covers only 20 to 48 pixels | Fixed: `design-system.md` says sizes under 20 are outside the exemption |
+| 12 | For information: `styleguide.css` has about 400 bytes left; the Phase 1 code block above still quotes the old comment | No action. The 2.0 header says later phases win |
+
+Not checked by the reviewer: the helper, request and system specs (they need Rails and Chrome), and the font against the npm tarball. The worker ran the specs (152 examples, 0 failures), and checked the tarball's sha1 and the file's SHA-256 against the registry and `web/NOTICE` while fetching it.

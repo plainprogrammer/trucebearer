@@ -32,6 +32,7 @@ module Stylesheets
     infobackground infotext inactivecaption inactivecaptiontext appworkspace activeborder
     inactiveborder activecaption
   ].freeze
+  FONT_FACE = /@font-face\s*\{[^{}]*\}/m
   VENDOR_COLOR = /-(?:webkit|moz)-(?:link|activelink|focus-ring-color|any-link|hyperlinktext|activehyperlinktext|visitedhyperlinktext)\b/i
   COLOR_FUNCTION = /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark)\(/i
   HEX_COLOR = /#[0-9a-f]{3,8}\b/i
@@ -59,7 +60,7 @@ module Stylesheets
     css.scan(/([^{}]+)\{([^{}]*)\}/m).map { |sel, body| [ sel.split(";").last.to_s.strip, body ] }
   end
 
-  # { "--color-page" => "#f6f3ec", ... } from the token file.
+  # { "--color-page" => "#eef3f6", ... } from the token file.
   def tokens(path = TOKENS)
     declarations(read(path)).select { |p, _, _| p.start_with?("--") }.to_h { |p, v, _| [ p, v ] }
   end
@@ -68,9 +69,15 @@ module Stylesheets
     tokens(path).select { |name, _| name.start_with?("--color-") }
   end
 
+  # [[property, line], ...] for each declaration that reads --color-ice (not --color-ice-pale).
+  def ice_uses(css)
+    declarations(css).select { |_, value, _| value.match?(/var\(\s*--color-ice\s*[,)]/) }.map { |prop, _, line| [ prop, line ] }
+  end
+
   # Problems with a stylesheet. Each is "file:line: what". In the token file, a
   # --color-* token may hold a six-digit hex value (and nothing else may hold a color).
-  def violations(css, label, token_file: false)
+  def violations(css, label, token_file: false, font_face: false)
+    css = css.sub(FONT_FACE, "") if font_face # the one block; font_spec holds its exact shape
     out = []
     px_props = declarations(css).select { |p, v, _| p.start_with?("--") && v.match?(/\d\s*px/i) }.map(&:first)
     declarations(css).each do |prop, value, line|
@@ -99,7 +106,7 @@ module Stylesheets
     out << "#{label}: color-mix" if css.include?("color-mix(")
     rules(css).each do |selector, body|
       next unless body.include?("var(--color-power-")
-      next if selector.split(",").all? { |part| part.match?(/\.power-badge--/) }
+      next if selector.split(",").all? { |part| part.strip.match?(/\A\.(?:power-badge|unit-icon|supply-center-icon)--(?:austria|england|france|germany|italy|russia|turkey)\z/) }
       out << "#{label}: --color-power- used outside a power badge rule (#{selector})"
     end
     out
@@ -111,8 +118,8 @@ module Contrast
   # [foreground, background, minimum ratio]. Each pair appears once, with its
   # higher minimum where the spec lists two uses.
   DOCUMENTED_PAIRS = [
-    [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ],
-    [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ],
+    [ "text", "page", 4.5 ], [ "text", "surface", 4.5 ], [ "text", "ice", 4.5 ], [ "text", "ice-pale", 4.5 ],
+    [ "text-muted", "page", 4.5 ], [ "text-muted", "surface", 4.5 ], [ "text-muted", "ice-pale", 4.5 ],
     [ "link", "page", 4.5 ], [ "link", "surface", 4.5 ],
     [ "link-visited", "page", 4.5 ], [ "link-visited", "surface", 4.5 ],
     [ "on-primary", "primary", 4.5 ], [ "on-primary", "primary-pressed", 4.5 ],
@@ -122,7 +129,8 @@ module Contrast
     [ "danger", "page", 4.5 ], [ "danger", "surface", 4.5 ],
     [ "on-danger", "danger", 4.5 ], [ "on-danger", "danger-pressed", 4.5 ],
     [ "danger-pressed", "page", 3.0 ], [ "danger-pressed", "surface", 3.0 ],
-    [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ],
+    [ "focus", "page", 3.0 ], [ "focus", "surface", 3.0 ], [ "focus", "ice", 3.0 ],
+    [ "steel", "page", 3.0 ], [ "steel", "surface", 3.0 ],
     [ "disabled-text", "disabled-fill", 3.0 ]
   ].freeze
 
