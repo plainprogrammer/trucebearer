@@ -114,12 +114,12 @@ RSpec.describe "Results after the reveal", type: :request do
       end
     end
 
-    it "shows the practice note while the stand-in is in use, and none when it is not (AC-7.1)" do
+    it "shows no practice note on any results view (spec 029 AC-3.3)" do
       revealed_phase_with(game, outcomes: [ [ hold.("england", "lon"), :held, true, false ] ])
-      each_view { |name, session| expect(page(session).css("section[data-results] .practice-note").size).to eq(1), name }
-
-      allow(RulesEngine).to receive(:stand_in?).and_return(false)
-      each_view { |name, session| expect(page(session).css(".practice-note")).to be_empty, name }
+      each_view do |name, session|
+        expect(page(session).css(".practice-note")).to be_empty, name
+        expect(page(session).text).not_to include("Practice results"), name
+      end
     end
 
     it "shows one paradox banner for a paradox result and none otherwise (AC-7.4)" do
@@ -137,7 +137,7 @@ RSpec.describe "Results after the reveal", type: :request do
       each_view do |name, session|
         text = page(session).css("section[data-results]").text
         expect(text).not_to match(/official|licensed|authorized|confirmed|verified|\bfinal\b|real results/i), name
-        expect(text).to include("Practice results"), name
+        expect(text).not_to include("Practice results"), name
       end
     end
   end

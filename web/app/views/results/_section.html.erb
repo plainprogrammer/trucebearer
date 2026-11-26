@@ -14,7 +14,6 @@
             text: "#{power_name(dislodged.power)}'s #{dislodged.unit_type} in #{dislodged.province.upcase} was dislodged. Settle it by hand." %>
     <% end %>
   <% end %>
-  <%= render "results/practice_note" if RulesEngine.stand_in? %>
   <% (kind == :host ? results.reading_groups : results.groups).each do |group| %>
     <%= render "results/group", group: group, reading: kind == :host %>
   <% end %>

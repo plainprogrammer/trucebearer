@@ -133,7 +133,7 @@ RSpec.describe "Revealing results to every phone", type: :system do
     end
   end
 
-  it "writes 360-pixel screenshots of a reveal with a mix of outcomes, a dislodged row and the practice note, only when SCREENSHOTS is set (AC-8.4)" do
+  it "writes 360-pixel screenshots of a reveal with a mix of outcomes and a dislodged row, only when SCREENSHOTS is set (AC-8.4)" do
     other = Game.start!(power: "england")
     hold = ->(power, at) { { "format" => 1, "type" => "hold", "power" => power, "at" => at } }
     mover = ->(power, at, to) { { "format" => 1, "type" => "move", "power" => power, "at" => at, "destination" => { "province" => to, "coast" => nil } } }
@@ -150,7 +150,7 @@ RSpec.describe "Revealing results to every phone", type: :system do
       visit "/games/#{other.game.public_id}/seat-link?token=#{other.seat_token}" # the host's own seat
       visit "/games/#{other.game.public_id}"
       expect(page).to have_css(".outcome-tag--dislodged")
-      expect(page).to have_css(".practice-note")
+      expect(page).to have_no_css(".practice-note")
       measure("the seat page with a mix of outcomes")
       screenshot("05-seat-page-mix")
       visit "/games/#{other.game.public_id}/phases/1/results"

@@ -7,7 +7,7 @@ RSpec.describe "The gem pin (AC-1.1, AC-2.8a)" do
 
   it "pins the git tag with the gemspec glob when the variable is unset, and uses the path otherwise" do
     expect(gemfile).to match(
-      /if ENV\["ADJUDICATOR_PATH"\]\.to_s\.empty\?\n\s+gem "trucebearer-adjudicator", git: "https:\/\/github\.com\/plainprogrammer\/trucebearer\.git", tag: "adjudicator-v0\.1\.0", glob: "adjudicator\/\*\.gemspec", require: false\n\s*else\n\s+gem "trucebearer-adjudicator", path: ENV\["ADJUDICATOR_PATH"\], require: false\n\s*end/
+      /if ENV\["ADJUDICATOR_PATH"\]\.to_s\.empty\?\n\s+gem "trucebearer-adjudicator", git: "https:\/\/github\.com\/plainprogrammer\/trucebearer\.git", tag: "adjudicator-v0\.2\.0", glob: "adjudicator\/\*\.gemspec", require: false\n\s*else\n\s+gem "trucebearer-adjudicator", path: ENV\["ADJUDICATOR_PATH"\], require: false\n\s*end/
     )
   end
 
