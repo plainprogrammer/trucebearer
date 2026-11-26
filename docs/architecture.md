@@ -38,6 +38,7 @@ Neither target includes the phase clock, the shared display or backups. Also out
   - `TRUCEBEARER_PASSPHRASE`: a secret. When it is unset or blank, creating a game is refused, and joining or playing an existing game still works.
   - `TRUCEBEARER_CABLE_ORIGINS`: not a secret. When it is unset, Rails allows live-update sockets only from the app's own address.
   - `TRUCEBEARER_TIME_ZONE`: not a secret. When it is unset or unknown, step-in notices use UTC.
+  - `TRUCEBEARER_HOST`: not a secret. Required for a Kamal deploy: Kamal reads it when it renders `web/config/deploy.yml`, and a deploy fails when it is unset or blank. When the app runs without it, Rails allows any host. `web/README.md` has the details.
 - The instance can be reached from the internet. Joining a game and every host action must stay safe when strangers find the URL.
 
 ## The adjudicator
