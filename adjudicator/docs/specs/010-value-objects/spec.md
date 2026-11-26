@@ -1,7 +1,7 @@
 # Feature 010: Value objects for positions, units and orders
 
-**Status:** Draft
-**Version:** 1.1.1
+**Status:** Approved
+**Version:** 1.2.0
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #10
@@ -17,6 +17,7 @@
 | 1.0.1 | 2026-11-25 | Recorded James's two decisions (keep `ArgumentError` for a missing keyword, with AC-1.10; reject duplicate standoff provinces) |
 | 1.1.0 | 2026-11-25 | Folded in the first independent review (round 1: changes required, nothing blocking).<br>• Messages are pinned: `inspect` form, and which value per case.<br>• `map` string is copied and frozen.<br>• Nested `from_h` strictness is listed case by case, including `nil` ownership and `Move#destination`.<br>• All keywords of `new` are required, with `ArgumentError` cases.<br>• `with` has a valid-path criterion, and every Must item has a criterion.<br>• Key order, `hash`/`eql?` and all six split coasts are asserted.<br>• Every example in the interface that only needs these objects builds.<br>• The stale #9 changelog sentence is trimmed.<br>• Two-dislodged-units reasoning recorded, and the follow-up owed to the maintainer is named |
 | 1.1.1 | 2026-11-25 | Folded in the second independent review (APPROVE, nothing blocking): unit and location province in placement messages, `format` then `type` checked first, single-fault specs, wording of the `new` symbols rule, a fuller list of excluded-section constructions |
+| 1.2.0 | 2026-11-25 | Gate A approved by the coordinator under the maintainer's delegation, with a ruling: this pull request adds the two stricter rules (duplicate standoff provinces, two dislodged units in one province) to the "Impossible objects" list in `docs/interface.md`, with a "Changed" changelog line and no "Interface change" Issue (AC-8.4, AC-8.7, FR-7, Open Question 2). Status is now Approved |
 
 ## Problem Statement
 
@@ -33,6 +34,7 @@
 - Every impossible object listed in `docs/interface.md` under "Impossible objects" raises `TA::InvalidInput`, from `new` and from `from_h` alike.
 - `TA::Map#starting_position` returns the spring 1901 position, built from the map's own data.
 - Every Ruby example in `docs/interface.md` that is about these objects runs as a passing spec.
+- The two stricter rules this feature adds (duplicate standoff provinces, and two dislodged units in one province) are named in the "Impossible objects" list of `docs/interface.md`, each with an example that runs as a spec.
 
 ## Non-Goals
 
@@ -41,7 +43,7 @@
 - Checking an order (#11), listing legal orders (#12) and adjudicating a phase (#14, #15). A value object is checked only for being well formed. A move to a province the unit can't reach is a valid order object, and judging it is the job of checking.
 - Any behavior on these objects beyond construction, validation against the classic map, canonical ordering, freezing, equality and conversion.
 - Rebuilding `TA::Location` or `TA::InvalidInput`. Both exist from #9 and are reused as they are.
-- Any change to `docs/interface.md`. This feature implements the contract as it stands. If building it shows a defect in the contract, work stops and the defect goes to the coordinator, because changing the contract is an interface change with its own rules in `adjudicator/AGENTS.md`.
+- Any change to `docs/interface.md` beyond the one ruled at Gate A: the two stricter rules are added to its "Impossible objects" list (AC-8.7). This feature otherwise implements the contract as it stands. If building it shows a defect in the contract, work stops and the defect goes to the coordinator, because changing the contract is an interface change with its own rules in `adjudicator/AGENTS.md`.
 - Any map other than the classic one.
 - Giving `TA::Location.new`, or any class built here, a different error for a missing keyword. That stays Ruby's `ArgumentError` (Open Question 1, decided by James).
 
@@ -208,7 +210,7 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 
 **Acceptance criteria:**
 
-- [ ] **AC-7.1** Given every Ruby example in `docs/interface.md` under `## Value objects` for `TA::Location`, `TA::Unit`, `TA::DislodgedUnit`, `TA::Position`, `TA::Order` and its six classes, under "Canonical order", under "Impossible objects", and the two `format` examples at the head of the section When each is run as a spec Then it gives the value or raises the error that the example's comment says
+- [ ] **AC-7.1** Given every Ruby example in `docs/interface.md` under `## Value objects` for `TA::Location`, `TA::Unit`, `TA::DislodgedUnit`, `TA::Position`, `TA::Order` and its six classes, under "Canonical order", under "Impossible objects" (including the two lines AC-8.7 adds), and the two `format` examples at the head of the section When each is run as a spec Then it gives the value or raises the error that the example's comment says
 - [ ] **AC-7.2** Given the `starting_position` examples under `## Map` (the overview block and the `Map#starting_position` subsection) and the `from_h` examples under `## Errors` When each is run as a spec Then it gives the value or raises the error its comment says. For the sample message in the Errors example, only the error class and the included value are asserted, not the wording
 - [ ] **AC-7.3** Given the examples this feature does not cover When the specs are read Then the specs name exactly these as excluded [verified in review]: both `TA::CheckResult` examples (the `to_h` pair under `### TA::CheckResult`) and the three `CheckResult` lines at the end of "Impossible objects" (#11); the `TA::Outcome` and `TA::Adjudication` examples (#14); and the calls to `TA.check`, `TA.legal_orders` and `TA.adjudicate` in the sections on checking, legal orders and adjudication
 - [ ] **AC-7.4** Given the specs for AC-7.1 and AC-7.2 When they build their inputs Then they build them as the examples do (with the same `army`, `fleet`, `spring` and `a` objects) and do not substitute simpler ones
@@ -225,9 +227,10 @@ Each criterion holds whether the object is built with `new`, with `from_h`, or b
 - [ ] **AC-8.1** Given this pull request When `adjudicator/CHANGELOG.md` is read Then "Unreleased" → "Added" has an entry for the unit, dislodged unit, position and order value objects, `TA::Order.from_h` and `Map#starting_position`, citing #10, and it says `TA::CheckResult` arrives with #11, and `TA::Outcome` and `TA::Adjudication` with #14. The #9 entry's sentence "`Map#starting_position` arrives with #10; until then the starting units are available through an internal reader." is trimmed so that it no longer says the method is still to come [verified in review]
 - [ ] **AC-8.2** Given `spec/trucebearer/adjudicator/map_spec.rb` When it is read Then no example says `starting_position` is not built. The example that checks `starting_units` is not in the interface now says only that, and the part that asserted `not_to respond_to(:starting_position)` is gone
 - [ ] **AC-8.3** Given this pull request When `bundle exec rspec` and `bundle exec rake` are run from `adjudicator/` Then both pass, with no spec skipped or marked pending [verified by the commands, in the pull request]
-- [ ] **AC-8.4** Given this pull request When `git diff --name-only main...HEAD` is run Then every path starts with `adjudicator/`, and `adjudicator/docs/interface.md` is not among them [verified by the command, in the pull request]
+- [ ] **AC-8.4** Given this pull request When `git diff --name-only main...HEAD` is run Then every path starts with `adjudicator/`, and the only change to `adjudicator/docs/interface.md` is the one of AC-8.7 [verified by `git diff main...HEAD -- adjudicator/docs/interface.md`, in the pull request]
 - [ ] **AC-8.5** Given the gem's code When it is read Then it defines no `TA::CheckResult`, `TA::Outcome` or `TA::Adjudication`, and does not require the existing #9 specs to change, other than AC-8.2 [verified in review]
 - [ ] **AC-8.6** Given `lib/trucebearer/adjudicator/map.rb` When the comment on `Map#starting_units` is read Then it says `starting_position` uses it, not that `starting_position` is still to come [verified in review]
+- [ ] **AC-8.7** Given `docs/interface.md` When its "Impossible objects" list is read Then it names two more cases, each with a one-line Ruby example in the list's own style that raises `TA::InvalidInput` and is run as a spec (AC-7.1): the same province twice in `standoffs`, and two dislodged units whose units stand in the same province. `adjudicator/CHANGELOG.md` has a line under "Changed" saying that the impossible-object list now names them, and no other line of `docs/interface.md` changes. No "Interface change" Issue is opened: no release has carried the old wording (0.1.0 is not out), so the app has nothing to upgrade from. The ruling is recorded in the pull request description [verified in review]
 
 ## Functional Requirements
 
@@ -325,7 +328,7 @@ Returns the position the game starts from, a `TA::Position`, as `docs/interface.
 - Update the `starting_units` example in `map_spec.rb` as in AC-8.2.
 - Update the comment on `Map#starting_units` so that it no longer says `starting_position` is still to come (AC-8.6).
 - Trim the stale sentence in the #9 changelog entry (AC-8.1).
-- Leave `docs/interface.md` unchanged.
+- Add the two cases of AC-8.7 to the "Impossible objects" list of `docs/interface.md`, and a "Changed" changelog line for them. Change nothing else in `docs/interface.md`.
 
 **Must not:**
 - Edit the #9 spec and plan documents. They record what #9 decided at the time. Only the executable spec that asserted `starting_position` was missing changes.
@@ -368,9 +371,9 @@ Returns the position the game starts from, a `TA::Position`, as `docs/interface.
 None blocking. Points 1 and 2 were put to James and are decided. The rest are decisions made in this spec, put to the reviewer at Gate A so that approval settles them.
 
 1. **A missing keyword in `new` (the #9 nit). Decided by James on 2026-11-25.** `TA::Location.new(province: nil)` raises `TA::InvalidInput`, but `TA::Location.new` with no keywords raises Ruby's `ArgumentError`. **Decision: keep Ruby's `ArgumentError`, for every class.** A missing or unknown keyword is a coding mistake in the code that calls `new`, not bad input, and `ArgumentError` is Ruby's own signal for that. `TA::InvalidInput` stays for bad values, and `from_h` still raises it for a missing key, so an app that rescues it around `from_h` catches everything a stored hash can do wrong. `docs/interface.md` doesn't promise either, so nothing changes for the app. #9's specs stay as they are, and this feature adds a spec that pins the behavior (AC-1.10).
-2. **Duplicate standoff provinces (AC-5.9). Decided by James on 2026-11-25.** The interface lists no impossible object for the same standoff province twice. **Decision: it raises `TA::InvalidInput`, with a spec.** A standoff list is a set, and a list with a duplicate would give two objects for one situation, which breaks "same contents, same hash form" unless the duplicate were quietly dropped, and quiet correction is forbidden. This is a stricter validation within the existing promise that an impossible object raises (`docs/interface.md` `## Value objects`, "Validated on construction"). It is not an interface change, so `docs/interface.md` is unchanged and no Interface change Issue is needed. **Decided here, for approval at Gate A:** the same stricter rule for two dislodged units in one province, which this spec also includes in AC-5.9 because a province held one unit. The reviewer's view (round 1) is to keep it: without it, "sorted by the unit's province" would not be a total order for `dislodged_units`, so two orderings of the same contents could give different hash forms, and the only alternatives are an invented tie-break or quiet correction. **Decision: keep it.** If the maintainer would rather drop it, only that clause of AC-5.9 goes.
+2. **Duplicate standoff provinces (AC-5.9). Decided by James on 2026-11-25.** The interface lists no impossible object for the same standoff province twice. **Decision: it raises `TA::InvalidInput`, with a spec.** A standoff list is a set, and a list with a duplicate would give two objects for one situation, which breaks "same contents, same hash form" unless the duplicate were quietly dropped, and quiet correction is forbidden. This is a stricter validation within the existing promise that an impossible object raises (`docs/interface.md` `## Value objects`, "Validated on construction"). The coordinator ruled at Gate A, under the maintainer's delegation, that `docs/interface.md` is updated in this pull request (see below). **Decided here and approved at Gate A:** the same stricter rule for two dislodged units in one province, which this spec also includes in AC-5.9 because a province held one unit. The reviewer's view (round 1) is to keep it: without it, "sorted by the unit's province" would not be a total order for `dislodged_units`, so two orderings of the same contents could give different hash forms, and the only alternatives are an invented tie-break or quiet correction. **Decision: keep it.** Approved at Gate A: two dislodged units in one province can never happen, so rejecting them is right.
 
-   **Owed to the maintainer:** `docs/interface.md` stays unchanged here, so neither stricter rule is documented in its "Impossible objects" list. A follow-up change adding both under "Added" is owed, and is named in the pull request description. Additions need no Interface change Issue (`adjudicator/AGENTS.md`).
+   **Ruling at Gate A (documentation).** `docs/interface.md` is not left behind. This pull request adds both cases to its "Impossible objects" list, each with a one-line example, and adds a line under "Changed" in `adjudicator/CHANGELOG.md` saying the list now names them (AC-8.7). No "Interface change" Issue is needed, because no release has carried the old wording (0.1.0 is not out), so the app has nothing to upgrade from. The ruling is recorded in the pull request description.
 3. **Not checked: standoffs, ownership and units against each other.** A standoff province that has a unit on it, an owned center with no unit, and a dislodged unit that no unit attacked from a neighbor are all valid objects here. The interface lists none of them as impossible, and whether they make sense depends on rules that belong to adjudication. They are left to #14 and later.
 4. **Any `Integer` is a valid `year`.** The interface says `Integer`, such as `1901`, and names no range, so none is imposed.
 5. **The #9 spec and plan documents are not edited.** They record what #9 decided. Only `map_spec.rb`, the executable spec that asserted `starting_position` was missing, changes (AC-8.2).
