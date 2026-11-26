@@ -53,6 +53,12 @@ Maps, powers, provinces, coasts, seasons, phases and unit types are all named by
 
 Three provinces have split coasts: `bul` has `:ec` and `:sc`, while `spa` and `stp` each have `:nc` and `:sc`. Every other province has none.
 
+```ruby
+TA::Map.classic.province(:stp).coasts     # => [:nc, :sc]
+L.new(province: :stp, coast: :sc).to_h    # => {"province" => "stp", "coast" => "sc"}
+L.new(province: "stp")                    # raises TA::InvalidInput (new takes symbols)
+```
+
 ### Provinces
 
 The classic map has the 75 provinces below, sorted by identifier. Each identifier is the game's standard three-letter abbreviation. "SC" marks a supply center, and "Home" names the power whose home center it is. The same lists are available from the map at run time (see [Map](#map)).
@@ -273,6 +279,11 @@ Positions, units, orders and results are value objects. These rules hold for eve
 - **Canonical order.** List fields are put into a fixed order when the object is built, and then frozen (see [Canonical order](#canonical-order)).
 - **Validated on construction.** Every value object is checked against the classic map, whether it is built with `new` or with `from_h`. An object that can't exist on that map raises `TA::InvalidInput` (see [Impossible objects](#impossible-objects)). This will be revisited if other maps arrive.
 
+```ruby
+O.from_h({"type" => "hold", "power" => "england", "at" => "lon"})                 # raises TA::InvalidInput: missing "format"
+O.from_h({"format" => 2, "type" => "hold", "power" => "england", "at" => "lon"})  # raises TA::InvalidInput: unknown format 2
+```
+
 A value object is only checked for being well formed. An order that breaks a rule of the game, such as a move to a province the unit can't reach, is still a valid order object. Judging it is the job of checking (see [Checking an order](#checking-an-order)).
 
 ### Province fields and location fields
@@ -480,7 +491,13 @@ The result of adjudicating a phase. It carries `format`. Only the fields are des
 - `paradox`: `true` or `false`.
 - `position`: a `TA::Position`, the position after the phase.
 
+The example below adjudicates a position, `pos`, that holds only England's fleet in London, with London owned by England. The fleet is ordered to hold.
+
 ```ruby
+pos = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement,
+  units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon))],
+  ownership: {lon: :england}, dislodged_units: [], standoffs: [])
+adjudication = TA.adjudicate(pos, [O::Hold.new(power: :england, at: :lon)])
 adjudication.to_h
 # => {"format" => 1,
 #     "outcomes" => [{"order" => {"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"},
@@ -580,6 +597,25 @@ TA.check(start, O::MoveViaConvoy.new(power: :england, at: :lvp, to: :wal))
 # => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:no_convoy_route]>   # no fleet is at sea yet
 TA.check(start, O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal))
 # => #<data Trucebearer::Adjudicator::CheckResult legal=true, reasons=[]>   # Austria may support a Russian army
+at_sea = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
+  dislodged_units: [], standoffs: [],
+  units: [TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :mao)),
+          TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :gol))])
+TA.check(at_sea, O::Move.new(power: :france, at: :mao, destination: L.new(province: :spa)))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:coast_required]>   # both coasts reachable; one must be named
+TA.check(at_sea, O::Move.new(power: :france, at: :gol, destination: L.new(province: :spa, coast: :nc)))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:coast_unreachable]>   # the Gulf of Lyon touches only the south coast
+retreat = TA::Position.from_h(start.to_h.merge("phase" => "retreat"))
+TA.check(retreat, O::Hold.new(power: :england, at: :lon))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:wrong_phase]>
+TA.check(start, O::Hold.new(power: :england, at: :wal))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:no_such_unit]>
+TA.check(start, O::SupportHold.new(power: :germany, at: :mun, target: :ber))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=true, reasons=[]>
+TA.check(start, O::SupportHold.new(power: :germany, at: :mun, target: :sil))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:no_unit]>
+TA.check(start, O::Convoy.new(power: :england, at: :lon, from: :lvp, to: :bel))
+# => #<data Trucebearer::Adjudicator::CheckResult legal=false, reasons=[:not_fleet_at_sea]>   # London is coastal, not a sea province
 ```
 
 ### Terms used in checking
@@ -674,6 +710,25 @@ TA.legal_orders(start, TA::Unit.new(power: :france, type: :fleet, location: L.ne
 # => []   # no French fleet is in London
 ```
 
+The next examples reuse `at_sea` and `retreat` from [Checking an order](#checking-an-order). They also use `ln`, a movement position that holds only England's army in London and fleet in the North Sea. By land, the army in London can reach only `wal` and `yor`. The fleet in `nth` links London by sea to the coastal provinces `bel`, `den`, `edi`, `hol`, `nwy` and `yor`. So `yor` is the only destination the army can reach both by land and by convoy.
+
+```ruby
+vie = TA::Unit.new(power: :austria, type: :army, location: L.new(province: :vie))
+TA.legal_orders(start, vie).include?(O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal))
+# => true   (a support for a move nobody has ordered)
+mao = TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :mao))
+TA.legal_orders(at_sea, mao).select { O::Move === _1 && _1.destination.province == :spa }.map { _1.destination.coast }
+# => [:nc, :sc]   (one move per reachable coast, none without a coast)
+ln = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
+  dislodged_units: [], standoffs: [],
+  units: [TA::Unit.new(power: :england, type: :army, location: L.new(province: :lon)),
+          TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :nth))])
+army = TA::Unit.new(power: :england, type: :army, location: L.new(province: :lon))
+TA.legal_orders(ln, army).grep(O::MoveViaConvoy).map(&:to)                            # => [:yor]
+TA.legal_orders(ln, army).any? { O::Move === _1 && _1.destination.province == :nwy }  # => true  (plain move, by convoy)
+TA.legal_orders(retreat, fleet)                                                        # => []
+```
+
 ## Adjudicating a movement phase
 
 *Arrives in 0.2.0.*
@@ -697,6 +752,9 @@ result.outcomes.count { !_1.submitted }  # => 20   (implied holds for the other 
 result.paradox                           # => false
 result.position.phase                    # => :retreat
 result.position.dislodged_units          # => []
+result.outcomes.drop(2).first(3).map { _1.order.at }          # => [:ank, :ber, :bre]  (implied holds, by province)
+result.position.units.any? { _1.location.province == :nth }   # => true  (units at their new places)
+result.position.ownership == start.ownership                  # => true  (ownership unchanged)
 
 bounce = [O::Move.new(power: :russia, at: :war, destination: L.new(province: :gal)),
           O::Move.new(power: :austria, at: :vie, destination: L.new(province: :gal))]
@@ -748,7 +806,7 @@ What each outcome means:
 Two further promises:
 
 - The result of a support or a convoy never depends on whether the move it helped succeeded.
-- A condition with the same name gets the same symbol under every order type (`:void`, `:unmatched`, `:given`), and no two different conditions share a symbol.
+- A condition with the same name gets the same symbol under every order type (`:void`, `:unmatched`, `:given`), and no two different conditions share a symbol. The cases grouped under `:bounced` (a bounce, a standoff and a lost head-to-head battle) count as one condition.
 
 ### The dislodged flag
 
@@ -780,11 +838,40 @@ These rules decide whether an army's move goes by land or by convoy. They give t
 - Once a move goes by convoy, it never falls back to the land route, even if the convoy is disrupted or was never ordered (DATC 6.G.8, 6.G.11, 6.G.20).
 - The route may use fleets of any power, and it doesn't have to pass through the fleet whose order showed the intent to convoy (DATC 6.G.6).
 
+These examples use `ln` from [Legal orders](#legal-orders): England's army in London and fleet in the North Sea. Yorkshire borders London, so the army could also go by land.
+
+```ruby
+by_sea = TA.adjudicate(ln, [O::Move.new(power: :england, at: :lon, destination: L.new(province: :yor)),
+                            O::Convoy.new(power: :england, at: :nth, from: :lon, to: :yor)])
+by_sea.outcomes.map(&:result)            # => [:succeeded, :given]   (the army went by sea)
+by_land = TA.adjudicate(ln, [O::Move.new(power: :england, at: :lon, destination: L.new(province: :yor))])
+by_land.outcomes.map(&:result)           # => [:succeeded, :held]    (by land; the fleet's implied hold)
+```
+
 ### Convoy paradoxes
 
-When the orders hold a convoy paradox, `adjudicate` still returns a result, with `paradox: true`. While the flag is set, every outcome value and where each unit ends up are unspecified until 0.3, even for orders that have nothing to do with the paradox (DATC 4.A.2). The next position is still a valid `TA::Position`.
+When the orders hold a convoy paradox, `adjudicate` still returns a result, with `paradox: true`. The flag is `true` exactly when the orders hold a convoy paradox, as defined under [Terms used in adjudication](#terms-used-in-adjudication), and `false` otherwise. While the flag is set, every outcome value and where each unit ends up are unspecified until 0.3, even for orders that have nothing to do with the paradox (DATC 4.A.2). The next position is still a valid `TA::Position`.
 
 The flag is set for each pending case listed under [DATC scope](#datc-scope), and clear for every case that section requires. Resolving paradoxes is #39.
+
+The position below has the shape of the simplest convoy paradox (DATC 6.F.14). France's army in Brest attacks London by convoy, which would cut the support from London. That support decides whether the convoying fleet in the English Channel is dislodged.
+
+```ruby
+paradox_pos = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
+  dislodged_units: [], standoffs: [],
+  units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon)),
+          TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :wal)),
+          TA::Unit.new(power: :france, type: :army, location: L.new(province: :bre)),
+          TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :eng))])
+result = TA.adjudicate(paradox_pos, [
+  O::Move.new(power: :england, at: :wal, destination: L.new(province: :eng)),
+  O::SupportMove.new(power: :england, at: :lon, from: :wal, to: :eng),
+  O::Move.new(power: :france, at: :bre, destination: L.new(province: :lon)),
+  O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon)])
+result.paradox                           # => true
+# The outcome values and where each unit ends up are unspecified until 0.3 (#39),
+# but result.position is still a valid TA::Position.
+```
 
 ### The next position
 
@@ -795,6 +882,25 @@ In 0.2, `position` is a snapshot taken after the moves. It has:
 - in `dislodged_units`, each dislodged unit, with `attacker_from` (a province, no coast) and `by_convoy` (DATC 4.A.5, 6.H.11, 6.H.12);
 - in `standoffs`, every province left empty by a standoff;
 - the same supply-center ownership as before.
+
+In the example below, Germany's army in Bohemia moves into Vienna with support from Tyrolia, and dislodges Austria's holding army.
+
+```ruby
+vienna = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
+  dislodged_units: [], standoffs: [],
+  units: [TA::Unit.new(power: :austria, type: :army, location: L.new(province: :vie)),
+          TA::Unit.new(power: :germany, type: :army, location: L.new(province: :boh)),
+          TA::Unit.new(power: :germany, type: :army, location: L.new(province: :tyr))])
+result = TA.adjudicate(vienna, [
+  O::Hold.new(power: :austria, at: :vie),
+  O::Move.new(power: :germany, at: :boh, destination: L.new(province: :vie)),
+  O::SupportMove.new(power: :germany, at: :tyr, from: :boh, to: :vie)])
+[result.outcomes.first.result, result.outcomes.first.dislodged]   # => [:held, true]
+result.position.dislodged_units
+# => [TA::DislodgedUnit.new(unit: TA::Unit.new(power: :austria, type: :army, location: L.new(province: :vie)),
+#                           attacker_from: :boh, by_convoy: false)]
+result.position.units.find { _1.location.province == :vie }.power   # => :germany
+```
 
 0.3 will replace this with the real next phase. Until then, the app builds the next movement position itself, from this retreat position and the host's edits, since `adjudicate` rejects a retreat position.
 
