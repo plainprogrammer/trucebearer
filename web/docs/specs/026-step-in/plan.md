@@ -1150,7 +1150,7 @@ This section is appended to `docs/specs/026-step-in/plan.md` (the plan's header 
 
 # Amendment 1.3.0 (#112): one History on the host page
 
-Spec: `spec.md` v1.3.0, D11 and Story 11 (Gate A approved with specs 025 1.2.0 and 027 1.0.6). Branch `web/112-one-history`. Everything is under `web/`. No migration, route or controller action changes.
+Spec: `spec.md` v1.3.0, D11 and Story 11 (Gate A approved with specs 025 1.3.0 and 027 1.0.6). Branch `web/112-one-history`. Everything is under `web/`. No migration, route or controller action changes.
 
 ## Gates checked
 

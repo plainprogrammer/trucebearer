@@ -55,7 +55,7 @@ RSpec.describe "The results broadcast" do
   end
 
   it "keeps the reveal when the cable raises, and logs only the class (AC-4.5)" do
-    allow(Turbo::StreamsChannel).to receive(:broadcast_refresh_to).and_raise(RuntimeError, "secret detail")
+    allow(Turbo::StreamsChannel).to receive(:broadcast_stream_to).and_raise(RuntimeError, "secret detail")
     allow(Rails.logger).to receive(:warn)
 
     game.current_phase.reveal!
