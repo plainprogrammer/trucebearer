@@ -1,0 +1,67 @@
+name: Early warning
+
+on:
+  pull_request:
+    paths:
+      - "adjudicator/**"
+      # Not in the original trigger list: lets the job run on a pull request
+      # that changes this file, as the other two workflows do.
+      - ".github/workflows/early-warning.yml"
+  push:
+    branches: [main]
+    paths:
+      - "adjudicator/**"
+      - "web/**"
+      - ".github/workflows/early-warning.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  early-warning:
+    name: "Early warning: app specs against the local gem (never blocks a merge)"
+    runs-on: ubuntu-latest
+    # A failure here warns that the next gem release would break the app.
+    # It must never block a merge, so never list this job as a required check.
+    continue-on-error: true
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    env:
+      # The override contract for the gem source: when this is set, web/Gemfile
+      # uses a path source at this folder instead of the pinned git tag.
+      # web/Gemfile does not honor it yet (Issue #19 adds the switch). Until
+      # then the variable has no effect and this job runs the same specs as
+      # the Web workflow.
+      ADJUDICATOR_PATH: ${{ github.workspace }}/adjudicator
+      # Unfrozen for this job only, so a path source can resolve differently
+      # from the committed Gemfile.lock.
+      BUNDLE_FROZEN: "false"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # setup-ruby has no input for a version file outside its working
+      # directory, so read the root .ruby-version here. Run steps start in
+      # web/, hence the relative path.
+      - name: Read the Ruby version from the root .ruby-version
+        id: ruby
+        run: echo "version=$(tr -d '[:space:]' < ../.ruby-version)" >> "$GITHUB_OUTPUT"
+
+      # No bundler-cache here: its deployment mode and lockfile-keyed cache
+      # would fight the unfrozen override. Install the gems in the next step.
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
+        with:
+          ruby-version: ${{ steps.ruby.outputs.version }}
+          working-directory: web
+
+      - name: Install gems
+        run: bundle install
+
+      - name: Run the specs
+        run: bundle exec rspec
