@@ -1,7 +1,7 @@
 # Feature 027: The host's position editor
 
-**Status:** Draft
-**Version:** 1.0.2
+**Status:** Approved
+**Version:** 1.0.3
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #27
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.3 | 2026-11-26 | Approved at Gate A (the maintainer's delegate): D2 option (a), D3, D4, D5, the screens and the amendments. Option (c) of D2, the host-toggled hold, is follow-up Issue #113, the first remedy if the repeated wipes hurt at the table. The engine's new methods are kept in one contiguous block of `rules_engine.rb`, because #29 edits that file. |
 | 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): the "Choose ..." checks run before any gem call and unknown identifiers are `other` (D5); `RulesEngine.coast_name` added; AC-1.5 and AC-1.9 agree with the stage order; the unit that vanishes under the lock is the stranger response (D7, AC-7.12); AC-3.3 covers a non-province value; spec 023's note is amended too (AC-10.2); stale Open Question references and the status-scan wording corrected. |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **D5/D8:** the plain words no longer rest on the gem's message text, which `web/AGENTS.md` forbids using. `RulesEngine` builds each edit in stages and explains a refusal from the documented map queries (province type, coasts, occupied provinces), only after the gem has refused. Open Question 1 is gone.<br>• **D3:** the clearing rule is now "an edit that changes where units stand". A season-and-year edit keeps orders, as an ownership edit does (orders are keyed to the phase and checked against units); the notice shows only the latest clearing time.<br>• **D7:** the guard on `Phase#position` is new behaviour (a model validation) and has ACs; `edit_position!` compares the locked open phase with the phase the URL named; stale and in-lock cases both go to the host page like the reveal.<br>• **D4:** `change` becomes `detail`, `kind` becomes `action`, moves carry `from_coast` and `to_coast`, removals carry the coast, years are integers; one `Game` method reads the notice's times.<br>• **D6/D8/AC-1.x:** coast field and the "Choose ..." sentences defined; which reason wins; both "set" forms use PUT.<br>• **Story 7/10:** route-table entries (`revealed: :none`, not `numbered`) and the `why` texts of three existing entries; named versions for the amended specs and the amendments spec; the stylesheet budget; ACs rewritten as Given/When/Then and the untestable ones replaced. |
 | 1.0.0 | 2026-11-26 | First draft |
@@ -81,7 +82,7 @@ The Issue says the host can "set the next phase" and "start the next movement ph
 
 - **(a) Edit in place, no new state. Recommended.** After a reveal, the open phase is the next movement phase (spring becomes fall of the same year, fall becomes spring of the next). The host opens the editor, makes the retreats and builds, and the phase is ready: "set the next phase" is the season-and-year form, for a host whose table is at a different date than the app, and "start the next movement phase" is met by the reveal that opened it. The risk is the one the comment from #22 describes: a player can save orders before the host has fixed the board. D3 handles that with a rule that needs no new state. **The cost:** each edit that moves units clears everyone's orders again, so a host who makes six builds after players have started ordering wipes them six times. The notice shows only the latest time, so it stays short. The cure is a habit the page says out loud ("Fix the board before the players order"); the table still can't be stopped from ordering early.
 - **(b) A "position being fixed" state.** The reveal would open the next phase on hold. While it is held, saving orders is refused with a plain page and the host page shows "Edit the board" and a "Start Spring 1902 · Movement" button. This matches the Issue's wording most literally and means no player ever saves against a stale board. It costs: a new column and state on `Phase`; a change to `Phase#reveal!` (spec 022 FR-7, D3, and the specs that build on it, 023 and 026); a refusal page on every order route; a second thing the status list and the live refresh must explain; and a button the host must press after **every** reveal, including the ones that need no fixing, which is most of them in the playtest, where the stand-in adjudicator never dislodges anything and no phase needs builds until fall. It also leaves a game stuck on hold if the host forgets.
-- **(c) A host-chosen hold: a "hold orders" switch on the editor.** The host switches the hold on, edits, switches it off. It needs no change to `reveal!` and is the only option that avoids the repeated wipes of (a). It costs a new state on `Phase`, a refusal page on every order route, and a new way for a game to be stuck on hold. It is the first thing to build if the playtest shows (a)'s cost is real, and is listed in Out of Scope for that reason.
+- **(c) A host-chosen hold: a "hold orders" switch on the editor.** The host switches the hold on, edits, switches it off. It needs no change to `reveal!` and is the only option that avoids the repeated wipes of (a). It costs a new state on `Phase`, a refusal page on every order route, and a new way for a game to be stuck on hold. It is the first thing to build if the playtest shows (a)'s cost is real: Issue #113 holds it, and it is listed in Out of Scope for that reason.
 
 If the maintainer prefers (b) or (c), this spec is amended (spec-update) and the plan grows a lifecycle step. Nothing in D1, D3, D4 or D5 changes.
 
@@ -435,7 +436,7 @@ Every route is classified. The sweep is extended. The scans are updated (AC-6.7,
 
 ## Out of Scope (Future Considerations)
 
-- A hold state while the host fixes the board (D2 options b and c), if the playtest shows players saving orders too early or the repeated wipes are too costly.
+- A hold state while the host fixes the board (D2 options b and c; the host-toggled hold is Issue #113), if the playtest shows players saving orders too early or the repeated wipes are too costly.
 - Re-checking orders instead of clearing them (D3), if clearing proves too costly at a real table.
 - Editing dislodged units and standoffs, retreat and adjustment phases (gem 0.3.0, 1.0).
 - A reason code on the gem's errors, so the app need not explain a refusal from map queries (an "Adjudicator request", if the maintainer wants one).
