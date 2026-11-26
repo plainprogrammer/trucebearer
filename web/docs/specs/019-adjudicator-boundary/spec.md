@@ -1,7 +1,7 @@
 # Feature 019: The adjudicator boundary and a stand-in adjudicator
 
 **Status:** Draft
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #19
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• The boundary gets four loaders (`load_position`, `load_order`, `load_check_result`, `load_adjudication`) that take a gem object, a string-keyed hash or nil, so the attribute types never name a gem class.<br>• The attribute types subclass `ActiveRecord::Type::Value`, never `Type::Json`, and let errors out. Unparsable JSON text is stated.<br>• Rule 4 of the stand-in is now a stated procedure with one result, and the swap, rotation, chain and coast cases get ACs, plus a sweep over legal orders.<br>• The guard gets exact patterns, negatives and a wider file set. The gem is declared `require: false`.<br>• "One file" is reworded to what really changes at 0.2.0. The stand-in's result classes are `Data` classes with fixed names.<br>• Verification fixes: no timing number, drop-table check, pin spec reads `Gemfile` text only |
 
 ## Problem Statement
 
@@ -24,7 +25,7 @@ The rules live in the `trucebearer-adjudicator` gem, and the app has to use them
 - The app depends on the gem at the git tag `adjudicator-v0.1.0`, and the committed `Gemfile.lock` installs frozen with no extra steps.
 - One switch (`ADJUDICATOR_PATH`) points the app at a local checkout of the gem for the early-warning job, as set out in the comment on Issue #19.
 - One boundary object is the only place in the app that touches the gem. It offers the starting position, checking an order, a unit's legal orders and adjudicating a phase.
-- Until 0.2.0, adjudication is answered by a stand-in, inside the boundary object's own file, that returns results in the documented shape. The upgrade to 0.2.0 is then a change to that one file.
+- Until 0.2.0, adjudication is answered by a stand-in, inside the boundary object's own file, that returns results in the documented shape. At 0.2.0 the only app source file that changes is that one, and callers that use the documented readers change not at all (see Story 5 for what else moves).
 - Positions, orders, check results and adjudication results can be saved in JSON columns as the gem's hash form and loaded back into equal objects. #21 and #22 reuse this without redesigning it.
 - A spec fails if any other app code reaches for the gem.
 
@@ -58,11 +59,11 @@ These were chosen for this spec, with the alternatives that were left out.
 | **B. An app-side value object that matches the readers of `TA::Adjudication` and `TA::Outcome`** (`outcomes`, `paradox`, `position`; `order`, `result`, `submitted`, `dislodged`) and has `to_h` and `from_h` producing the documented hash form | A few dozen lines. Callers read the same names before and after 0.2.0, and stored rows stay valid. **Chosen.** |
 | C. Leave adjudication out until 0.2.0 | Breaks the Issue's "Done when", and blocks #21's end-to-end flow. |
 
-Option B lives inside `app/models/rules_engine.rb`, as nested classes the 0.2.0 upgrade deletes. Its `position` is a real gem position, and its orders are real gem orders.
+Option B lives inside `app/models/rules_engine.rb`, as the nested classes `RulesEngine::StandInAdjudication` and `RulesEngine::StandInOutcome`, both built with `Data.define` so equality, `to_h` and pattern matching behave as the gem's do. The 0.2.0 upgrade deletes them. Their `position` is a real gem position, and their orders are real gem orders. `adjudication_from_h` for them validates as the gem documents for value objects: exactly the documented keys, `format` 1, `result` one of the nine symbols, booleans where booleans belong.
 
 **D3. How storage is proved.** A table that exists only while the specs run, built in `spec/support/` and never in `db/`. The alternative, one minimal real table, would put a table in the production schema that #21 and #22 then have to migrate away. The attribute types are real app code (`app/models/`) and are the part #21 and #22 reuse.
 
-**D4. Attribute types.** One ActiveRecord attribute type per stored kind: position, order, check result and adjudication result. Each serializes with `to_h` as JSON, and loads with the matching `from_h` through the boundary object. The types never name a gem class.
+**D4. Attribute types.** One ActiveRecord attribute type per stored kind: position, order, check result and adjudication result. Each subclasses `ActiveRecord::Type::Value` (not `Type::Json`, whose `deserialize` swallows decode errors and whose in-place change check re-reads the raw value). Each serializes with `to_h` as JSON text, and loads through the boundary's matching loader. The types never name a gem class.
 
 ## User Stories
 
@@ -92,10 +93,13 @@ Option B lives inside `app/models/rules_engine.rb`, as nested classes the 0.2.0 
 - [ ] **AC-2.2** Given the starting position When England's hold in London is checked (`RulesEngine.check`) Then the result is legal and has no reasons
 - [ ] **AC-2.3** Given the starting position When France's hold in London is checked Then the result is not legal and its reasons are `[:foreign_unit]`
 - [ ] **AC-2.4** Given the starting position and England's fleet in London (taken from the position's own units) When `RulesEngine.legal_orders` is called Then the list starts with England's hold in London, and every order in it passes `RulesEngine.check`
-- [ ] **AC-2.5** Given hash forms of a position, an order, a check result and an adjudication result as `JSON.parse` returns them When each is passed to the boundary's matching loader (`position_from_h`, `order_from_h`, `check_result_from_h`, `adjudication_from_h`) Then each returns an object equal to the original
-- [ ] **AC-2.6** Given any stored hash form with a `format` other than `1`, or without one When it is passed to a loader Then the gem's `InvalidInput` error is raised, and it is the same class as `RulesEngine::InvalidInput`
-- [ ] **AC-2.7** Given the app's Ruby code (`app/`, `lib/`, `config/`, `db/`) When it is scanned Then no file other than `app/models/rules_engine.rb` names the gem's module, the `TA` alias, or requires the gem
-- [ ] **AC-2.8** Given the guard in AC-2.7 When a file that references `Trucebearer::Adjudicator` is added outside the boundary file Then the guard spec fails (proved once by running the guard against a temporary fixture string, not by committing a bad file)
+- [ ] **AC-2.5** Given hash forms of a position, an order (each of the six types), a check result and an adjudication result as `JSON.parse` returns them When each is passed to the boundary's matching loader (`load_position`, `load_order`, `load_check_result`, `load_adjudication`) Then each returns an object equal to the original
+- [ ] **AC-2.5a** Given an object already of the right kind, or nil When it is passed to its loader Then the same object, or nil, comes back
+- [ ] **AC-2.5b** Given a value that is neither of the right kind, a hash nor nil (an Integer, a String, an array, or an object of another kind such as an order given to `load_position`) When it is passed to a loader Then `InvalidInput` is raised and its message names the value
+- [ ] **AC-2.6** Given any hash form with a `format` other than `1`, or without one, or with symbol keys, or with a missing or unknown key When it is passed to a loader Then the gem's `InvalidInput` error is raised, and it is the same class as `RulesEngine::InvalidInput`
+- [ ] **AC-2.7** Given the app's code (every file under `app/`, `lib/`, `config/`, `db/` and `bin/`, plus `config.ru` and `Rakefile`) When it is scanned Then no file other than `app/models/rules_engine.rb` matches the guard patterns of FR-7
+- [ ] **AC-2.8** Given the guard's matcher When it is run on strings Then it flags `Trucebearer::Adjudicator`, `Trucebearer.const_get`, `TA::Order`, `require "trucebearer/adjudicator"` and `RulesEngine::StandInOutcome`, and it does not flag the page title `Trucebearer`, `TABLE`, `DATA`, `STATUS`, `RulesEngine::InvalidInput` or `RulesEngine.check`
+- [ ] **AC-2.8a** Given `web/Gemfile` When it is read Then the gem is declared with `require: false`, and the only `require` of the gem in the app is in the boundary file
 - [ ] **AC-2.9** Given the boundary object When it is read Then its name, its methods and its nested classes contain no "Dip" and no "Diplomacy" (the existing words spec already covers this)
 
 ### Story 3: A stand-in adjudicator in the documented shape
@@ -110,13 +114,19 @@ Option B lives inside `app/models/rules_engine.rb`, as nested classes the 0.2.0 
 - [ ] **AC-3.2** Given Russia's Warsaw to Galicia and Austria's Vienna to Galicia When adjudicated Then both outcomes are `:bounced`, no unit enters Galicia, and the next position lists `gal` in `standoffs`
 - [ ] **AC-3.3** Given an order that fails `RulesEngine.check` (France ordering a hold for the unit in London) When adjudicated Then its outcome is `:void` with `submitted` true, and England's unit in London gets an implied hold
 - [ ] **AC-3.4** Given a legal support or convoy order When adjudicated Then its outcome is `:given`, and it changes nothing about any other order
-- [ ] **AC-3.5** Given a legal move into a province whose unit stays put (it holds, is void, or its own move bounced) When adjudicated Then the move is `:bounced`, so the next position never holds two units in one province
+- [ ] **AC-3.5** Given a legal move into a province whose unit stays put (it holds, is void, supports, convoys, or its own move bounced) When adjudicated Then the move is `:bounced` and the province is not in `standoffs`
 - [ ] **AC-3.6** Given a legal move into a province whose unit moves away successfully When adjudicated Then the move is `:succeeded`
+- [ ] **AC-3.6a** Given two units that swap provinces, and three units that rotate through three provinces When adjudicated Then all the moves are `:succeeded`
+- [ ] **AC-3.6b** Given a move into a province whose unit has a blocked move, behind which a second move waits (a chain of two moves behind a move that bounces) When adjudicated Then all three moves are `:bounced`
+- [ ] **AC-3.6c** Given three units that move to one empty province When adjudicated Then all three are `:bounced` and the province is in `standoffs`
+- [ ] **AC-3.6d** Given a fleet that moves into Spain's north coast, and a fleet that moves out of St Petersburg's south coast to a province with no coasts When adjudicated Then the first unit ends on that coast and the second ends with no coast
+- [ ] **AC-3.6e** Given a legal move via convoy When adjudicated Then it is treated as a move to its `to` province under rule 4, with the unit ending there with no coast
+- [ ] **AC-3.6f** Given a fixed set of seeded random picks, one legal order per unit chosen from `RulesEngine.legal_orders` for each unit of several positions (the starting position and positions with fleets at sea and split coasts), several hundred phases in all When each is adjudicated Then `adjudicate` never raises and the next position it returns equals `load_position` of its own `to_h`
 - [ ] **AC-3.7** Given any adjudication When the result is read Then no outcome has `dislodged` true, `position.dislodged_units` is empty, the season, year and ownership are the same as before, and the phase is `:retreat`
 - [ ] **AC-3.8** Given the outcomes of a result Then the submitted orders come first, in the order given, followed by the implied holds sorted by province, and every `result` is one of the nine documented symbols
-- [ ] **AC-3.9** Given a position that isn't in the movement phase, or two orders from one power for units in the same province When adjudicated Then `InvalidInput` is raised, as the gem's documented 0.2.0 interface does
-- [ ] **AC-3.10** Given any result When `to_h` is called Then it has exactly the keys `format` (1), `outcomes`, `paradox` and `position`, with string keys and values all the way down, and a position hash that `RulesEngine.position_from_h` loads
-- [ ] **AC-3.11** Given the stand-in's source When it is read Then a comment at its head says that its outcomes are fake and lists its rules, and `FR-3` below lists them exactly
+- [ ] **AC-3.9** Given a position that isn't in the movement phase, or two orders from one power for units in the same province, or an argument that isn't a position or an array of orders When adjudicated Then `InvalidInput` is raised, as the gem's documented 0.2.0 interface does for the first two
+- [ ] **AC-3.10** Given any result When `to_h` is called Then it has exactly the keys `format` (1), `outcomes`, `paradox` and `position`, with string keys and values all the way down. Each outcome hash has exactly `order`, `result`, `submitted` and `dislodged`, with no `format` of its own and with the nested order carrying its own `format`. The `position` hash is one that `RulesEngine.load_position` loads
+- [ ] **AC-3.11** (Review check, not a spec.) Given the stand-in's source When it is read Then a comment at its head says that its outcomes are fake and lists its rules, and FR-3 below lists them exactly
 
 ### Story 4: Gem objects stored in JSON columns and loaded back
 
@@ -133,20 +143,23 @@ Option B lives inside `app/models/rules_engine.rb`, as nested classes the 0.2.0 
 - [ ] **AC-4.5** Given a saved record When its raw column text is read Then it is the JSON text of the object's `to_h` and contains `"format":1`, so any reader of the database can see the version
 - [ ] **AC-4.6** Given a column that is nil When loaded Then the attribute is nil, and saving a nil writes SQL NULL
 - [ ] **AC-4.7** Given a record assigned a hash form (string keys) instead of an object When saved and reloaded Then the attribute is the equal object
+- [ ] **AC-4.7a** Given a record assigned a symbol-keyed hash, a String, an Integer, or an object of another kind When it is assigned Then `InvalidInput` is raised at assignment
 - [ ] **AC-4.8** Given a stored row whose JSON has an unknown `format` (for example 2) When the record is loaded and the attribute read Then `InvalidInput` is raised, nothing is rescued, and no empty or partial object is returned
-- [ ] **AC-4.9** Given the same stored row When loaded through the model Then the error message names the offending value (the gem's message does), and the type adds nothing to hide it
-- [ ] **AC-4.10** Given the stored table the specs use When the suite ends Then the table is gone and `db/` holds no new file
+- [ ] **AC-4.9** Given the same stored row When loaded through the model Then the error message contains the offending value, and the type neither rescues nor rewrites it
+- [ ] **AC-4.9a** Given a stored row whose column text is not JSON When the attribute is read Then `JSON::ParserError` is raised, and a row holding JSON that is not an object (such as `[]`) raises `InvalidInput`
+- [ ] **AC-4.9b** Given a stored row that won't load When the record is saved without touching that attribute Then the save does not re-read or alter the bad column
+- [ ] **AC-4.10** Given the spec-only table When the suite has run Then the table is dropped after its examples, and `git status --porcelain web/db` is empty
 
-### Story 5: The 0.2.0 upgrade is a change to one file
+### Story 5: The 0.2.0 upgrade changes one source file
 
 **As a** developer doing #29
 **I want** the stand-in and every gem call in one place
-**So that** the upgrade replaces the stand-in with the real adjudicator in one file
+**So that** the upgrade replaces the stand-in with the real adjudicator in one app source file. The pull request also moves the pin and the lockfile, rewrites the stand-in's spec, drops the stand-in class names from the guard, and decides what to do with any stored stand-in rows (they hold fake outcomes in the real shape)
 
 **Acceptance criteria:**
 
-- [ ] **AC-5.1** Given the app's Ruby code When it is scanned for the stand-in's result classes Then they appear only in `app/models/rules_engine.rb`
-- [ ] **AC-5.2** Given `RulesEngine.adjudicate`, `adjudication_from_h` and the adjudication attribute type When read Then they hand back objects with the readers `outcomes`, `paradox` and `position` (and `order`, `result`, `submitted`, `dislodged` on each outcome), so callers need no change when the gem's own classes take over
+- [ ] **AC-5.1** Given the app's code When it is scanned for `StandInAdjudication` and `StandInOutcome` Then they appear only in `app/models/rules_engine.rb`
+- [ ] **AC-5.2** Given `RulesEngine.adjudicate`, `adjudication_from_h` and the adjudication attribute type When read Then they hand back objects with the readers `outcomes`, `paradox` and `position` (and `order`, `result`, `submitted`, `dislodged` on each outcome), so callers that use only those readers need no change when the gem's own classes take over. (The stand-in only ever produces five of the nine result symbols, so a caller that matches on results must handle all nine)
 - [ ] **AC-5.3** Given `web/AGENTS.md` When read Then it says that every gem call goes through `RulesEngine`
 
 ## Functional Requirements
@@ -173,11 +186,11 @@ Option B lives inside `app/models/rules_engine.rb`, as nested classes the 0.2.0 
 | `check(position, order)` | a check result with `legal` and `reasons` |
 | `legal_orders(position, unit)` | an array of orders, in the gem's documented order |
 | `adjudicate(position, orders)` | an adjudication result (the stand-in until 0.2.0) |
-| `position_from_h`, `order_from_h`, `check_result_from_h`, `adjudication_from_h` | the object for a stored hash form |
+| `load_position(value)`, `load_order(value)`, `load_check_result(value)`, `load_adjudication(value)` | the object of that kind. A gem object of the right kind (an adjudication, the stand-in's before 0.2.0) comes back as it is, nil comes back as nil, a string-keyed hash is rebuilt with the gem's `from_h`, and anything else raises `InvalidInput` naming the value |
 | `InvalidInput` | the gem's error class, under the app's own constant |
 
 **Must:**
-- Be the only app file that requires the gem or names its constants.
+- Be the only app file that requires the gem or names its constants. The gem is declared `require: false` in the Gemfile, and the boundary file requires it. Its `TA` alias is a private constant of `RulesEngine`.
 - Pass the gem's own errors through unchanged. It adds no rescue and no new error class.
 - Hand back the gem's immutable objects as they are, except for the adjudication result before 0.2.0 (FR-3).
 - Offer no map queries and no unit constructor. A caller gets a unit from `position.units`.
@@ -193,8 +206,12 @@ The stand-in is a private part of `app/models/rules_engine.rb`. **Its outcomes a
 1. The position must be in the movement phase, and one power may not give two orders for units in the same province. Otherwise `InvalidInput` is raised.
 2. Each submitted order is checked with `check`. An order that fails is `:void`.
 3. A legal hold is `:held`. A legal support or convoy is `:given`. Supports and convoys have no other effect.
-4. A legal move (`Move` or `MoveViaConvoy`) targets a province. It is `:bounced` if another legal move targets the same province, or if the province holds a unit that stays (see rule 5). Otherwise it is `:succeeded`. This is worked out repeatedly until no outcome changes, so a chain of moves behind a bounced move bounces too. Moves that swap two units, or rotate three or more, succeed. A convoy chain is not looked at.
-5. A unit stays when its order is a hold, a support, a convoy, is void, or is a move that bounced. A unit with no legal order from its owner gets an implied hold.
+4. A legal move (`Move` or `MoveViaConvoy`) targets a province (the move's destination, or the via-convoy move's `to`). Its result is found like this:
+   1. Every legal move starts as `:succeeded`.
+   2. Every move whose target is also the target of another legal move becomes `:bounced`.
+   3. Repeat until nothing changes: a move that is still `:succeeded` becomes `:bounced` when its target province holds a unit that is not making a move that is still `:succeeded`.
+   Each step only turns moves into bounces, so it ends, and it has one answer. Moves that swap two units, or rotate three or more, succeed. A convoy chain is not looked at.
+5. A unit stays when its order is a hold, a support, a convoy, is void, or is a move that is `:bounced`. A unit with no legal order from its owner gets an implied hold.
 6. The outcome list is the submitted orders in the order given, then one implied hold per remaining unit, sorted by province, with `submitted` false. No outcome is ever dislodged. `paradox` is always false.
 7. The next position keeps the season, year and ownership, has the phase `:retreat`, moves each unit whose move succeeded (an army keeps no coast, a fleet takes the destination's coast), has no dislodged units, and lists in `standoffs` every province that two or more legal moves targeted and that is empty afterward.
 8. The result's `to_h` is the documented form, with `format` 1.
@@ -207,8 +224,10 @@ The stand-in is a private part of `app/models/rules_engine.rb`. **Its outcomes a
 
 **Must:**
 - Provide one ActiveRecord attribute type each for a position, an order, a check result and an adjudication result, in `app/models/`.
-- Write the object's `to_h` as JSON. Read it back through the boundary's matching loader. Accept an already built object or a string-keyed hash on assignment. Treat nil as nil.
-- Let a loader's `InvalidInput` reach the caller, both when a record is read and when a hash is assigned.
+- Subclass `ActiveRecord::Type::Value`. `cast` is the boundary's loader for that kind, so assignment accepts an object, a string-keyed hash or nil, and raises `InvalidInput` for anything else (a String is not parsed on assignment).
+- `serialize` returns nil for nil, else the JSON text of the loaded object's `to_h`. `deserialize` returns nil for nil, else parses the column text with `JSON.parse` and passes it to the loader, which is not the same method as `cast`.
+- Leave `changed_in_place?` false: the objects are immutable, and a save must not re-read an untouched column.
+- Let a loader's `InvalidInput`, and `JSON::ParserError` for text that is not JSON, reach the caller.
 - Work on a JSON column (SQLite stores it as text).
 
 **Must not:**
@@ -218,24 +237,29 @@ The stand-in is a private part of `app/models/rules_engine.rb`. **Its outcomes a
 
 ### FR-5: What the app does when stored data won't load
 
-A stored value that the gem refuses (an unknown or missing `format`, or any other hash the gem rejects) is a data problem that needs a person. The type lets `InvalidInput` out at the moment the attribute is read. It does not guess, skip or blank it. In a request it ends as a server error with the gem's message in the log. Showing something kinder, and any migration of old stored data, belong to the screen that reads it and to the pull request that upgrades the pin, which can match on the new `format`.
+A stored value that the gem refuses (an unknown or missing `format`, or any other hash the gem rejects) is a data problem that needs a person. The type lets `InvalidInput` out at the moment the attribute is read. It does not guess, skip or blank it. Because attributes load lazily, anything that reads the bad attribute raises, including `inspect`, `attributes` and `as_json` on that record. In a request it ends as a server error with the gem's message in the log. Showing something kinder, and any migration of old stored data, belong to the screen that reads it and to the pull request that upgrades the pin, which can match on the new `format`.
 
 ### FR-6: Specs for the round trip
 
 **Must:**
 - Cover the boundary, the stand-in, the attribute types and the guard, test first.
 - Prove the database round trip with a table that exists only during the specs, created in `spec/support/` and dropped after, with its own model class defined there.
-- Keep specs from reading gem code: they use the same documented calls as the app, through `RulesEngine`, apart from the specs that prove the gem is pinned or the same error class is raised.
+- Build spec data (custom positions, the six order types, a legal convoy, a fleet in Spain's north coast) with `RulesEngine.load_position` and `load_order` from hand-written string-keyed hashes, so specs need no gem constants.
+- Read only `web/Gemfile` text in the pin spec. The early-warning job's unfrozen install rewrites `Gemfile.lock` to a path source, so a spec that read the lockfile or the loaded gem's source would fail there.
 
 ### FR-7: The guard spec
 
 **Must:**
-- Fail if any `.rb`, `.erb` or `.rake` file under `app/`, `lib/`, `config/` or `db/`, other than `app/models/rules_engine.rb`, contains `Trucebearer::`, a bare `TA` constant, `require "trucebearer` or `require 'trucebearer`.
-- Fail if any such file other than the boundary file names the stand-in's classes.
+- Scan every file, of any extension, under `app/`, `lib/`, `config/`, `db/` and `bin/`, plus `config.ru` and `Rakefile`, and fail on any match outside `app/models/rules_engine.rb` of:
+  - `\bTrucebearer\s*(::|\.)` (the module, including `Trucebearer.const_get`);
+  - `(?<![A-Za-z0-9_])TA(?![A-Za-z0-9_])` (the alias);
+  - `require\s*\(?\s*["']trucebearer` (the gem);
+  - `StandInAdjudication` or `StandInOutcome`.
+- Say in its own comment that it is textual: building a constant name from pieces would pass it, so review still matters.
 
 **Must not:**
 - Flag the word "Trucebearer" in plain text, such as a page title.
-- Scan `spec/` (specs may use `RulesEngine::InvalidInput` and need no gem constants otherwise).
+- Scan `spec/` (specs use `RulesEngine::InvalidInput` and otherwise need no gem constants).
 
 ### FR-8: Documentation
 
@@ -247,7 +271,7 @@ A stored value that the gem refuses (an unknown or missing `format`, or any othe
 
 ### Performance
 
-- `RulesEngine.starting_position`, `check` and `legal_orders` cost what the gem costs. The stand-in adjudicates a full 22-order phase in under 100 ms on the CI runner (measured once in a spec with a generous bound, not a benchmark).
+- `RulesEngine.starting_position`, `check` and `legal_orders` cost what the gem costs. The stand-in does one pass over the orders plus a loop that ends in at most as many rounds as there are moves. No timing target is set, and no timing spec is written.
 
 ### Security
 
@@ -270,8 +294,11 @@ A stored value that the gem refuses (an unknown or missing `format`, or any othe
 | `RulesEngine.adjudicate` is given two orders from one power for the unit in one province | `InvalidInput` |
 | A loader gets a hash with an unknown `format` | `InvalidInput`, with the gem's message |
 | A loader gets a hash with a missing or unknown key | `InvalidInput`, with the gem's message |
+| A stored column holds text that isn't JSON | `JSON::ParserError` from the read, not rescued |
+| A stored column holds JSON that isn't an object | `InvalidInput` naming the value |
+| `RulesEngine.adjudicate` gets something that isn't a position or an array of orders | `InvalidInput` |
 | A loader gets a hash with symbol keys | `InvalidInput`, because the gem's `from_h` takes strings only |
-| An attribute is assigned something that is neither a gem object, a hash nor nil | `InvalidInput` |
+| An attribute is assigned something that is neither a gem object of its kind, a string-keyed hash nor nil | `InvalidInput` naming the value |
 | A stored row won't load | `InvalidInput` when the attribute is read; see FR-5 |
 | A foreign power orders someone else's unit | That order is `:void`, and the owner's unit holds |
 
@@ -291,14 +318,14 @@ None. The choices in D1 to D4 are the maintainer's to confirm at Gate A.
 
 | Item | How it is checked |
 |------|-------------------|
-| AC-1.1 | A spec reads `web/Gemfile` and checks the tag, glob and absence of a path source with the variable unset |
-| AC-1.2 | `BUNDLE_FROZEN=true bundle install` in `web/` with `ADJUDICATOR_PATH` unset, then `git diff --exit-code Gemfile.lock` |
-| AC-1.3, AC-1.4 | `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && bundle exec rspec`, then the committed lockfile is restored with `git checkout Gemfile.lock` |
+| AC-1.1 | A spec reads `web/Gemfile` as text only and checks the tag, glob and the `ADJUDICATOR_PATH` branch. It never reads the lockfile or the loaded gem, so it passes in the early-warning job too |
+| AC-1.2 (manual and CI; needs the network) | `BUNDLE_FROZEN=true bundle install` in `web/` with `ADJUDICATOR_PATH` unset, then `git diff --exit-code Gemfile.lock` |
+| AC-1.3, AC-1.4 (manual; the early-warning job repeats AC-1.3) | `ADJUDICATOR_PATH=../adjudicator BUNDLE_FROZEN=false bundle install && bundle exec rspec`, then the committed lockfile is restored with `git checkout Gemfile.lock` |
 | AC-1.5 | Read `web/Dockerfile`: the build stage's package list holds `git` |
 | AC-2.1 to AC-2.6, AC-5.2 | `spec/models/rules_engine_spec.rb` (the first spec written, red until the pin and the boundary exist) |
-| AC-2.7 to AC-2.9, AC-5.1 | `spec/models/rules_engine_boundary_spec.rb`, the guard |
+| AC-2.7 to AC-2.9, AC-2.8a, AC-5.1 | `spec/models/rules_engine_boundary_spec.rb`, the guard |
 | AC-3.x | `spec/models/rules_engine_stand_in_spec.rb` |
 | AC-4.x | `spec/models/stored_gem_objects_spec.rb` with a spec-only table |
-| AC-5.3 | Read `web/AGENTS.md` |
+| AC-3.11, AC-5.3 | Review: read the stand-in's head comment and `web/AGENTS.md` |
 | CI | The `Web specs` job is green. The early-warning job is started by hand on the branch and runs the same specs against `ADJUDICATOR_PATH` |
 | Scope | `git diff --name-only main...HEAD` lists only paths under `web/` |
