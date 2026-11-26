@@ -166,7 +166,13 @@ RSpec.describe "Revealing a phase", type: :request do
         # Spec 026: the step-in confirmation and its record carry the phase number, and neither touches a phase.
         [ "GET", "/games/:public_id/host/seats/:power/phases/:number/step-in" ], [ "POST", "/games/:public_id/host/seats/:power/phases/:number/step-in" ],
         [ "GET", "/games/:public_id/host/seats/:power/phases/:number/orders" ], [ "PUT", "/games/:public_id/host/seats/:power/phases/:number/orders" ],
-        [ "GET", "/games/:public_id/host/seats/:power/phases/:number/orders/:province" ]
+        [ "GET", "/games/:public_id/host/seats/:power/phases/:number/orders/:province" ],
+        # Spec 027: the position editor changes the open phase's position and nothing else; no route reopens, undoes or deletes a phase.
+        [ "GET", "/games/:public_id/host/phases/:number/position" ], [ "GET", "/games/:public_id/host/phases/:number/position/units/new" ],
+        [ "POST", "/games/:public_id/host/phases/:number/position/units" ], [ "GET", "/games/:public_id/host/phases/:number/position/units/:province" ],
+        [ "PATCH", "/games/:public_id/host/phases/:number/position/units/:province" ], [ "DELETE", "/games/:public_id/host/phases/:number/position/units/:province" ],
+        [ "GET", "/games/:public_id/host/phases/:number/position/owners" ], [ "PUT", "/games/:public_id/host/phases/:number/position/owners" ],
+        [ "GET", "/games/:public_id/host/phases/:number/position/date" ], [ "PUT", "/games/:public_id/host/phases/:number/position/date" ]
       ])
       expect(routes.map(&:last).grep(/reopen|undo|unreveal/)).to be_empty
     end
