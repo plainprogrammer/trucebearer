@@ -1,4 +1,5 @@
 require "rails_helper"
+require_relative "../support/deploy_config"
 
 # Spec 024 D5, AC-7.1 to AC-7.3: what the setting does to Action Cable's own origin check, and where it is documented.
 RSpec.describe "The Action Cable origins" do
@@ -42,11 +43,11 @@ RSpec.describe "The Action Cable origins" do
   end
 
   it "lists the variable under env.clear in deploy.yml and explains it, with the unset case, in the README (AC-7.3)" do
-    deploy = YAML.load_file(Rails.root.join("config/deploy.yml"))
+    deploy = DeployConfig.load("TRUCEBEARER_HOST" => "play.example.org")
     readme = File.read(Rails.root.join("README.md"))
     section = readme[/^## Live updates.*?(?=^## |\z)/m]
 
-    expect(deploy.dig("env", "clear")).to include("TRUCEBEARER_CABLE_ORIGINS" => "https://app.example.com")
+    expect(deploy.dig("env", "clear")).to include("TRUCEBEARER_CABLE_ORIGINS" => "https://play.example.org")
     expect(section).not_to be_nil
     expect(section).to include("TRUCEBEARER_CABLE_ORIGINS")
     expect(section).to match(/unset/i)
