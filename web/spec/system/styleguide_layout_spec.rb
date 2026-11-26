@@ -22,6 +22,7 @@ RSpec.describe "Style guide layout", type: :system do
     it "makes every tappable control at least 44 by 44 pixels at #{width} pixels wide (AC-1.2)" do
       with_viewport(width) do
         visit "/styleguide"
+        expect(evaluate_script("window.innerWidth")).to eq(width)
 
         controls = sizes_of(TAPPABLE)
         expect(controls).not_to be_empty
