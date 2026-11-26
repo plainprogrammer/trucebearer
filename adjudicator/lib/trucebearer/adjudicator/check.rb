@@ -32,6 +32,9 @@ module Trucebearer
         when Order::Hold then nil
         when Order::Move then move(position, unit, order)
         when Order::MoveViaConvoy then move_via_convoy(position, unit, order)
+        when Order::SupportHold then support_hold(position, unit, order)
+        when Order::SupportMove then support_move(position, unit, order)
+        when Order::Convoy then convoy(position, unit, order)
         end
       end
 
@@ -60,6 +63,46 @@ module Trucebearer
         return :not_adjacent unless Reach.reaches?(unit, order.to)
 
         :no_convoy_route unless Reach.chain?(position, order.at, order.to)
+      end
+
+      def support_hold(position, unit, order)
+        return :own_province if order.target == order.at
+        return :no_unit unless unit_at(position, order.target)
+
+        :not_reachable unless Reach.reaches?(unit, order.target)
+      end
+
+      def support_move(position, unit, order)
+        return :own_province if order.from == order.at || order.to == order.at
+        return :same_province if order.from == order.to
+
+        supported = unit_at(position, order.from)
+        return :no_unit unless supported
+        return :not_reachable unless Reach.reaches?(unit, order.to)
+
+        :move_impossible unless could_move?(position, supported, order.to, order.at)
+      end
+
+      def convoy(position, unit, order)
+        return :not_fleet_at_sea unless unit.type == :fleet && Map.classic.province(order.at).type == :sea
+        return :bad_endpoints if order.from == order.to || !coastal?(order.from) || !coastal?(order.to)
+
+        army = unit_at(position, order.from)
+        return :no_unit unless army&.type == :army
+
+        :not_on_chain unless Reach.on_minimal_chain?(position, order.at, order.from, order.to)
+      end
+
+      # Could this unit make a plain move into the province? An army may also go by a
+      # convoy chain that doesn't need the supporter's fleet (6.D.31).
+      def could_move?(position, unit, province, supporter_province)
+        return true if Reach.reaches?(unit, province)
+
+        unit.type == :army && Reach.chain?(position, unit.location.province, province, without: supporter_province)
+      end
+
+      def coastal?(province)
+        Map.classic.province(province).type == :coastal
       end
 
       def unit_at(position, province)
