@@ -79,7 +79,9 @@ RSpec.describe "Marshal round trips of the value objects" do
       end
 
       it "round-trips with freeze: true as well" do
-        expect(Marshal.load(Marshal.dump(object), freeze: true)).to eq(object)
+        frozen_load = Marshal.load(Marshal.dump(object), freeze: true)
+        expect(frozen_load).to eq(object)
+        expect(deeply_frozen?(frozen_load)).to be(true)
       end
 
       it "dumps the hash form, so a hand-built payload of to_h is the same bytes (checks the spec helper)" do
@@ -118,9 +120,13 @@ RSpec.describe "Marshal round trips of the value objects" do
   describe "objects nested in other objects" do
     it "keeps the units of a position, each on its own and inside it, frozen and equal" do
       retreat_position.units.each do |unit|
-        expect(Marshal.load(Marshal.dump(unit))).to eq(unit)
+        alone = Marshal.load(Marshal.dump(unit))
+        expect(alone).to eq(unit)
+        expect(deeply_frozen?(alone)).to be(true)
       end
-      expect(Marshal.load(Marshal.dump(retreat_position)).units).to eq(retreat_position.units)
+      inside = Marshal.load(Marshal.dump(retreat_position)).units
+      expect(inside).to eq(retreat_position.units)
+      expect(deeply_frozen?(inside)).to be(true)
     end
 
     it "keeps the nested lists, mappings and strings of a position frozen" do
@@ -133,10 +139,15 @@ RSpec.describe "Marshal round trips of the value objects" do
       expect(loaded.dislodged_units.first.unit.location).to be_frozen
     end
 
-    it "puts the lists back in canonical order" do
-      loaded = Marshal.load(Marshal.dump(retreat_position))
+    it "puts the lists back in canonical order, even from a payload written out of order" do
+      hash = retreat_position.to_h
+      hash["standoffs"] = %w[vie boh]
+      hash["ownership"] = { "stp" => "russia", "bud" => "austria" }
+      hash["units"] = [Board.fleet, Board.army].map(&:to_h)
+      loaded = Marshal.load(payload(TA::Position, hash))
       expect(loaded.standoffs).to eq(%i[boh vie])
       expect(loaded.ownership.keys).to eq(%i[bud stp])
+      expect(loaded.units.map { |unit| unit.location.province }).to eq(%i[bud stp])
     end
 
     it "round-trips a whole list of objects, as a cache would hold them" do
@@ -166,7 +177,10 @@ RSpec.describe "Marshal round trips of the value objects" do
       [O::Hold, ->(h) { h.merge("at" => "xyz") }, /"xyz"/],
       [O::Hold, ->(h) { h.merge("type" => "move") }, /"move"/],
       [O::Move, ->(h) { h.merge("destination" => { "province" => "par", "coast" => "nc" }) }, /coast/],
-      [O::SupportMove, ->(h) { h.merge("to" => "spa/nc") }, /"spa\/nc"/]
+      [O::MoveViaConvoy, ->(h) { h.merge("to" => "xyz") }, /"xyz"/],
+      [O::SupportHold, ->(h) { h.merge("target" => "spa/nc") }, /"spa\/nc"/],
+      [O::SupportMove, ->(h) { h.merge("to" => "spa/nc") }, /"spa\/nc"/],
+      [O::Convoy, ->(h) { h.merge("from" => "xyz") }, /"xyz"/]
     ]
     bases = {
       TA::Location => -> { L.new(province: :bud) },
@@ -175,7 +189,10 @@ RSpec.describe "Marshal round trips of the value objects" do
       TA::Position => -> { TA::Map.classic.starting_position },
       O::Hold => -> { O::Hold.new(power: :england, at: :lon) },
       O::Move => -> { O::Move.new(power: :france, at: :mao, destination: L.new(province: :spa, coast: :nc)) },
-      O::SupportMove => -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) }
+      O::MoveViaConvoy => -> { O::MoveViaConvoy.new(power: :england, at: :lon, to: :wal) },
+      O::SupportHold => -> { O::SupportHold.new(power: :germany, at: :mun, target: :ber) },
+      O::SupportMove => -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) },
+      O::Convoy => -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) }
     }
 
     spots.each_with_index do |(klass, change, message), index|
@@ -191,6 +208,18 @@ RSpec.describe "Marshal round trips of the value objects" do
       hash = starting_position.to_h
       hash["units"][0] = hash["units"][0].merge("type" => "fleet", "location" => { "province" => "mun", "coast" => nil })
       expect { Marshal.load(payload(TA::Position, hash)) }.to raise_error(TA::InvalidInput, /inland/)
+    end
+
+    # A limit, written down so the interface wording stays honest. Ruby reads a payload in
+    # its plain struct format ("S") straight into the fields in C, without calling
+    # `initialize` or `marshal_load`, so no Ruby code can check it. If a future Ruby
+    # closes this, this example fails: then the docs can promise more.
+    it "does not catch a payload built by hand in Ruby's plain struct format (a limit of Ruby)" do
+      symbol = ->(name) { Marshal.dump(name.to_sym)[2..] }
+      by_hand = "\x04\bS".b + symbol.call(TA::Location.name) + "\x07".b +
+                symbol.call(:province) + symbol.call(:xyz) + symbol.call(:coast) + "0".b
+      expect { TA::Location.from_h("province" => "xyz", "coast" => nil) }.to raise_error(TA::InvalidInput)
+      expect(Marshal.load(by_hand).province).to eq(:xyz)
     end
   end
 end
