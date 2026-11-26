@@ -1,7 +1,7 @@
 # Feature 022: The phase lifecycle, open until the host reveals
 
-**Status:** Draft
-**Version:** 1.1.0
+**Status:** Approved
+**Version:** 1.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #22
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.0 | 2026-11-26 | Approved at Gate A (two Fable review rounds), with these rulings.<br>• **Stylesheet caps raised.** The total goes from 24 KB (24,576 bytes) to 32 KB (32,768 bytes), and `styleguide.css` from 4 KB (4,096) to 6 KB (6,144). Reason: the screen components the design-system catalog plans (#22 to #28), which spec 020 sized its 24 KB for before they were listed. The limits are enforced by `spec/styles/stylesheet_rules_spec.rb`, which changes with them. Specs 020 and 021 carry a changelog row for the new numbers; no Issue.<br>• **Reissue** (D9) is approved. Spec 021 is amended in this pull request (its changelog has a row).<br>• A host who reissues a seat and then enters orders on it is acting as that seat, unrecorded. That is #26's ground (D9). This feature does not solve it.<br>• The Gate A note for #27 (D3, "Handed to later issues") is posted on #27 after this pull request merges, and the note on unrecorded acting is posted on #26 |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• Reissuing a seat clears that seat's saved orders and submission for the open phase (D9, AC-7.10), because a reissue was a way for the host to read a seat's orders.<br>• D8 names the write lock as the arbiter and the conditional write as a backstop. The concurrency ACs are model-level specs with a forced interleaving.<br>• The orders table and model are `saved_orders` and `SavedOrder`, so the source scan has an unambiguous name. The scan, the route table (framework routes included) and the invariance sweep are defined exactly.<br>• Failure messages never carry an exception message. `.confirm` takes a danger variant. The seat page text changes (spec 021 AC-4.10). A stylesheet budget is stated. Smaller fixes to AC-2.x, 4.6, 4.10, 6.4 and 7.9 |
 | 1.0.0 | 2026-11-26 | First draft |
 
@@ -87,7 +88,7 @@ On top of the check, the app refuses what the check cannot know: the order's `po
 
 **D8. The write lock is the arbiter; the conditional write is a backstop.** SQLite has no row locks: `lock!` adds nothing to the query there. What serializes two reveals, and a save against a reveal, is the transaction: Rails 8.1's SQLite adapter starts every write transaction in immediate mode, so a second writer waits (up to the connection's 5-second timeout) until the first commits. So every reveal and every save runs in a transaction, and its first statement is `phase.lock!` (a reload with a lock: a real row lock on a database that has them, and a fresh read of the phase on SQLite, past the request's query cache). It then re-reads whether the phase is still open. Whoever gets the lock second sees the phase revealed and stops. The reveal also writes the revealed time with a conditional write (only where it is still null) and raises, rolling everything back, if not exactly one row changed. That is a backstop: it can only fire if the lock failed, so it is loud (a 500, AC-4.10), and it turns a broken lock into a failure and never into a second stored result. A spec asserts the adapter's default mode (it reads the configuration, since an example inside a fixture transaction issues no `BEGIN` of its own).
 
-**D9. Reissuing a seat clears its saved orders.** Spec 021 lets the host reissue a seat and open the new seat link on the host's own phone. Without this decision that is a way for the host to read any seat's saved orders: the reissue, the link, then the orders page. It is not the step-in that `docs/architecture.md` describes (confirmed, recorded, the owner told). So a reissue, in the same transaction that replaces the token, deletes that seat's saved orders and its submission for the open phase. The cost is that a player whose phone died enters their orders again. Revealed phases are untouched. The confirmation page says so. Left out: keeping the orders (leaves the hole open until #26) and recording and announcing it (that is #26).
+**D9. Reissuing a seat clears its saved orders.** Spec 021 lets the host reissue a seat and open the new seat link on the host's own phone. Without this decision that is a way for the host to read any seat's saved orders: the reissue, the link, then the orders page. It is not the step-in that `docs/architecture.md` describes (confirmed, recorded, the owner told). So a reissue, in the same transaction that replaces the token, deletes that seat's saved orders and its submission for the open phase. The cost is that a player whose phone died enters their orders again. Revealed phases are untouched. The confirmation page says so. Left out: keeping the orders (leaves the hole open until #26) and recording and announcing it (that is #26). What remains open is plain: a host who reissues a seat and then enters orders on it is acting as that seat, unrecorded and unannounced. That is the step-in of #26, which must record and announce it; this feature does not solve it.
 
 ## URLs
 
@@ -365,7 +366,7 @@ As in the catalog and in Story 8. Each is one partial: `phases/_header` (locals:
 ### Performance
 
 - Opening the orders page makes no write, and saving and revealing each take one database transaction. The reveal holds the database's write lock while the stand-in runs, which is plain Ruby with no input or output, so the wait for a second writer stays far under the 5-second timeout. No timing is asserted by a spec.
-- **Stylesheet budget.** Spec 021 FR-10 keeps the stylesheets within 24,576 bytes in total and `styleguide.css` within 4,096. They stand at 23,378 and 3,716, leaving 1,198 and 380 bytes for the three components, the plain form's rows and the style-guide sections. That is likely not enough. If it is not, an Issue to raise the limit is opened before the limit is changed (spec 021), and the cap is raised only with the maintainer's answer to it; this is put to Gate A.
+- **Stylesheet budget.** The caps are raised to 32,768 bytes in total and 6,144 for `styleguide.css` (changelog 1.2.0). The stylesheets stand at 23,378 and 3,716 bytes. This feature's CSS stays within the new caps, and `spec/styles/stylesheet_rules_spec.rb` enforces them.
 
 ### Security
 
@@ -403,7 +404,7 @@ As in the catalog and in Story 8. Each is one partial: `phases/_header` (locals:
 
 ## Open Questions
 
-Nothing in the spec is unresolved. The maintainer is asked about D2, D3, D4, D5, D6 and D9, and about one budget (the stylesheet limit, below under Performance).
+Nothing in the spec is unresolved. The maintainer is asked about D2, D3, D4, D5, D6 and D9, and about the stylesheet limit (answered in changelog 1.2.0).
 
 ## Out of Scope (Future Considerations)
 
