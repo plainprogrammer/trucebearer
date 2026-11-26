@@ -1,0 +1,5 @@
+<%# The owner's notice (spec 026 D6): one banner listing the open phase's step-ins into this seat. locals: seat, phase %>
+<% times = seat.step_in_times(phase) %>
+<% if times.any? %>
+  <%= render "shared/banner", kind: "warning", text: safe_join([ "The host entered your orders at ", safe_join(times.map { |time| table_time(time) }, ", "), "." ]) %>
+<% end %>

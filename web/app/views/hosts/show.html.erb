@@ -58,5 +58,7 @@
     <% end %>
   </section>
 
+  <%= render "step_ins/history", game: @game %>
+
   <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
 </div>

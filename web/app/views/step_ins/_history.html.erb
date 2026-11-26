@@ -1,0 +1,14 @@
+<%# The game's step-ins, oldest first (spec 026 D6). Phases, powers and times only. locals: game %>
+<% entries = game.step_in_history.to_a %>
+<section class="stack" aria-labelledby="step-ins-heading" data-step-ins>
+  <h2 id="step-ins-heading">Step-ins</h2>
+  <% if entries.empty? %>
+    <p>The host has not stepped into a seat.</p>
+  <% else %>
+    <ul class="list">
+      <% entries.each do |entry| %>
+        <li><div class="list__row"><span class="mono"><%= entry.phase.title %></span> <%= power_badge(entry.seat.power) %> <span class="text-muted"><%= table_time(entry.created_at) %></span></div></li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
