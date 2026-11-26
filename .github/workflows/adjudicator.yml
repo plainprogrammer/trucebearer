@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "adjudicator/**"
+      - ".ruby-version"
       - ".github/workflows/adjudicator.yml"
   push:
     branches: [main]
     paths:
       - "adjudicator/**"
+      - ".ruby-version"
       - ".github/workflows/adjudicator.yml"
 
 permissions:
