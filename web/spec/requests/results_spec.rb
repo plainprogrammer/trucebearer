@@ -66,7 +66,7 @@ RSpec.describe "Results after the reveal", type: :request do
     end
   end
 
-  it "has no results section and no Earlier results list before any reveal (AC-1.7)" do
+  it "has no results section, no Earlier results list and no reveal row before any reveal (AC-1.7)" do
     france_phone.get "/games/#{id}"
     host.get "/games/#{id}/host"
 
@@ -74,6 +74,7 @@ RSpec.describe "Results after the reveal", type: :request do
       expect(page(session).css("section[data-results]")).to be_empty
       expect(session.response.body).not_to include("Earlier results")
     end
+    expect(page(host).css("[data-seat-history] li")).to be_empty
   end
 
   it "starts the seat page's results with a Skip to orders link that reaches the Enter orders button (AC-1.9)" do
@@ -99,6 +100,23 @@ RSpec.describe "Results after the reveal", type: :request do
     france_phone.get links.first.last
     expect(france_phone.response).to have_http_status(:ok)
     expect(page(france_phone).at_css("h2").text).to include("Spring 1901")
+  end
+
+  it "gives the host no Earlier results list: each revealed phase is a row of the History, a link that works (AC-6.4, spec 026 D11)" do
+    reveal
+    reveal(2)
+    host.get "/games/#{id}/host"
+    doc = page(host)
+    links = doc.css("[data-seat-history] li a").map { |link| [ link.text.squish.sub(/ \d{1,2}:\d{2} [AP]M [A-Z]+\z/, ""), link["href"] ] }
+
+    expect(host.response.body).not_to include("Earlier results")
+    expect(doc.at_css("[data-history]")).to be_nil
+    expect(doc.at_css("section[data-results] h2").text).to include("Fall 1901") # the latest phase's results section is still drawn
+    expect(links).to eq([ [ "Spring 1901 · Movement revealed", "/games/#{id}/host/phases/1/results" ], [ "Fall 1901 · Movement revealed", "/games/#{id}/host/phases/2/results" ] ])
+    links.each do |_, href|
+      host.get href
+      expect(host.response).to have_http_status(:ok)
+    end
   end
 
   describe "the four views of a revealed phase" do
