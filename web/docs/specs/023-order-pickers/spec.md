@@ -1,6 +1,6 @@
 # Feature 023: Enter movement orders with pickers
 
-**Status:** Draft
+**Status:** Approved
 **Version:** 1.0.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
