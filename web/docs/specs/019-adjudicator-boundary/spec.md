@@ -1,7 +1,7 @@
 # Feature 019: The adjudicator boundary and a stand-in adjudicator
 
 **Status:** Approved
-**Version:** 1.2.2
+**Version:** 1.3.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #19
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.3.0 | 2026-11-26 | Amended by spec 029 (gem 0.2.0, #29).<br>• Story 3, FR-3 and AC-3.x (the stand-in adjudicator) and the stand-in half of AC-5.1 are retired: `RulesEngine.adjudicate` calls the gem's real adjudication and `load_adjudication` builds the gem's adjudication result with `from_h`. AC-4.4 and AC-5.2 read as the real result.<br>• The stand-in has no test double (spec 029 D2): the code, its spec and `RulesEngine.stand_in?` are deleted, and AC-5.1 is replaced by a guard that nothing under `app/`, `lib/`, `config/`, `db/` or `bin/` names it.<br>• The rest of the boundary (the four loaders, `check`, `legal_orders`, the guard on gem names) is unchanged. |
 | 1.0.0 | 2026-11-26 | First draft |
 | 1.2.2 | 2026-11-26 | Patch, after the implementation review: the spec-only table is built inside the storage spec (not `spec/support/`); the guard skips encrypted files; the lockfile pins the tag (and so its commit); FR-5 records two caveats for models that use the types; only `from_h` validates a stand-in result |
 | 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). Rule 4 says outright that swaps and rotations succeeding is a fake result that 0.2.0 corrects |
