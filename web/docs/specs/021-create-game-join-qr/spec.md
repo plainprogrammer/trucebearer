@@ -1,7 +1,7 @@
 # Feature 021: Create a game and join it by QR code
 
 **Status:** Approved
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #21
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.2.2 | 2026-11-26 | Patch: the maintainer approved `force_ssl`, so the "pending" marks are gone from AC-11.4 and FR-12 and the fallback sentence is dropped. The cookies' `secure` flag is also set from `Rails.env.production?`, so they are `Secure` in production whichever way `force_ssl` is set |
 | 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). The `force_ssl` half of AC-11.4 and FR-12 is marked pending the maintainer. The sameness ACs leave the session cookie out of the `Set-Cookie` comparison, because Rails sets it on every page that has a form token and its value differs each time |
 | 1.2.0 | 2026-11-26 | Changed after the second independent review.<br>• A stranger response deletes a presented cookie only when it fails to verify for that id (an unknown game counts as a failure). A valid cookie survives a wrong page or a bad link, so a bystander cannot strip the host's cookies. New AC.<br>• Sameness of stranger responses is tested on status, body and a named list of headers, pairwise between an existing and a missing game.<br>• The session cookie's `Secure` is covered by the production configuration (AC-11.4), not by the cookie spec.<br>• FR-4 says what `assume_ssl` really does (plain http is not redirected). The route takes a segment constraint and no format. The 429 sentence fits every window. `.kamal/secrets` gains the passphrase.<br>• AC-1.7 and AC-4.11 state what a spec can observe. The error table lists the seat POST. |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• Production turns on `assume_ssl` and `force_ssl` (FR-12), so `secure` cookies are written; plain http in production is unsupported, and the LAN-by-http claim is dropped. "Secure" gets a named switch and a test.<br>• The suite clears the cache before every request and system spec (FR-8).<br>• Every stranger response deletes any presented host or seat cookie for the path's id, so deletion is no existence oracle. AC-5.5 compares headers.<br>• One status per route for unknown, closed and malformed codes (URL table, error table). `/join/<code>` takes any single path segment.<br>• Taken tiles sit on `surface` with "Taken" in `text-muted`, so no new contrast pair is needed.<br>• New ACs: CSRF, `no-store`, `no-referrer`, Turbo no-cache on the one-time pages, a seated phone's POST, joining racing a close, the 429 body.<br>• Seat lookup compares each of the game's seats with `secure_compare`. Rate limits share named scopes and key IPv6 by /64. The creation refusal is 403 (a tunnel may replace a 5xx body). The QR's color comes from the stylesheet. The SVG carries its own quiet zone |
@@ -248,7 +249,7 @@ These were chosen for this spec, with the alternatives that were left out. Gate 
 - [ ] **AC-11.1** Given forgery protection switched on for the spec When `POST /games`, `POST /join`, `POST /join/<code>/seat`, `POST /games/<id>/host/close` and `POST /games/<id>/host/seats/<power>/reissue` are sent without the form's token Then each is refused and changes nothing
 - [ ] **AC-11.2** Given the host and seat cookies are set over https with `force_ssl` stubbed on When their `Set-Cookie` headers are read Then each has `HttpOnly`, `SameSite=Lax` and `Secure`, and with it stubbed off they have `HttpOnly` and `SameSite=Lax` and no `Secure`. The session cookie of the flash has `HttpOnly` and `SameSite=Lax` in both cases
 - [ ] **AC-11.3** Given the host or seat cookie When its raw value is read from the response Then it is not the token, and it verifies as a signed value whose payload is the token
-- [ ] **AC-11.4** Given the configuration of production When `config/environments/production.rb` is read Then `assume_ssl` is set to true, and, **pending the maintainer's decision on `force_ssl`**, `force_ssl` is set to true with `/up` excluded from the redirect. If the maintainer declines `force_ssl`, this AC keeps only the `assume_ssl` half and the cookies' `secure` flag is set from `Rails.env.production?` instead. With `force_ssl` on, Rails' own SSL middleware marks every cookie of the response `Secure`, the session cookie included. A spec wraps the app in that middleware and shows the session cookie flagged
+- [ ] **AC-11.4** Given the configuration of production When `config/environments/production.rb` is read Then `assume_ssl` is set to true, and `force_ssl` is set to true with `/up` excluded from the redirect. With `force_ssl` on, Rails' own SSL middleware marks every cookie of the response `Secure`, the session cookie included. A spec wraps the app in that middleware and shows the session cookie flagged
 
 ## Functional Requirements
 
@@ -292,7 +293,7 @@ In these ACs, "no cookie is set" means the response carries no `Set-Cookie` that
 - Make a host token and a seat token from `SecureRandom`: 24 bytes, URL-safe base64, 32 characters, at least 128 bits.
 - Store only the SHA-256 digest of a token, as a hex string. No log line, flash value that outlives the next request, or column holds a token.
 - Compare a presented token with the stored digest through `ActiveSupport::SecurityUtils.secure_compare`, on digests of equal length. For a seat, compare against each of the game's seats in turn (seven at most) and never look a seat up by digest. The unique index on a digest is a safeguard, not a lookup.
-- Set the host cookie `host_<id>` and the seat cookie `seat_<id>` as signed, permanent cookies with `httponly: true` and `same_site: :lax`, and `secure` when `force_ssl` is on, which it is in production. Their value is the token. A phone holds at most one of each per game.
+- Set the host cookie `host_<id>` and the seat cookie `seat_<id>` as signed, permanent cookies with `httponly: true` and `same_site: :lax`, and `secure` when `force_ssl` is on or the app runs in production (`Rails.env.production?`), which it does in production. Their value is the token. A phone holds at most one of each per game.
 - Treat a cookie whose token does not match the stored digest as a stranger's, and delete it (FR-6).
 - Filter `passphrase` and `token` from the log, so the passphrase and `?token=` values never appear there. (`token` is already filtered.)
 - Make the session cookie that carries the one-time flash `httponly` and `same_site: :lax`. With `force_ssl` on, Rails also marks every cookie `secure`.
@@ -455,7 +456,7 @@ All three are pure Ruby, with no native extension and no further runtime depende
 ### FR-12: What changes elsewhere in the app
 
 - `RulesEngine` gains one reader, `powers`, returning the map's powers, each with an identifier (a symbol) and a name. A seat stores the identifier as a string, the form `PowerBadgeHelper::POWER_NAMES` uses. This is the only place a power list comes from. A spec checks that `POWER_NAMES` has the same powers and names, so the two cannot drift.
-- `config/environments/production.rb` turns on `assume_ssl`, as `docs/architecture.md` ("Hosting") already says, and, **pending the maintainer**, `force_ssl` with `/up` excluded. `docs/architecture.md` names only `assume_ssl`. `force_ssl` is an addition for the `Secure` flag and HSTS, and the pull request says so. Both are commented out there today. This change is in `web/`, and the pull request names it for the maintainer.
+- `config/environments/production.rb` turns on `assume_ssl`, as `docs/architecture.md` ("Hosting") already says, and `force_ssl` with `/up` excluded. `docs/architecture.md` names only `assume_ssl`. `force_ssl` is an addition for the `Secure` flag and HSTS, approved by the maintainer, and the pull request says so. Both are commented out there today. This change is in `web/`, and the pull request names it for the maintainer.
 - A hook in `spec/rails_helper.rb` clears the cache before every request spec and system spec.
 - `config/routes.rb`, the home page, the style guide, the contrast spec, `web/docs/design-system.md`, `web/README.md`, `config/deploy.yml`, the test environment's cache store and the log filter change as set out above.
 - Nothing outside `web/` changes.
