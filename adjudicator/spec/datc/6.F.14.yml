@@ -1,0 +1,18 @@
+case: "6.F.14"
+summary: "The simplest paradox: the attacked unit supports an attack on a convoying fleet"
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: wal}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+orders:
+  - order: {type: support_move, power: england, at: lon, from: wal, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: england, at: wal, destination: eng}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}

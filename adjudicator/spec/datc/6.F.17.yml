@@ -1,0 +1,27 @@
+case: "6.F.17"
+summary: The same shape, but the army's destination can displace the unit that shields its fleet
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: wal}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: france, type: fleet, at: yor}
+    - {power: germany, type: fleet, at: nth}
+    - {power: germany, type: fleet, at: bel}
+orders:
+  - order: {type: support_move, power: england, at: lon, from: wal, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: england, at: wal, destination: eng}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: support_move, power: france, at: yor, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: nth, from: bel, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: bel, destination: eng}
+    check: {legal: true}

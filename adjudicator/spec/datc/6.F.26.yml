@@ -1,0 +1,36 @@
+case: "6.F.26"
+summary: The simplest paradox next to more convoys that are related to it
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: wal}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: italy, type: army, at: gas}
+    - {power: italy, type: army, at: spa}
+    - {power: italy, type: fleet, at: mao}
+    - {power: russia, type: army, at: cly}
+    - {power: russia, type: fleet, at: nao}
+    - {power: russia, type: fleet, at: iri}
+orders:
+  - order: {type: support_move, power: england, at: lon, from: wal, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: england, at: wal, destination: eng}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: gas, from: spa, to: bre}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: spa, destination: bre}
+    check: {legal: true}
+  - order: {type: convoy, power: italy, at: mao, from: spa, to: bre}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: cly, destination: wal}
+    check: {legal: true}
+  - order: {type: convoy, power: russia, at: nao, from: cly, to: wal}
+    check: {legal: true}
+  - order: {type: convoy, power: russia, at: iri, from: cly, to: wal}
+    check: {legal: true}

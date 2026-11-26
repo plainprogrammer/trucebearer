@@ -1,0 +1,27 @@
+case: "6.F.15"
+summary: The simplest paradox next to an unrelated convoy
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: wal}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: italy, type: fleet, at: iri}
+    - {power: italy, type: fleet, at: mao}
+    - {power: italy, type: army, at: naf}
+orders:
+  - order: {type: support_move, power: england, at: lon, from: wal, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: england, at: wal, destination: eng}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: italy, at: iri, from: naf, to: wal}
+    check: {legal: true}
+  - order: {type: convoy, power: italy, at: mao, from: naf, to: wal}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: naf, destination: wal}
+    check: {legal: true}

@@ -1,0 +1,36 @@
+case: "6.F.27"
+summary: Two separate paradoxes at once
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: lon}
+    - {power: england, type: fleet, at: eng}
+    - {power: france, type: fleet, at: bel}
+    - {power: germany, type: fleet, at: hel}
+    - {power: germany, type: fleet, at: ska}
+    - {power: italy, type: army, at: tun}
+    - {power: italy, type: fleet, at: ion}
+    - {power: turkey, type: fleet, at: aeg}
+    - {power: turkey, type: fleet, at: gre}
+orders:
+  - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
+    check: {legal: true}
+  - order: {type: move, power: england, at: lon, destination: bel}
+    check: {legal: true}
+  - order: {type: support_move, power: england, at: eng, from: lon, to: bel}
+    check: {legal: true}
+  - order: {type: support_hold, power: france, at: bel, target: nth}
+    check: {legal: true}
+  - order: {type: support_move, power: germany, at: hel, from: ska, to: nth}
+    check: {legal: true}
+  - order: {type: move, power: germany, at: ska, destination: nth}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: tun, destination: gre}
+    check: {legal: true}
+  - order: {type: convoy, power: italy, at: ion, from: tun, to: gre}
+    check: {legal: true}
+  - order: {type: move, power: turkey, at: aeg, destination: ion}
+    check: {legal: true}
+  - order: {type: support_move, power: turkey, at: gre, from: aeg, to: ion}
+    check: {legal: true}

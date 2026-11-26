@@ -1,0 +1,36 @@
+case: "6.F.23"
+summary: A second-order paradox with two exclusive convoys
+paradox: true
+position:
+  units:
+    - {power: england, type: fleet, at: edi}
+    - {power: england, type: fleet, at: yor}
+    - {power: france, type: army, at: bre}
+    - {power: france, type: fleet, at: eng}
+    - {power: germany, type: fleet, at: bel}
+    - {power: germany, type: fleet, at: lon}
+    - {power: italy, type: fleet, at: mao}
+    - {power: italy, type: fleet, at: iri}
+    - {power: russia, type: army, at: nwy}
+    - {power: russia, type: fleet, at: nth}
+orders:
+  - order: {type: move, power: england, at: edi, destination: nth}
+    check: {legal: true}
+  - order: {type: support_move, power: england, at: yor, from: edi, to: nth}
+    check: {legal: true}
+  - order: {type: move, power: france, at: bre, destination: lon}
+    check: {legal: true}
+  - order: {type: convoy, power: france, at: eng, from: bre, to: lon}
+    check: {legal: true}
+  - order: {type: support_hold, power: germany, at: bel, target: eng}
+    check: {legal: true}
+  - order: {type: support_hold, power: germany, at: lon, target: nth}
+    check: {legal: true}
+  - order: {type: move, power: italy, at: mao, destination: eng}
+    check: {legal: true}
+  - order: {type: support_move, power: italy, at: iri, from: mao, to: eng}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: nwy, destination: bel}
+    check: {legal: true}
+  - order: {type: convoy, power: russia, at: nth, from: nwy, to: bel}
+    check: {legal: true}
