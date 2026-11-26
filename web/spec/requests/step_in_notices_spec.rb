@@ -73,20 +73,20 @@ RSpec.describe "Step-in notices and history", type: :request do
 
   it "keeps the history on the host page, and drops the notice in the next phase (AC-6.4)" do
     travel_to(Time.utc(2026, 11, 26, 20, 42)) { confirm }
-    game.current_phase.reveal!
+    travel_to(Time.utc(2026, 11, 26, 20, 43)) { game.current_phase.reveal! }
     phone = phone_for(france_and_token.last)
     phone.get "/games/#{id}"
     expect(notice(phone)).to be_empty
 
     host.get "/games/#{id}/host"
     rows = page.css("[data-seat-history] li").map { |li| li.text.squish }
-    expect(rows).to eq([ "Spring 1901 · Movement France stepped in 8:42 PM UTC" ])
+    expect(rows).to eq([ "Spring 1901 · Movement France stepped in 8:42 PM UTC", "Spring 1901 · Movement revealed 8:43 PM UTC" ])
     expect(page.at_css("[data-seat-history] .power-badge").text).to eq("France")
   end
 
   it "says so when there are none, and lists several oldest first (AC-6.4)" do
     host.get "/games/#{id}/host"
-    expect(page.at_css("[data-seat-history]").text).to include("Nothing has happened to a seat yet.")
+    expect(page.at_css("[data-seat-history]").text).to include("No phase has been revealed yet.")
 
     confirm("england")
     confirm("france")

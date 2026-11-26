@@ -40,10 +40,19 @@ RSpec.describe "The step-in boundary" do
     expect(File.read(File.join(root, "app/models/reissue.rb"))).not_to match(/saved_order|SavedOrder|orders_for/i)
     expect(File.read(File.join(root, "app/models/game.rb"))).not_to match(/through:\s*:?reissues/)
     readers = Dir.glob(File.join(root, "app/{views,controllers,helpers}/**/*")).select do |path|
-      File.file?(path) && File.read(path).match?(/\breissues\b|reissue_history|seat_history/) && !path.end_with?("app/views/step_ins/_history.html.erb")
+      File.file?(path) && File.read(path).match?(/\breissues\b|reissue_history|seat_history|host_history/) && !path.end_with?("app/views/step_ins/_history.html.erb")
     end
 
     expect(readers).to be_empty, "reads the reissues table outside the boundary: #{readers.join(', ')}"
+  end
+
+  it "names the host history's reveal entry only in Game, and reads host_history only in the partial (spec 026 AC-11.7)" do
+    users = files.select { |path| File.binread(path).force_encoding("UTF-8").scrub.match?(/\bRevealEntry\b/) }.map { |path| path.delete_prefix("#{root}/") }
+    readers = Dir.glob(File.join(root, "app/{views,controllers,helpers}/**/*")).select { |path| File.file?(path) && File.read(path).match?(/\bhost_history\b/) }
+                 .map { |path| path.delete_prefix("#{root}/") }
+
+    expect(users).to match_array(%w[app/models/game.rb])
+    expect(readers).to eq(%w[app/views/step_ins/_history.html.erb])
   end
 
   position_edit_pattern = /\bPositionEdit(?:\.|::|\s*<)/

@@ -1,7 +1,7 @@
 # Feature 027: The host's position editor
 
 **Status:** Approved
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #27
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.6 | 2026-11-26 | Amended by #112 (one history on the host page). **PATCH**: no new behavior of this spec; the list that holds the position edits is renamed and folded.<br>• **D4's "row on the host page"** and **AC-6.4**: the list is now the host page's one "History" list (spec 026 D11), still with the hook `data-seat-history`; its heading is "History" and it opens with "No phase has been revealed yet." while no phase has been revealed. The board-change row is unchanged. Where this spec says "Seat history" (Goals, D4's title, the screen list) it means that list.<br>• **AC-6.2:** the list also holds the revealed phases; at one instant the order is reissue, step-in, position edit, then the reveal of that phase. **AC-9.1** reads "History".<br>• **Open Question 2** is answered: the list is renamed "History" by #112 |
 | 1.0.5 | 2026-11-26 | Found at the implementation review: spec 029 (#29) took spec 022's 1.6.0 first, so spec 022 is amended as 1.7.0 and AC-10.1 reads so; the amended specs' version lines are checked as "at least the row's version" in `spec_amendments_spec.rb`, because later amendments move them on (AC-10.5); spec 023's row says the order screen gains the notice. |
 | 1.0.4 | 2026-11-26 | Approved at Gate B (the maintainer's delegate): the app's coast labels are the existing `OrderLabelHelper::COASTS` ("north coast", ...), so `RulesEngine.coast_name` is not built and D5's `coast_name` is struck; `RulesEngine.coasts` returns the three identifiers. Fewer moving parts: one coast-label table in the app, not two. |
 | 1.0.3 | 2026-11-26 | Approved at Gate A (the maintainer's delegate): D2 option (a), D3, D4, D5, the screens and the amendments. Option (c) of D2, the host-toggled hold, is follow-up Issue #113, the first remedy if the repeated wipes hurt at the table. The engine's new methods are kept in one contiguous block of `rules_engine.rb`, because #29 edits that file. |
@@ -31,7 +32,7 @@ Players can already save orders in the next phase before the host has fixed the 
 - The host can add a unit, move a unit, remove a unit, set who owns a supply center, and set the season and year, all for the **open phase's position**.
 - Every edit is built as a new position by the rules engine, so an impossible board (two units in one province, a fleet inland, an army at sea, a missing or wrong coast) is refused by the engine, with a plain-word reason (D5), and nothing is stored.
 - An edit that changes where units stand clears every seat's saved orders and submission for the open phase. An edit of ownership, or of the season and year, clears nothing. Each seat is told on its own pages, and the submitted states on every phone follow through the existing status stream.
-- Every edit is recorded in the game's history: what changed, the phase and the time. The host's Seat history list shows it, in the order spec 026 D10 set.
+- Every edit is recorded in the game's history: what changed, the phase and the time. The host's Seat history list (the History list since 1.0.6) shows it, in the order spec 026 D10 set.
 - Only the host reaches the editor. No page of it shows any saved order, and every new route is classified in the secrecy table and covered by the sweep.
 - Every step is a normal page with its own URL, works without JavaScript, and fits a phone 360 pixels wide.
 - The page set adds the `.segmented` component (army or fleet), used with `supply_center_icon`, and lists both in `/styleguide` and the design-system catalog.
@@ -46,7 +47,7 @@ Players can already save orders in the next phase before the host has fixed the 
 - Undoing an edit. The host edits again.
 - Showing the history to anyone but the host. The seats see only that the board changed, and when (D3).
 - A live reload of order screens that are already open on a phone (Open Question 1).
-- Folding the host page's lists into one (#112), the shared display, the phase clock, any rendered map.
+- ~~Folding the host page's lists into one (#112)~~ done in 1.0.6; the shared display, the phase clock, any rendered map.
 - Any change to `adjudicator/`, `.github/` or the root files.
 
 ## Users and Context
@@ -104,7 +105,7 @@ If the maintainer prefers (b) or (c), this spec is amended (spec-update) and the
 - **What an open order screen does.** A phone that still shows the old board can send a save. `Seat#save_orders!` reads the phase under its lock, so it checks the order against the **new** position and refuses an illegal order with the existing sentence ("You have no unit in BUR."). Nothing changes there. Open Question 1 asks whether to reload open screens.
 - **An edit that changes nothing is refused** ("That is already the position."), writes no record and clears nothing, so an accidental double tap does not wipe the table's orders twice.
 
-**D4. History: a third append-only table, `position_edits`, read into the existing Seat history list. (Gate A)**
+**D4. History: a third append-only table, `position_edits`, read into the existing Seat history list (the History list since 1.0.6). (Gate A)**
 
 | Table | Columns | Keys and checks |
 |---|---|---|
@@ -125,8 +126,8 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
 - **Written in the edit's transaction.** `Game#edit_position!` takes the phase lock (as a save and a reissue do), builds the new position, stores it, clears the orders when D3 says so, and writes the row, in one transaction. A row that can't be written rolls the whole edit back. A refused edit writes nothing.
 - **Which phase** is the open phase the edit ran in. **When** is `created_at`, in UTC.
 - **Reads.** `Game#position_edit_history` reads every row whose phase belongs to the game, oldest first, through the game's phases and with no `through:` association, as `step_in_history` and `reissue_history` do. `Game#seat_history` merges it with the other two. Each entry answers `kind` (`:position_edit` here; `:step_in` and `:reissue` as today) and its own `phase`, `created_at` and `id`, so the list partial names no constant. **The notice's reader** is one more `Game` method, `Game#board_cleared_at(phase)`, that returns the time of the latest clearing edit of a phase or nil, so no view or controller reads the table.
-- **Order of the list: #104's order, extended.** Oldest first by `created_at`; at the same instant a reissue comes before a step-in (spec 026 D10), and a position edit comes after both, then by id. The order is stable.
-- **The row on the host page.** In the Seat history list: the phase title, the words "board changed", and the change in words, then the time: "Fall 1901 · Movement · board changed: France's army added in BUR · 8:42 PM UTC". The list keeps its heading, "Seat history", its hook `data-seat-history` and its empty text, so #104's specs stand. Its name is now a little narrow, since it also holds board edits; #112 can rename it when it folds the host page's lists (Open Question 2).
+- **Order of the list: #104's order, extended.** Oldest first by `created_at`; at the same instant a reissue comes before a step-in (spec 026 D10), and a position edit comes after both, then by id. The order is stable. *(1.0.6: the list also holds the reveals and its sort key gains the phase number; a reveal comes after the position edits of its own phase, spec 026 D11.)*
+- **The row on the host page.** In the host page's history list (headed "Seat history" until 1.0.6, "History" since, spec 026 D11): the phase title, the words "board changed", and the change in words, then the time: "Fall 1901 · Movement · board changed: France's army added in BUR · 8:42 PM UTC". The list keeps its hook `data-seat-history`. *(1.0.6: its heading is "History" and it opens with the no-reveal sentence, spec 026 D11; #112 folded the host page's lists, Open Question 2.)*
 - **A changed date and old titles.** A row shows its phase's title as it is when the page is drawn. After a date edit, earlier rows of the same phase carry the new title, and the date edit's own row says "season and year set from Spring 1901 to Fall 1901". The phase's number never changes.
 - **Who sees the history: only the host**, on the host page. Seats see only the notice of D3.
 
@@ -166,7 +167,7 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
 
 - A successful edit redirects (303) to the board page with a `.banner` of kind `info` that says what changed in words and the sentence of D3.
 - A refused edit answers 422 with the same page and a `.banner` of kind `danger` holding the plain sentence, and keeps what the host picked in the form.
-- **The host's way in.** The host section of the host page gets one link, "Edit the board", beside "Reveal orders". It is there in every state. The host page's other lists are not changed (#112).
+- **The host's way in.** The host section of the host page gets one link, "Edit the board", beside "Reveal orders". It is there in every state. The host page's other lists were not changed here; #112 folded them in 1.0.6.
 - **Every page** carries `Cache-Control: no-store`, the Turbo no-cache meta and `Referrer-Policy: no-referrer`.
 - **Host only.** Every route behind `require_host`: a stranger, a seat or another game's host gets the stranger response and nothing is written (spec 021 D4).
 - Phone and Native: each is a normal Turbo Drive page with a meaningful URL. No Stimulus controller and no JavaScript are added.
@@ -205,7 +206,7 @@ The "Choose ..." sentences are the app's own check that a field holds one of the
 4. A unit's page (move and remove).
 5. Supply-center owner.
 6. Season and year.
-7. The host page with "Edit the board" and the Seat history list holding a board change.
+7. The host page with "Edit the board" and the History list ("Seat history" before 1.0.6) holding a board change.
 8. A seat page with the "board changed" notice.
 
 ## URLs
@@ -301,9 +302,9 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 **Acceptance criteria:**
 
 - [ ] **AC-6.1** Given a successful edit of each of the five kinds When it is made Then exactly one `position_edits` row exists for it with the phase, the time and the `detail` of D4, and a refused edit writes none
-- [ ] **AC-6.2** Given edits, reissues and step-ins in one game, some made in a phase that has since been revealed When the host opens the host page Then the Seat history lists them all together, oldest first, with the order of D4 at the same instant (reissue, step-in, then position edit, then id)
+- [ ] **AC-6.2** Given edits, reissues and step-ins in one game, some made in a phase that has since been revealed When the host opens the host page Then the history lists them all together with the revealed phases, oldest first, with the order of D4 at the same instant (reissue, step-in, then position edit, then id, and the reveal of a phase after the rows of that phase; spec 026 D11)
 - [ ] **AC-6.3** Given an edit row When the host page draws it Then its line reads the phase title, "board changed", the change in words (for example "France's army added in BUR", "Italy's fleet moved from NAP to ION", "Italy's army in ROM removed", "VEN given to Austria", "VEN set to nobody", "season and year set from Spring 1901 to Fall 1901") and the time in `<time datetime>`
-- [ ] **AC-6.4** Given the list When the host page draws it Then its heading, hook and empty text are the ones of spec 026 1.1.0 ("Seat history", `data-seat-history`, "Nothing has happened to a seat yet.") and the existing specs for them pass unchanged
+- [ ] **AC-6.4** Given the list When the host page draws it Then its hook is the one of spec 026 1.1.0 (`data-seat-history`) and its heading and no-reveal sentence are the ones of spec 026 1.3.0 ("History", "No phase has been revealed yet."; 1.0.6 replaces "Seat history" and "Nothing has happened to a seat yet."), and the specs that read them follow
 - [ ] **AC-6.5** Given a `PositionEdit` row When a spec updates or destroys it Then it raises (append-only), and a row whose `detail` is not one of the five shapes of D4 is invalid
 - [ ] **AC-6.6** Given the history with edits in it, and seats that had ordered different things When the host page draws it Then the page carries no order, count of orders, token, link or submitted state of a seat, and is identical whatever the seats had ordered
 - [ ] **AC-6.7** *(source scan, in the step-in boundary spec)* Given the source When the scan runs Then the constant `PositionEdit` is used only in its model, `Game`, the migration and the schema; `Game` has no `through: :position_edits` association; `position_edit.rb` names no `saved_order` or `orders_for`; no view or controller reads `position_edits`; and the table has no column that could hold an order
@@ -351,7 +352,7 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 
 **Acceptance criteria:**
 
-- [ ] **AC-9.1** *(system spec)* Given a viewport 360 pixels wide, 800 tall When the host opens the board, the add form, the add form refused, a unit's page, the owners form, the date form, the host page with the Seat history and a seat page with the notice Then none scrolls sideways, every button, link, select, input and radio option is at least 44 pixels high, and the page's primary button is visible without scrolling on each form page
+- [ ] **AC-9.1** *(system spec)* Given a viewport 360 pixels wide, 800 tall When the host opens the board, the add form, the add form refused, a unit's page, the owners form, the date form, the host page with the History and a seat page with the notice Then none scrolls sideways, every button, link, select, input and radio option is at least 44 pixels high, and the page's primary button is visible without scrolling on each form page
 - [ ] **AC-9.2** *(system spec)* Given the add form When the host taps "Fleet" Then the Fleet option shows the selected state and the Army option does not, the radio is reachable with the keyboard, a keyboard focus shows a ring from the `focus` token, and the form posts the chosen value with no JavaScript
 - [ ] **AC-9.3** Given the eight pages of D10 When the screenshots are taken Then they are saved at 360 pixels to `web/docs/specs/027-position-editor/screens/`, and the pull request shows them
 - [ ] **AC-9.4** Given `/styleguide` When the style-guide system spec opens it at 360 and 768 pixels Then it shows `.segmented` (one option selected, and one option focused) and a row of `supply_center_icon` samples without sideways scroll
@@ -433,7 +434,7 @@ Every route is classified. The sweep is extended. The scans are updated (AC-6.7,
 ## Open Questions
 
 1. **Reloading an open order screen after an edit.** The reveal sends a contentless refresh (spec 025 D3). The same message after a clearing edit would reload every open page and show the notice and the new unit lists at once. It would need a second caller of `broadcast_results_refresh` and a change to spec 025's scan (AC-4.6) and to channel code that #105 is editing. Left out; the existing refusal of spec 022 covers a stale save.
-2. **The history's name.** "Seat history" now also lists board edits. #112 folds the host page's lists and can rename it. Left alone here so #104's specs stand.
+2. ~~**The history's name.**~~ Answered in 1.0.6: #112 folded the host page's lists and named the one list "History" (spec 026 D11); the hook stays `data-seat-history`.
 3. **The maintainer's choice at Gate A:** D2 (edit in place, recommended, or a hold), D3 (clear everything that moves units, recommended, or re-check) and D4 (a third table, recommended).
 
 ## Out of Scope (Future Considerations)

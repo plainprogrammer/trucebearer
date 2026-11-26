@@ -96,22 +96,22 @@ RSpec.describe "The board-changed notice and the history row", type: :request do
   end
 
   describe "the host page's history (AC-6.2 to AC-6.4)" do
-    it "lists the edit in words, with the phase and the time, under the existing heading and hook" do
+    it "lists the edit in words, with the phase and the time, under the History heading and the existing hook" do
       add
 
       host.get "/games/#{id}/host"
 
       history = page(host).at_css("[data-seat-history]")
-      expect(history.at_css("h2").text).to eq("Seat history")
+      expect(history.at_css("h2").text).to eq("History")
       row = history.at_css("li").text.squish
       expect(row).to include("Spring 1901 · Movement").and include("board changed: France's army added in BUR").and match(/\d{1,2}:\d{2} (AM|PM) [A-Z]+/)
       expect(history.at_css("li time")["datetime"]).to be_present
     end
 
-    it "still says nothing has happened when there is no history (AC-6.4)" do
+    it "still says no phase has been revealed when there is no history (AC-6.4)" do
       host.get "/games/#{id}/host"
 
-      expect(page(host).at_css("[data-seat-history]").text).to include("Nothing has happened to a seat yet.")
+      expect(page(host).at_css("[data-seat-history]").text).to include("No phase has been revealed yet.")
     end
 
     it "words every kind of edit (AC-6.3)" do

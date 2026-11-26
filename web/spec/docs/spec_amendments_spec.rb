@@ -85,7 +85,7 @@ RSpec.describe "Spec amendments" do
   # The row that mentions spec 027, and its version, which the spec's version line must have reached (a later amendment may move it on).
   def position_editor_row(path)
     spec = File.read(File.expand_path("../../docs/specs/#{path}/spec.md", __dir__))
-    row = spec.lines.find { |line| line.start_with?("| ") && line.include?("spec 027") }
+    row = spec.lines.find { |line| line.start_with?("| ") && line.include?("Amended by spec 027") }
     expect(row).not_to be_nil
     version = row[/\A\| (\d+\.\d+\.\d+) \|/, 1]
     expect(Gem::Version.new(spec[/\*\*Version:\*\* (\d+\.\d+\.\d+)/, 1])).to be >= Gem::Version.new(version)

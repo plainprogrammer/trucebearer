@@ -52,7 +52,7 @@ RSpec.describe "Revealing a phase", type: :request do
       host.follow_redirect!
       expect(page.css(".banner--info").map(&:text)).to eq([ "Spring 1901 · Movement was revealed. It is now Fall 1901 · Movement." ])
       expect(page.at_css(".phase-header__title").text).to eq("Fall 1901 · Movement")
-      expect(page.at_css("[data-history]").text).to include("Spring 1901 · Movement")
+      expect(page.at_css("[data-seat-history]").text).to include("Spring 1901 · Movement")
     end
 
     it "reveals while joining is still open (AC-4.13)" do
