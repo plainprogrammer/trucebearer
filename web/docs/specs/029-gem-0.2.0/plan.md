@@ -19,7 +19,7 @@ The first test written (spec Story 2, AC-2.1) is `spec/models/phase_reveal_real_
 ## Decisions the plan adds (each traceable to the spec)
 
 - **P1. Order of work.** New specs first, red against the stand-in (Phase 1); then the swap (Phase 2); then the deletions, with the guard written first (Phase 3); then the amendments (Phase 4); then screenshots and the full proof (Phase 5). Phase 1 ends red on purpose and is not committed alone as green: its commit is "Add the specs the real engine must pass". Each later phase ends green.
-- **P2. The set-up helper** `reveal_position!` goes in `spec/support/results_fixtures.rb` (spec D4, D6). It sets the open phase's position from units, saves each power's orders through its seat (taking the seat when the game has none), and calls `Phase#reveal!`. The three specs that need a real position share it (AC-2.1, AC-4.1, AC-4.2, and the rewritten `reveal_post_spec.rb` examples).
+- **P2. The set-up helper** `reveal_position!` goes in `spec/support/results_fixtures.rb` (spec D4, D6). It sets the open phase's position from units, saves each power's orders through its seat (taking the seat when the game has none), and calls `Phase#reveal!`. The two specs that need a real position through `reveal!` share it (AC-2.1, and AC-4.1 with AC-4.2). The rewritten `reveal_post_spec.rb` examples set their own position and orders in `save_dislodging_orders`, because the host must reveal through the POST request.
 - **P3. Characterization specs.** AC-4.1 and AC-4.2 describe what the existing views do with real output, so they may already pass once the engine is swapped. They are still written first and run red against the stand-in (it never dislodges and never sets `paradox`), which is their failing evidence.
 - **P4. The `stand_in?` method stays until Phase 3**, so the views keep rendering during Phase 2. Phase 3 deletes the method, the partial and the views' use together.
 
@@ -29,7 +29,7 @@ The first test written (spec Story 2, AC-2.1) is `spec/models/phase_reveal_real_
 |---|---|---|
 | `spec/support/results_fixtures.rb` | add `reveal_position!` | 1 |
 | `spec/models/phase_reveal_real_engine_spec.rb` | new (AC-2.1, AC-2.2) | 1 |
-| `spec/models/rules_engine_adjudicate_spec.rb` | new (AC-2.3 to AC-2.5, AC-3.2) | 1 |
+| `spec/models/rules_engine_adjudicate_spec.rb` | new (AC-2.3 to AC-2.5); AC-3.2's example added in Phase 3 | 1, 3 |
 | `spec/requests/real_results_spec.rb` | new (AC-4.1, AC-4.2) | 1 |
 | `spec/requests/reveal_post_spec.rb` | dislodged-units examples on a real position (AC-3.5) | 1 |
 | `spec/config/gemfile_pin_spec.rb`, `Gemfile`, `Gemfile.lock` | the tag (AC-1.1, AC-1.2) | 2 |
@@ -49,7 +49,7 @@ The first test written (spec Story 2, AC-2.1) is `spec/models/phase_reveal_real_
 
 ## Phase 1: The specs the real engine must pass (red against the stand-in)
 
-**Implements:** FR-1, FR-2. **Satisfies:** AC-2.1 to AC-2.5, AC-3.2, AC-3.5 (the stub half), AC-4.1, AC-4.2. **Files:** the six in the file map for Phase 1.
+**Implements:** FR-1, FR-2. **Satisfies:** AC-2.1 to AC-2.5, AC-3.5 (the stub half), AC-4.1, AC-4.2. **Files:** the five in the file map for Phase 1.
 
 ### The helper
 
@@ -133,10 +133,6 @@ RSpec.describe "RulesEngine.adjudicate and load_adjudication" do
   let(:start) { RulesEngine.starting_position }
   let(:result) { RulesEngine.adjudicate(start, [ move(:england, :lon, :nth) ]) }
 
-  it "has no stand_in? any more (AC-3.2)" do
-    expect(RulesEngine).not_to respond_to(:stand_in?)
-  end
-
   describe "load_adjudication (AC-2.3)" do
     it "returns an object as it is, builds one from its hash form, and passes nil" do
       expect(RulesEngine.load_adjudication(result)).to equal(result)
@@ -175,15 +171,15 @@ RSpec.describe "RulesEngine.adjudicate and load_adjudication" do
       expect(RulesEngine.adjudicate(start, swap).outcomes.first(2).map(&:result)).to eq(%i[bounced bounced])
     end
 
-    it "reports a support for a unit that moves as unmatched" do
+    it "reports a support for a unit that moves, and a support for a move nobody makes, as unmatched" do
       orders = [ move(:austria, :bud, :ser), rules_order(:support_hold, :austria, :vie, target: "bud") ]
       expect(RulesEngine.adjudicate(start, orders).outcomes.map(&:result).first(2)).to eq(%i[succeeded unmatched])
+      nobody = [ rules_order(:support_move, :austria, :vie, from: "bud", to: "gal") ]
+      expect(RulesEngine.adjudicate(start, nobody).outcomes.first.result).to eq(:unmatched)
     end
   end
 end
 ```
-
-(`rules_order(:support_hold, ...)` takes the gem's `target` field. If the plan's order list differs from what `TA.legal_orders` allows, the check inside `adjudicate` makes the order void and the spec shows it red for the right reason; the executor then picks a legal pair from `RulesEngine.legal_orders` and records it.)
 
 ### The real-position specs (AC-4.1, AC-4.2)
 
@@ -307,7 +303,7 @@ Replace the helper `stub_result_with_dislodged_unit` (which stubs `adjudicate` w
   end
 ```
 
-The France unit needs no seat: an unordered unit holds by an implied hold, which the engine supports. The existing file's `host`, `game`, `id` and `reveal_path` lets are reused. Check at execution that the example's other lets (`england`) do not conflict; the file already includes `RulesHelpers`.
+The France unit needs no seat: an unordered unit holds by an implied hold, which the engine supports. The existing file's `host`, `game`, `id` and `reveal_path` lets are reused.
 
 ### Run (the red evidence)
 
@@ -315,13 +311,13 @@ The France unit needs no seat: an unordered unit holds by an implied hold, which
 cd web && bundle exec rspec spec/models/phase_reveal_real_engine_spec.rb spec/models/rules_engine_adjudicate_spec.rb spec/requests/real_results_spec.rb spec/requests/reveal_post_spec.rb
 ```
 
-**Expect red, for these reasons.** AC-2.1: France's outcome has `dislodged` false, because the stand-in bounces the attack against a holding unit. `rules_engine_adjudicate_spec.rb`: `respond_to?(:stand_in?)` is true; the impossible-object hash loads; the swap succeeds. `real_results_spec.rb`: the Dislodged banner is absent and `paradox` is false. `reveal_post_spec.rb`: no banner for France's army. Record the failure messages in the commit body of Phase 2. Commit: "Add the specs the real engine must pass".
+**Expect red, for these reasons.** AC-2.1: France's outcome has `dislodged` false, because the stand-in bounces the attack against a holding unit. `rules_engine_adjudicate_spec.rb`: the impossible-object hash loads; the swap succeeds. `real_results_spec.rb`: the Dislodged banner is absent and `paradox` is false. `reveal_post_spec.rb`: no banner for France's army. Record the failure messages in this commit's body. Commit: "Add the specs the real engine must pass".
 
 ---
 
 ## Phase 2: Move the pin and swap the engine
 
-**Implements:** FR-1, D1. **Satisfies:** AC-1.1, AC-1.2, AC-2.1 to AC-2.5, AC-3.2 (the method itself waits for Phase 3 and the spec for AC-3.2 stays red until then), AC-4.1, AC-4.2. **Files:** `spec/config/gemfile_pin_spec.rb`, `Gemfile`, `Gemfile.lock`, `app/models/rules_engine.rb`, `spec/models/rules_engine_stand_in_spec.rb` (deleted).
+**Implements:** FR-1, D1. **Satisfies:** AC-1.1, AC-1.2, AC-2.1 to AC-2.5, AC-4.1, AC-4.2. **Files:** `spec/config/gemfile_pin_spec.rb`, `Gemfile`, `Gemfile.lock`, `app/models/rules_engine.rb`, `spec/models/rules_engine_stand_in_spec.rb` (deleted).
 
 ### Test first
 
@@ -352,7 +348,7 @@ cd web && bundle exec rspec spec/config/gemfile_pin_spec.rb spec/models/phase_re
 bundle exec rspec
 ```
 
-Expect everything green except the one AC-3.2 example (`stand_in?` still exists). The throwaway run before planning showed the rest of the suite (768 examples) passing against the real engine. Commit: "Pin adjudicator-v0.2.0 and adjudicate with the gem".
+Expect everything green. The throwaway run before planning showed the rest of the suite (768 examples) passing against the real engine. Commit: "Pin adjudicator-v0.2.0 and adjudicate with the gem".
 
 ---
 
@@ -362,7 +358,7 @@ Expect everything green except the one AC-3.2 example (`stand_in?` still exists)
 
 ### Test first
 
-In `spec/models/rules_engine_boundary_spec.rb`, drop the `stand_in_pattern` line from the first example and replace the last example with:
+In `spec/models/rules_engine_boundary_spec.rb`, delete the `stand_in_pattern = ...` assignment (line 15) and the assertion that uses it in the first example (line 40), add ", spec 029 AC-3.1, AC-3.5" to the describe title, and replace the last example with:
 
 ```ruby
   # Spec 029 AC-3.1: nothing in the app names the stand-in or its note. Unlike the scan above, this one includes the boundary
@@ -387,10 +383,18 @@ In `spec/models/rules_engine_boundary_spec.rb`, drop the `stand_in_pattern` line
 
 (`spec_files` already excludes this file, which names those patterns.)
 
-In the four results specs change the assertions as follows, then run them and the boundary spec red:
+Add to `spec/models/rules_engine_adjudicate_spec.rb`, at the top of the describe, the AC-3.2 example:
+
+```ruby
+  it "has no stand_in? any more (AC-3.2)" do
+    expect(RulesEngine).not_to respond_to(:stand_in?)
+  end
+```
+
+In the four results specs change the assertions as follows. Then run them, the AC-3.1 example and the AC-3.2 example: they are red (the method, the partial and the stand-in comments are still there). The AC-3.5 example is a guard that is green from the start, because its stub and spec went in Phases 1 and 2:
 
 - `spec/requests/results_spec.rb` example "shows the practice note while the stand-in is in use…" becomes `it "shows no practice note on any results view (AC-3.3)"` with `each_view { |name, session| expect(page(session).css(".practice-note")).to be_empty, name; expect(page(session).text).not_to include("Practice results"), name }` after `revealed_phase_with(...)` as before, and the `allow(RulesEngine).to receive(:stand_in?)` lines go. The AC-7.3 example's `expect(text).to include("Practice results")` becomes `not_to include`.
-- `spec/views/results_partials_spec.rb`: the example becomes `it "shows the paradox banner only when the stored result says so (AC-7.4)"`; its two practice-note lines and the `stand_in?` stub go; `expect(draw(clean).at_css(".practice-note")).to be_nil` stays as the one note assertion.
+- `spec/views/results_partials_spec.rb`: the example becomes `it "shows the paradox banner only when the stored result says so (AC-7.4)"`; delete the `be_present` practice-note check and the `allow(RulesEngine).to receive(:stand_in?)` stub (lines 82-83) and keep the `be_nil` line that follows as the one note assertion.
 - `spec/requests/styleguide_spec.rb`: the example name drops "and the practice note" and `expect(section.at_css(".practice-note")).to be_present` becomes `to be_nil` (AC-3.4).
 - `spec/system/reveal_results_spec.rb`: the AC-8.4 example name drops "and the practice note", and `expect(page).to have_css(".practice-note")` becomes `expect(page).to have_no_css(".practice-note")`.
 - Wording only: `spec/models/rules_engine_next_phase_spec.rb` (header comment "It is not part of the stand-in." becomes "It is the playtest's own rule, not the gem's."; the example "follows the stand-in's result for a real spring phase (AC-5.2)" becomes "follows the engine's result for a real spring phase (AC-5.2)"); `spec/requests/order_secrecy_spec.rb` ("with the stand-in's outcome for it" becomes "with its outcome"; "(both uncontested under the stand-in)" becomes "(both uncontested)").
@@ -422,30 +426,32 @@ All green, including AC-3.2. Commit: "Remove the stand-in, stand_in? and the pra
 ```ruby
 # spec/docs/spec_amendments_spec.rb: the existing 022 1.5.0 example loses `expect(spec).to include("**Version:** 1.5.0")`
 # (022's version moves on, as the 1.4.0 example's comment says), and these three are added.
-  def amendment_row(path, version_line)
+  # The row that mentions spec 029, and its version, which must also be the spec's version line (the row is found by text, not by number).
+  def amendment_row(path)
     spec = File.read(File.expand_path("../../docs/specs/#{path}/spec.md", __dir__))
     row = spec.lines.find { |line| line.start_with?("| ") && line.include?("spec 029") }
-    [ spec, row, row && row[/\A\| (\d+\.\d+\.\d+) \|/, 1] ].tap { |_, _, version| expect(spec).to include("**Version:** #{version}") if version && version_line }
+    expect(row).not_to be_nil
+    version = row[/\A\| (\d+\.\d+\.\d+) \|/, 1]
+    expect(version).not_to be_nil
+    expect(spec).to include("**Version:** #{version}")
+    [ spec, row, version ]
   end
 
   it "records spec 029's retirement of the stand-in in spec 019's changelog (spec 029 AC-5.1)" do
-    spec, row, = amendment_row("019-adjudicator-boundary", true)
-    expect(row).not_to be_nil
-    expect(spec).to include("**Version:** 1.3.0")
-    expect(row).to include("FR-3").and include("AC-5.1").and include("test double").and include("TA.adjudicate").and include("load_adjudication")
+    _, row, version = amendment_row("019-adjudicator-boundary")
+    expect(version).to eq("1.3.0")
+    expect(row).to include("FR-3").and include("AC-5.1").and include("test double").and include("RulesEngine.adjudicate").and include("load_adjudication")
   end
 
   it "records spec 029's reading of spec 022 in its changelog (spec 029 AC-5.2)" do
-    _, row, version = amendment_row("022-phase-lifecycle", true)
-    expect(row).not_to be_nil
-    expect(version).not_to eq("1.5.0")
+    _, row, version = amendment_row("022-phase-lifecycle")
+    expect(version).to match(/\A1\.(?:[6-9]|\d{2,})\.0\z/) # the next free minor after 1.5.0
     expect(row).to include("AC-5.2").and include("next_movement_position").and include("real engine")
   end
 
   it "records spec 029's retirement of the practice note in spec 025's changelog (spec 029 AC-5.3)" do
-    spec, row, = amendment_row("025-reveal-results", true)
-    expect(row).not_to be_nil
-    expect(spec).to include("**Version:** 1.1.0")
+    _, row, version = amendment_row("025-reveal-results")
+    expect(version).to eq("1.1.0")
     expect(row).to include("D6").and include("AC-7.1").and include("AC-7.3").and include("AC-8.1").and include("AC-8.4").and include("stand_in?")
   end
 ```
@@ -456,7 +462,7 @@ Run `bundle exec rspec spec/docs/spec_amendments_spec.rb`: the three new example
 
 Add one row at the top of each changelog table and move the version line (and `Last Updated`) as stated:
 
-- Spec 019, `**Version:** 1.3.0`: "Amended by spec 029 (gem 0.2.0, #29).<br>• Story 3, FR-3 and AC-3.x (the stand-in adjudicator) and the stand-in half of AC-5.1 are retired: `RulesEngine.adjudicate` calls `TA.adjudicate` and `load_adjudication` builds a `TA::Adjudication` with `from_h`. AC-4.4 and AC-5.2 read as the real adjudication result.<br>• The stand-in has no test double (spec 029 D2). `app/models/rules_engine.rb` keeps the four loaders, `check`, `legal_orders` and the rest of the boundary unchanged."
+- Spec 019, `**Version:** 1.3.0`: "Amended by spec 029 (gem 0.2.0, #29).<br>• Story 3, FR-3 and AC-3.x (the stand-in adjudicator) and the stand-in half of AC-5.1 are retired: `RulesEngine.adjudicate` calls the gem and `load_adjudication` builds a `TA::Adjudication` with `from_h`. AC-4.4 and AC-5.2 read as the real adjudication result.<br>• The stand-in has no test double (spec 029 D2). `app/models/rules_engine.rb` keeps the four loaders, `check`, `legal_orders` and the rest of the boundary unchanged."
 - Spec 022, next free minor after 1.5.0 (1.6.0 unless #27 or #105 took it, in which case the next free): "Amended by spec 029 (gem 0.2.0, #29).<br>• The Non-Goal that keeps the app on gem 0.1.0 and the stand-in, AC-5.2's \"stand-in's result\" and the closing line that #29 changes only `RulesEngine` are read as: adjudication is the real engine, and #29 also edits the views and specs listed in spec 029 D6.<br>• `RulesEngine.next_movement_position` is unchanged and stays until 1.0."
 - Spec 025, `**Version:** 1.1.0`: "Amended by spec 029 (gem 0.2.0, #29).<br>• D6's stand-in note, Story 7's AC-7.1 and AC-7.3's wording about the note, AC-8.1's and AC-8.4's note, `RulesEngine.stand_in?` and the partial `results/_practice_note` are retired; no results view carries a practice note.<br>• The Goal and Non-Goal lines, AC-7.2's \"stand-in's loader\" wording and the Known limits entries that call the results fake are read as the real engine. The paradox warning and every other behavior stand."
 
@@ -490,7 +496,7 @@ Then the proof of every "Done when" item, from `web/`:
 | One side only | `git diff --name-only main...HEAD` lists only `web/` paths |
 | CI and early warning | the `Web specs` job green; `gh workflow run early-warning.yml --ref web/29-gem-0.2.0`, then link the run in the pull request |
 
-After that: the implementation review (Opus, read-only), `session-wrap`, the push that opens the draft pull request, and `gh pr ready`.
+After that: the implementation review (Opus, read-only), `session-wrap`, the push that opens the draft pull request, and `gh pr ready`. The pull request description links the early-warning run and says (spec D5) that no data holds stand-in results, that no migration is needed, and that a development database may be reset with `bin/rails db:reset`; it does not promise that an old development row fails to load.
 
 ## Gates
 
