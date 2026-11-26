@@ -31,11 +31,12 @@ module Trucebearer
     # the board. Raises InvalidInput only for an argument of the wrong class.
     def self.legal_orders(position, unit) = LegalOrders.call(position, unit)
 
-    # Adjudicates a movement phase without convoys (docs/interface.md, "Adjudicating a movement
-    # phase"): one outcome for every order, then an implied hold for every unit that has none,
-    # and the position after the moves. Raises InvalidInput for an argument of the wrong class,
-    # a position that isn't in the movement phase, or one power giving two orders for one
-    # province; a broken rule is an outcome, never an error. Convoys arrive with #15.
+    # Adjudicates a movement phase (docs/interface.md, "Adjudicating a movement phase"): one
+    # outcome for every order, then an implied hold for every unit that has none, and the
+    # position after the moves. Raises InvalidInput for an argument of the wrong class, a
+    # position that isn't in the movement phase, or one power giving two orders for one
+    # province; a broken rule is an outcome, never an error. A convoy paradox is flagged, not
+    # resolved (#39).
     def self.adjudicate(position, orders) = Adjudicate.call(position, orders)
   end
 end

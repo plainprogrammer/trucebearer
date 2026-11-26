@@ -72,7 +72,12 @@ module Trucebearer
       def chain?(position, from, to, without: nil)
         return false if from == to
 
-        seas = fleet_seas(position, without)
+        linked?(fleet_seas(position, without), from, to)
+      end
+
+      # True when the given sea provinces hold a convoy chain from `from` to `to`: some of
+      # them, each next to the one before, the first next to `from` and the last next to `to`.
+      def linked?(seas, from, to)
         frontier = seas.select { |sea| touches?(sea, from) }
         reached = frontier.to_set
         until frontier.empty?

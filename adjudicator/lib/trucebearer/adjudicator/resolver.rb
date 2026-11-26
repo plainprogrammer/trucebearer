@@ -6,12 +6,16 @@ module Trucebearer
   module Adjudicator
     # Internal: decides every move of a movement phase, following the decision-based approach
     # of Kruijswijk's "The Math of Adjudication" (docs/specs/014-adjudicate-movement/spec.md,
-    # "How the conditions are resolved"). Not part of docs/interface.md.
+    # "How the conditions are resolved"; convoys: docs/specs/015-convoys/spec.md). Not part of
+    # docs/interface.md.
     #
     # It is given one followed order for each unit. A move's decision starts unknown. Each
     # strength is kept as a range [least, most] given what is already decided, and a move is
-    # decided as soon as its range settles it. When nothing more can be decided, the moves
-    # that remain wait on each other in a circle, and circular movement decides them.
+    # decided as soon as its range settles it. Whether a move that goes by convoy has a route
+    # depends on whether its carrying fleets are dislodged, so it is sure, lost or open, and an
+    # open route widens the ranges. When nothing more can be decided, circular movement decides
+    # the circles, and whatever is still undecided is a convoy paradox: those moves fail and
+    # `paradox` is set. Resolving a paradox properly is #39.
     class Resolver
       Entry = Data.define(:order, :unit) do
         def province = unit.location.province
@@ -20,12 +24,8 @@ module Trucebearer
         def destination = order.is_a?(Order::Move) ? order.destination.province : order.to
       end
 
-      # True when the last-resort rule ran: the moves on the cycles that are stuck failed. It
-      # can't run in this release: a move that goes by convoy fails at once, so every other
-      # undecided move waits on at most one move, and the cycles that remain are circles that
-      # `circle_pass` decides (docs/specs/014-adjudicate-movement/spec.md, "The paradox flag").
-      # #15 makes it reachable, once whether a convoy route works depends on a fleet that may
-      # be dislodged, and decides what it becomes.
+      # True when moves were left undecided after the ranges and circular movement: the orders
+      # hold a convoy paradox (docs/specs/015-convoys/spec.md, "Detecting a paradox").
       attr_reader :paradox
 
       def initialize(position, orders)
@@ -35,6 +35,7 @@ module Trucebearer
         @moves = @entries.select(&:move?)
         @into = @moves.group_by(&:destination)
         @by_convoy = @moves.select { |move| goes_by_convoy?(move) }.to_set
+        @carriers = @by_convoy.to_h { |move| [move, carriers_of(move)] }
         @state = {}
         @paradox = false
         resolve
@@ -53,7 +54,7 @@ module Trucebearer
 
           succeeded?(entry) ? :succeeded : :bounced
         when Order::SupportHold, Order::SupportMove then support_result(entry)
-        when Order::Convoy then :unmatched
+        when Order::Convoy then convoy_result(entry)
         end
       end
 
@@ -114,9 +115,46 @@ module Trucebearer
         end
       end
 
-      # The one place a later release decides whether a convoy route works (#15). `result` reads
-      # it too, so a move without a route is :no_route.
-      def path?(move) = !convoy?(move)
+      # The fleets that carry a move that goes by convoy: those whose followed order is a
+      # Convoy that matches it, of any power.
+      def carriers_of(move)
+        @entries.select do |entry|
+          entry.order.is_a?(Order::Convoy) && entry.order.from == move.province && entry.order.to == move.destination
+        end
+      end
+
+      # Does the move have a working route? :sure when some chain of carrying fleets has no
+      # fleet that might be dislodged, :lost when every chain has one that surely is (or there
+      # is none), :open otherwise. A move that goes by land always has one.
+      def route(move)
+        return :sure unless convoy?(move)
+
+        fleets = @carriers.fetch(move)
+        safe = fleets.select { |fleet| dislodged_state(fleet) == false }.to_set(&:province)
+        return :sure if Reach.linked?(safe, move.province, move.destination)
+
+        possible = fleets.reject { |fleet| dislodged_state(fleet) == true }.to_set(&:province)
+        Reach.linked?(possible, move.province, move.destination) ? :open : :lost
+      end
+
+      # Only called once everything is decided (by `result`).
+      def path?(move) = route(move) == :sure
+
+      # true when some move into the unit's province has succeeded, false when none can,
+      # nil while that is not known.
+      def dislodged_state(entry)
+        states = (@into[entry.province] || []).map { |move| @state[move] }
+        return true if states.any?(true)
+
+        states.all?(false) ? false : nil
+      end
+
+      def convoy_result(entry)
+        matched = @by_convoy.any? { |move| move.province == entry.order.from && move.destination == entry.order.to }
+        return :unmatched unless matched
+
+        dislodged_state(entry) ? :disrupted : :given
+      end
 
       def destination_location(entry)
         entry.order.is_a?(Order::Move) ? entry.order.destination : Location.new(province: entry.order.to)
@@ -156,17 +194,14 @@ module Trucebearer
           next if decide_pass
           next if circle_pass
 
-          last_resort
+          fail_residue
         end
       end
 
-      # Nothing can be decided and no circle of three or more is left. This can't happen in
-      # this release (see `paradox`). The moves on the cycles that are stuck fail, or every
-      # undecided move if there is no cycle, so the loop always ends.
-      def last_resort
-        stuck = cycles.flatten
-        stuck = @moves.select { |move| @state[move].nil? } if stuck.empty?
-        stuck.each { |move| @state[move] = false }
+      # Nothing more can be decided and no circle is left: the moves still undecided are the
+      # residue, which holds a convoy paradox. They all fail, and the flag is set.
+      def fail_residue
+        @moves.each { |move| @state[move] = false if @state[move].nil? }
         @paradox = true
       end
 
@@ -184,12 +219,18 @@ module Trucebearer
         progressed
       end
 
-      # Moves that wait on each other in a circle of three or more units, each into the
+      # Moves that wait on each other in a circle (see `circle?`), each into the
       # province the next one leaves, all succeed (circular movement).
       def circle_pass
-        circles = cycles.select { |circle| circle.size >= 3 }
+        circles = cycles.select { |circle| circle?(circle) }
         circles.each { |circle| circle.each { |move| @state[move] = true } }
         !circles.empty?
+      end
+
+      # Three or more moves, or two when one of them goes by convoy (two plain moves are a
+      # head-to-head battle), and every route sure.
+      def circle?(moves)
+        (moves.size >= 3 || moves.any? { |move| convoy?(move) }) && moves.all? { |move| route(move) == :sure }
       end
 
       # The cycles that the undecided moves form: each move waits on the undecided move of the
@@ -250,8 +291,10 @@ module Trucebearer
       end
 
       def attack(move)
-        return [0, 0] unless path?(move)
+        widen(move, attack_with_route(move))
+      end
 
+      def attack_with_route(move)
         other = @at[move.destination]
         return range(1, move_supporters(move)) unless other
         return staying_attack(move, other) if !other.move? || head_to_head?(move)
@@ -266,6 +309,15 @@ module Trucebearer
         end
       end
 
+      # A move with no route has no strength; one whose route is open might have none.
+      def widen(move, strength)
+        case route(move)
+        when :sure then strength
+        when :lost then [0, 0]
+        else [0, strength[1]]
+        end
+      end
+
       # Against a unit that stays: nothing against its own power, and no help from its owner.
       def staying_attack(move, other)
         return [0, 0] if other.power == move.power
@@ -274,8 +326,10 @@ module Trucebearer
       end
 
       def prevent(move)
-        return [0, 0] unless path?(move)
+        widen(move, prevent_with_route(move))
+      end
 
+      def prevent_with_route(move)
         if head_to_head?(move)
           case @state[@at[move.destination]]
           when true then return [0, 0]
@@ -302,18 +356,24 @@ module Trucebearer
       # the supported move goes to the province that move comes from; and by dislodgement.
       def cut?(support)
         attackers = @into[support.province] || []
-        return true if attackers.any? { |move| cuts?(move, support) }
+        cuts = attackers.map { |move| cuts?(move, support) }
+        return true if cuts.any?(true)
 
         states = attackers.map { |move| @state[move] }
         return true if states.any?(true)
 
-        states.all?(false) ? false : nil
+        cuts.all?(false) && states.all?(false) ? false : nil
       end
 
+      # true, false, or nil while the move's route is open.
       def cuts?(move, support)
-        return false if !path?(move) || move.power == support.power
+        return false if move.power == support.power
+        return false unless support.order.is_a?(Order::SupportHold) || move.province != support.order.to
 
-        support.order.is_a?(Order::SupportHold) || move.province != support.order.to
+        case route(move)
+        when :sure then true
+        when :lost then false
+        end
       end
 
       def occupied_after?(province)
