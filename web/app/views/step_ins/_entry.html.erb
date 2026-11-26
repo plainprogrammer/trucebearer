@@ -1,0 +1,12 @@
+<%# The host page's way in (spec 026 D8): one row for each held seat but the host's own. No order, count or submitted state.
+    locals: game, seats (by power), phase %>
+<% others = seats.values.reject { |seat| seat == game.host_seat } %>
+<% if others.any? %>
+  <h3>Step into a seat</h3>
+  <p>Enter orders for a player who can't. It is recorded, and that player is told.</p>
+  <ul class="list" data-step-in-entry>
+    <% others.each do |seat| %>
+      <li><%= link_to safe_join([ power_badge(seat.power), tag.span("Step in") ]), game_step_in_path(game.public_id, seat.power, phase.number), class: "list__row" %></li>
+    <% end %>
+  </ul>
+<% end %>

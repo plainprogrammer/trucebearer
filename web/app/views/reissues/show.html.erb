@@ -3,4 +3,5 @@
 <%= render layout: "shared/confirm", locals: { title: "Reissue #{power_name(@seat.power)}", confirm_label: "Reissue seat", danger: true,
       confirm_path: game_reissue_path(@game.public_id, @seat.power), cancel_path: game_host_path(@game.public_id) } do %>
   <p>The phone that holds this seat loses it at once. The seat's saved orders for this phase are deleted with it. Show the new QR code to the player who takes it over.</p>
+  <p>If you open the new link on your own phone, that counts as stepping into this seat: you will be asked to confirm, and it is recorded.</p>
 <% end %>

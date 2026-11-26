@@ -42,6 +42,7 @@
         </li>
       <% end %>
     </ul>
+    <%= render "step_ins/entry", game: @game, seats: @seats, phase: @phase %>
   </section>
 
   <section class="stack" aria-labelledby="history-heading" data-history>

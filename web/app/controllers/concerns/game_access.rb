@@ -66,7 +66,20 @@ module GameAccess
     @game = find_game
     power = request.path_parameters[:power]
     @seat = @game && (power ? stepped_in_seat(@game, power) : seat_of(@game))
-    stranger!(@game) unless @seat
+    return stranger!(@game) unless @seat
+    return if power || send_to_step_in(@game, @seat)
+
+    load_step_in(@game)
+  end
+
+  # A browser that holds the host cookie and a seat other than the host's own is not that seat: it is sent to that seat's step-in
+  # confirmation for the open phase, and the foreign seat cookie goes (spec 026 D5). True when it redirected.
+  def send_to_step_in(game, seat)
+    return false unless host?(game) && seat != game.host_seat
+
+    cookies.delete(cookie_name(:seat, game.public_id))
+    redirect_to game_step_in_path(game.public_id, seat.power, game.current_phase.number)
+    true
   end
 
   def step_in_cookie_name(public_id) = "step_in_#{public_id}"
