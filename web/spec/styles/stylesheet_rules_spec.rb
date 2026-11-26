@@ -85,6 +85,14 @@ RSpec.describe "Stylesheet rules" do
     expect(File.size?(File.join(Stylesheets::DIR, "styleguide.css")).to_i).to be <= 6 * 1024
   end
 
+  it "keeps the game card within its 2,800 bytes (spec 028 AC-8.3)" do
+    css = File.read(File.join(Stylesheets::DIR, "components.css")) # the raw file: Stylesheets.read strips the comment this looks for
+    block = css[/\/\* ---- Game card \(#28\).*?(?=\n  \/\* ----|\z)/m].to_s
+
+    expect(block).not_to be_empty
+    expect(block.bytesize).to be <= 2800
+  end
+
   it "sets touch-action and safe-area insets, and sizes fields at 1rem (AC-1.4, 1.6, 3.5)" do
     css = files.map { |f| Stylesheets.read(f) }.join("\n")
     components = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "components.css")))

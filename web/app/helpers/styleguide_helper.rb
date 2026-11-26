@@ -35,6 +35,13 @@ module StyleguideHelper
   # Stand-ins for the game and phase the order screen's partials build their links from (spec 023).
   SAMPLE_GAME = Struct.new(:public_id).new("sample").freeze
   SAMPLE_PHASE = Struct.new(:number).new(1).freeze
+  # The game card's three forms (spec 028 D3), with no database: a game that only knows when it started.
+  SAMPLE_CARD_GAME = Struct.new(:created_at).new(Time.utc(2026, 11, 21, 12)).freeze
+  SAMPLE_ENTRIES = [
+    ResumableGames::Entry.new(game: SAMPLE_CARD_GAME, phase: nil, power: "england", host: false, href: "#"),
+    ResumableGames::Entry.new(game: SAMPLE_CARD_GAME, phase: nil, power: "germany", host: true, href: "#"),
+    ResumableGames::Entry.new(game: SAMPLE_CARD_GAME, phase: nil, power: nil, host: true, href: "#")
+  ].freeze
 
   # Made-up result groups for the style guide's Results section (spec 025 AC-8.1): a player group and a reading group between them
   # showing every tag. The partials take the presenter's own value types.

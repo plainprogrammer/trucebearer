@@ -3,7 +3,7 @@ require_relative "../support/stylesheets"
 
 RSpec.describe "Style guide", type: :request do
   components = %w[button link list field choice power-badge heading-text unit-icon supply-center-icon mono-text
-                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status results segmented]
+                join-code qr-card power-tile host-section phase-header banner confirm unit-row picker submit-bar seat-status results segmented game-card]
   # The documented pairs other than the power pairs (spec FR-3).
   non_power_pair_count = Contrast::DOCUMENTED_PAIRS.size
 
@@ -35,6 +35,14 @@ RSpec.describe "Style guide", type: :request do
         expect(sample.css("input[type=radio][checked]").size).to eq(1)
         expect(sample.css("input[type=radio]").size).to be >= 2
       end
+    end
+
+    it "shows the game card in its three forms (spec 028 AC-8.1)" do
+      cards = page.css("section[data-component=game-card] a.game-card")
+
+      expect(cards.size).to eq(3)
+      expect(cards.map { |card| card.text.squish }.join(" ")).to include("You host this game")
+      expect(cards.count { |card| card.at_css(".power-badge") }).to eq(2)
     end
 
     it "shows static variants: each button variant, disabled, invalid, a disabled choice (AC-5.1)" do

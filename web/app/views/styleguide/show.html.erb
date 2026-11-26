@@ -203,6 +203,16 @@
     <%= render "phases/header", phase: sample_phase %>
   </section>
 
+  <section data-component="game-card" class="stack" aria-labelledby="sg-game-card">
+    <h2 id="sg-game-card">Game card</h2>
+    <p>One link to a game on the home page: when it started, the open phase, and your power. A host sees the words "You host this game"; a host with no seat has no badge.</p>
+    <ul class="game-cards">
+      <% StyleguideHelper::SAMPLE_ENTRIES.each do |entry| %>
+        <li><%= render "home/game_card", entry: entry.with(phase: sample_phase) %></li>
+      <% end %>
+    </ul>
+  </section>
+
   <section data-component="banner" class="stack" aria-labelledby="sg-banner">
     <h2 id="sg-banner">Banner</h2>
     <p>One sentence. Warnings and errors start with a word, so the kind never rests on colour.</p>

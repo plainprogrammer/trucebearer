@@ -143,7 +143,7 @@ Class names follow the pattern of the base stylesheet: block, `__element`, `--va
 | Result row | `.result-row`, `.outcome-tag` (partials `results/_row`, `results/_outcome_tag`) | #25 (built) | The unit and its order in words, then a mono tag ("Succeeded", "Bounced", "Support cut", "Dislodged"); dislodged uses `danger`; the one tag partial is the only writer of `.outcome-tag`; an implied hold carries a muted note |
 | Result group | `.result-group` (`--reading`; partials `results/_group`, and `results/_section` for the heading, banners, groups and the list of earlier results) | #25 (built) | Grouped by power; the host's reading variant has larger type, and groups holding a dislodged unit come first |
 | Segmented toggle | `.segmented` (partial `shared/_segmented`) | #27 (built) | Army or fleet, spring or fall; a radio group drawn as joined buttons, the selected option in `primary` with `on-primary`; the radios stay real, clipped to a pixel, and the label is the 44-pixel target |
-| Game card | `.game-card` | #28 | Game name, phase header, your power |
+| Game card | `.game-card` (partial `home/_game_card`, helper `game_started`) | #28 (built) | One link to a game on the home page: the start date, the phase header with your power badge, and "You host this game" for a host. Start date, phase header, your power |
 
 ### 1.0 screens
 
