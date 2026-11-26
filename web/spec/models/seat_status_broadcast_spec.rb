@@ -59,12 +59,22 @@ RSpec.describe "Seat status broadcast" do
   end
 
   it "keeps the save, and its answer, when the cable call raises, and logs only the exception's class (D7, AC-5.4)" do
-    allow(Turbo::StreamsChannel).to receive(:broadcast_update_to).and_raise(IOError, "secret detail")
+    allow(Turbo::StreamsChannel).to receive(:broadcast_stream_to).and_raise(IOError, "secret detail")
     allow(Rails.logger).to receive(:warn)
 
     expect(seat.save_orders!(phase, {}, submit: true)).to eq(Seat::Saved.new(changed: false, submitted: true))
     expect(seat.submitted?(phase)).to be(true)
     expect(Rails.logger).to have_received(:warn).with("seat status broadcast failed: IOError")
+  end
+
+  it "builds the message the broadcast sends from one method that a catch-up shares (spec 024 D10, AC-9.3)" do
+    seat.save_orders!(phase, {}, submit: true)
+
+    expect(game.seat_status_message).to eq(payloads.last)
+  end
+
+  it "generates public ids in the shape the channels parse (D10)" do
+    expect(game.public_id).to match(/\A#{Game::PUBLIC_ID_PATTERN}\z/)
   end
 
   it "does not hide a template that raises (D7)" do

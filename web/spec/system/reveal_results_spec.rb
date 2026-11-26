@@ -98,6 +98,7 @@ RSpec.describe "Revealing results to every phone", type: :system do
     with_viewport(360) do
       visit "/games/#{id}/seat-link?token=#{france.last}"
       visit "/games/#{id}/phases/1/orders"
+      connected(1) # subscribed before the reveal: a subscription that landed after it would be sent a catch-up refresh (spec 024 D10)
       Phase.find_by(game: game, number: 1).reveal!
       click_on "Submit orders"
       expect(page).to have_css(".banner--danger", text: "The host has already revealed this phase")

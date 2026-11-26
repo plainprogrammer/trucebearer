@@ -1,6 +1,6 @@
 <%# The heading, the live status list, the stream source and the cache rule (spec 024 FR-3, D9): one line in each page.
     locals: game, phase, level (2 on the seat page, 3 in the host section) %>
 <% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
-<%= turbo_stream_from :seat_status, game.public_id %>
+<%= turbo_stream_from :seat_status, game.public_id, channel: SeatStatusChannel %>
 <%= content_tag "h#{level}", "Who has submitted" %>
 <%= seat_status(phase.seat_statuses) %>

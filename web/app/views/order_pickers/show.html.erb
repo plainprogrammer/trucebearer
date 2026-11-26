@@ -1,7 +1,7 @@
 <% content_for :title, @step.title %>
 <% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
 
-<%= render "results/live", game: @game unless @stepped_in_page %>
+<%= render "results/live", game: @game, phase: @phase unless @stepped_in_page %>
 <div class="stack picker">
   <h1><%= @step.title %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>

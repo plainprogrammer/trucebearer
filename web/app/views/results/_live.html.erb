@@ -1,3 +1,4 @@
-<%# The stream source and the morphed refresh for a page that switches to the results at the reveal (spec 025 D1, D2). locals: game %>
+<%# The stream source and the morphed refresh for a page that switches to the results at the reveal (spec 025 D1, D2). The signed name carries the
+    number of the phase the page is drawn for, so ResultsChannel can refresh a phone that missed the reveal (spec 024 D10). locals: game, phase %>
 <% turbo_refreshes_with method: :morph, scroll: :preserve %>
-<%= turbo_stream_from :results, game.public_id %>
+<%= turbo_stream_from :results, game.public_id, phase.number, channel: ResultsChannel %>
