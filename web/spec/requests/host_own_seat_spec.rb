@@ -43,7 +43,8 @@ RSpec.describe "The host page's way to the host's own seat", type: :request do
   it "does the same for a browser whose seat cookie is another seat's, a junk one or a reissued one" do
     _france, france_token = game.take_seat!("france")
     junk = phone([ "host", started.host_token ]).tap { |s| s.cookies["seat_#{id}"] = "junk" }
-    other = phone([ "host", started.host_token ], [ "seat", france_token ])
+    other = phone([ "seat", france_token ], [ "host", started.host_token ]) # seat first: a host browser's seat link asks to step in and saves nothing
+    expect(other.cookies["seat_#{id}"]).to be_present
     old_phone = phone([ "host", started.host_token ], [ "seat", started.seat_token ])
     game.reissue_seat!(game.host_seat)
 
@@ -56,7 +57,7 @@ RSpec.describe "The host page's way to the host's own seat", type: :request do
 
   it "says the same words to every browser that lacks the seat" do
     _france, france_token = game.take_seat!("france")
-    bodies = [ phone([ "host", started.host_token ]), phone([ "host", started.host_token ], [ "seat", france_token ]) ].map do |session|
+    bodies = [ phone([ "host", started.host_token ]), phone([ "seat", france_token ], [ "host", started.host_token ]) ].map do |session|
       host_page(session).css("main p").find { |p| p.text.include?("reissue your own seat") }.to_html
     end
 
