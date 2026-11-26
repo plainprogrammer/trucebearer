@@ -7,7 +7,7 @@ require_relative "../../support/board"
 # Every Ruby example under `## Adjudicating a movement phase`, `### TA::Outcome` and
 # `### TA::Adjudication` of docs/interface.md, with the same expected values (AC-1.1 to
 # AC-1.3). The first example is the first spec of the feature. The two examples that need
-# a working convoy are pending until #15.
+# a working convoy are real specs since #15.
 RSpec.describe "TA.adjudicate: the examples of docs/interface.md" do
   let(:start) { TA::Map.classic.starting_position }
 
@@ -107,17 +107,14 @@ RSpec.describe "TA.adjudicate: the examples of docs/interface.md" do
     expect(TA::Adjudication.from_h(JSON.parse(JSON.generate(adjudication.to_h)))).to eq(adjudication)
   end
 
-  # AC-1.3: needs a working convoy, which arrives with #15. These run and fail as expected;
-  # when #15 makes one pass, RSpec flags it until the `pending` is removed.
+  # AC-1.1 and AC-1.2 of spec 015: the two examples that need convoys.
   it "sends an army by sea when a fleet convoys it (the by_sea example)" do
-    pending "convoys: #15"
     by_sea = TA.adjudicate(ln, [O::Move.new(power: :england, at: :lon, destination: L.new(province: :yor)),
                                 O::Convoy.new(power: :england, at: :nth, from: :lon, to: :yor)])
     expect(by_sea.outcomes.map(&:result)).to eq(%i[succeeded given])
   end
 
   it "flags the convoy paradox of the paradox_pos example" do
-    pending "convoys: #15"
     paradox_pos = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {},
                                    dislodged_units: [], standoffs: [],
                                    units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon)),
@@ -131,6 +128,8 @@ RSpec.describe "TA.adjudicate: the examples of docs/interface.md" do
       O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon)
     ])
     expect(result.paradox).to be(true)
+    expect(result.position).to be_a(TA::Position)
+    expect(result.position.units.size + result.position.dislodged_units.size).to eq(4)
   end
 
   describe "the impossible outcomes and adjudications of the contract" do
