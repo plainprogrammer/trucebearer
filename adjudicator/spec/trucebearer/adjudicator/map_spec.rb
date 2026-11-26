@@ -378,9 +378,8 @@ RSpec.describe Trucebearer::Adjudicator::Map do
       end
     end
 
-    it "is not mentioned in the interface document, and starting_position is not built here" do
+    it "is not mentioned in the interface document" do
       expect(File.read(INTERFACE_DOC)).not_to include("starting_units")
-      expect(map).not_to respond_to(:starting_position)
     end
   end
 end

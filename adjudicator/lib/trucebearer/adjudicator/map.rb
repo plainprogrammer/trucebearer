@@ -105,7 +105,7 @@ module Trucebearer
       end
 
       # Internal: not part of docs/interface.md, and may change in any release.
-      # The units a game starts with, for Map#starting_position (issue #10).
+      # The units a game starts with, which Map#starting_position turns into a TA::Position.
       # Each entry is a frozen Hash with :power, :type and :location (a TA::Location).
       # Built on each call so that no Location is made while the map is loading.
       def starting_units
@@ -113,6 +113,20 @@ module Trucebearer
           { power: u[:power], type: u[:type],
             location: Location.new(province: u[:province], coast: u[:coast]) }.freeze
         end.freeze
+      end
+
+      # The position the game starts from: spring 1901, the movement phase, each power's
+      # units, and each power owning its own home centers. The neutral centers are absent
+      # from ownership. Built on each call, since a frozen map cannot hold one.
+      def starting_position
+        Position.new(
+          map: id, season: :spring, year: 1901, phase: :movement,
+          units: starting_units.map { |u| Unit.new(power: u[:power], type: u[:type], location: u[:location]) },
+          ownership: @powers.each_with_object({}) do |power, owned|
+            home_centers(power.id).each { |center| owned[center] = power.id }
+          end,
+          dislodged_units: [], standoffs: []
+        )
       end
 
       private

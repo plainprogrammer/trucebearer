@@ -112,4 +112,21 @@ RSpec.describe "docs/interface.md examples" do
         .to eq({ "format" => 1, "type" => "convoy", "power" => "england", "at" => "nth", "from" => "lon", "to" => "nwy" })
     end
   end
+
+  describe "Map#starting_position and the year example" do
+    it "gives the values of the Map section (overview block and subsection)" do
+      map = TA::Map.classic
+      start = map.starting_position
+      expect([start.season, start.year, start.phase]).to eq([:spring, 1901, :movement])
+      expect(start.units.size).to eq(22)
+      expect(start.ownership.size).to eq(22)
+      expect(start.ownership[:lon]).to eq(:england)
+      expect(start.ownership.key?(:bel)).to be(false)
+    end
+
+    it "raises for the year example under Errors" do
+      start = TA::Map.classic.starting_position
+      expect { TA::Position.from_h(start.to_h.merge("year" => "1901")) }.to raise_error(TA::InvalidInput, /"1901"/)
+    end
+  end
 end
