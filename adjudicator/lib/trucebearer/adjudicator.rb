@@ -12,6 +12,7 @@ require_relative "adjudicator/order"
 require_relative "adjudicator/check_result"
 require_relative "adjudicator/reach"
 require_relative "adjudicator/check"
+require_relative "adjudicator/legal_orders"
 
 module Trucebearer
   # The rules engine: checks orders and adjudicates each phase of a game turn.
@@ -20,5 +21,10 @@ module Trucebearer
     # reason it is not (docs/interface.md, "Checking an order"). Raises InvalidInput only for
     # an argument that is not a position or an order; a broken rule is a result, never an error.
     def self.check(position, order) = Check.call(position, order)
+
+    # Lists every order that is legal for one unit, in a fixed order (docs/interface.md,
+    # "Legal orders"). Empty when the position isn't in a movement phase or the unit isn't on
+    # the board. Raises InvalidInput only for an argument of the wrong class.
+    def self.legal_orders(position, unit) = LegalOrders.call(position, unit)
   end
 end

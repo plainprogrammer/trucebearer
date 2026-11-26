@@ -11,9 +11,10 @@ require_relative "../../support/board"
 #
 # Excluded, because they belong to later issues (AC-7.3):
 #   - the TA::Outcome and TA::Adjudication examples (#14);
-#   - the TA.legal_orders and TA.adjudicate calls in their own sections.
+#   - the TA.adjudicate calls in its own section (#14).
 # The TA::CheckResult examples, the three CheckResult lines at the end of "Impossible
-# objects" and the TA.check examples run in check_examples_spec.rb (#11).
+# objects" and the TA.check examples run in check_examples_spec.rb (#11). The
+# TA.legal_orders examples run in legal_orders_examples_spec.rb (#12).
 RSpec.describe "docs/interface.md examples" do
   describe "TA::Location, TA::Unit and TA::DislodgedUnit" do
     it "gives the hash forms the document shows" do
