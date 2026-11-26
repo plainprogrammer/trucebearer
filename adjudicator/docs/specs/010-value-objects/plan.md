@@ -14,8 +14,8 @@
 - **Test first.** Each phase writes its specs, runs them, and sees them fail for the right reason before it writes any code. The examples spec (`interface_examples_spec.rb`) grows with each phase for the same reason: the interface examples for that phase's objects are written first.
 - Run every command from `adjudicator/`. Spec files begin with `require "trucebearer/adjudicator"` and, from Phase 1, `require_relative "../../support/board"`. `.rspec` already loads `spec_helper`.
 - `TA`, `L` and `O` stand for `Trucebearer::Adjudicator`, `TA::Location` and `TA::Order`, as in `interface.md`. Code files begin with `# frozen_string_literal: true`.
-- Commit messages are plain imperative sentences, one commit per phase, each ending with the trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. One git operation per shell call.
-- A phase is committed only when `bundle exec rspec` is green. The round-trip spec written first (Phase 1, step 1) stays uncommitted and red until Phase 4 turns it green.
+- Commit messages are plain imperative sentences, one commit per phase, each ending with the `Co-Authored-By:` trailer the session's attribution reminder gives (at the time of writing, `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`). One git operation per shell call.
+- A phase is committed only when `bundle exec rspec` is green, with one exception: Phase 1, Step 1 commits the round-trip spec (and `spec/support/board.rb`) on its own, red, as the first code commit, so the history shows it was written first (AC-6.9). Nothing is pushed before Phase 5, so CI never sees a red commit. Until Phase 4 turns that spec green, the phases run the suite with `--exclude-pattern "**/starting_position_spec.rb"`.
 
 ## Pre-implementation gates
 
@@ -68,7 +68,7 @@
 **Implements:** FR-1, FR-4 (identifier and key checks, `format` value), FR-5 (units) | **Satisfies:** AC-1.1 to AC-1.10, AC-5.2, AC-5.3, AC-5.4, AC-4.4 (the value), AC-7.1 (Location, Unit, DislodgedUnit examples)
 **Files:** `spec/support/board.rb`, `starting_position_spec.rb`, `unit_spec.rb`, `dislodged_unit_spec.rb`, `interface_examples_spec.rb`, `shape.rb`, `unit.rb`, `dislodged_unit.rb`, `lib/trucebearer/adjudicator.rb`
 
-### Step 1: The round-trip spec (the first spec written)
+### Step 1: The round-trip spec (the first spec written), committed red
 
 Create `spec/trucebearer/adjudicator/starting_position_spec.rb` with the round trip only. It is the test the Issue names first.
 
@@ -90,13 +90,13 @@ RSpec.describe "Map#starting_position" do
 end
 ```
 
-It needs `spec/support/board.rb` to exist (Step 2 creates it, with the `TA` constant). Create that file first and run the spec:
+It needs `spec/support/board.rb`, which is created in the same step (see Step 2 for its text; create it before running the spec). Run the spec:
 
 ```sh
 bundle exec rspec spec/trucebearer/adjudicator/starting_position_spec.rb
 ```
 
-Expected: fails with `NoMethodError: undefined method 'starting_position' for an instance of Trucebearer::Adjudicator::Map`. Do not commit this file yet; it is committed with Phase 4, when it turns green.
+Expected: fails with `NoMethodError: undefined method 'starting_position' for an instance of Trucebearer::Adjudicator::Map`. Commit this spec and `spec/support/board.rb` now, as the red first commit: "Add the failing starting-position round-trip spec". Phase 4 extends the spec and turns it green.
 
 ### Step 2: Shared spec helpers
 
@@ -179,6 +179,7 @@ RSpec.describe Trucebearer::Adjudicator::Unit do
     it "raises ArgumentError, not InvalidInput, for a missing or unknown keyword (AC-1.10)" do
       expect { described_class.new(power: :france, type: :army) }.to raise_error(ArgumentError)
       expect { described_class.new(power: :france, type: :army, location: L.new(province: :par), extra: 1) }.to raise_error(ArgumentError)
+      expect { L.new }.to raise_error(ArgumentError) # the #9 behavior, pinned (AC-1.10)
     end
   end
 
@@ -269,6 +270,8 @@ RSpec.describe Trucebearer::Adjudicator::Unit do
     it "refuses an impossible unit written as a hash (AC-5.10)" do
       expect { described_class.from_h("power" => "germany", "type" => "fleet", "location" => { "province" => "mun", "coast" => nil }) }.to raise_error(TA::InvalidInput, /:mun/)
       expect { described_class.from_h("power" => "france", "type" => "fleet", "location" => { "province" => "spa", "coast" => nil }) }.to raise_error(TA::InvalidInput, /:spa/)
+      expect { described_class.from_h("power" => "england", "type" => "army", "location" => { "province" => "nth", "coast" => nil }) }.to raise_error(TA::InvalidInput, /:nth/)
+      expect { described_class.from_h("power" => "france", "type" => "army", "location" => { "province" => "spa", "coast" => "nc" }) }.to raise_error(TA::InvalidInput, /:spa/)
     end
   end
 end
@@ -328,6 +331,7 @@ RSpec.describe Trucebearer::Adjudicator::DislodgedUnit do
     expect { described_class.from_h(valid.merge("attacker_from" => :bul)) }.to raise_error(TA::InvalidInput, /:bul/)
     expect { described_class.from_h(valid.merge("attacker_from" => { "province" => "spa", "coast" => "nc" })) }.to raise_error(TA::InvalidInput, /"coast" => "nc"/)
     expect { described_class.from_h(valid.merge("by_convoy" => "true")) }.to raise_error(TA::InvalidInput, /"true"/)
+    expect { described_class.from_h(valid.merge("attacker_from" => "xyz")) }.to raise_error(TA::InvalidInput, /"xyz"/)
     expect { described_class.from_h(valid.merge("unit" => { "power" => "austria" })) }.to raise_error(TA::InvalidInput, /"type"/)
     expect { described_class.from_h(valid.reject { |k, _| k == "by_convoy" }) }.to raise_error(TA::InvalidInput, /"by_convoy"/)
     expect { described_class.from_h(valid.merge("extra" => 1)) }.to raise_error(TA::InvalidInput, /"extra"/)
@@ -336,6 +340,16 @@ RSpec.describe Trucebearer::Adjudicator::DislodgedUnit do
 
   it "raises ArgumentError for a missing keyword (AC-1.10)" do
     expect { described_class.new(unit: serbian_army, attacker_from: :bul) }.to raise_error(ArgumentError)
+  end
+
+  it "leaves the hash it is given alone, accepts a frozen one, and holds no reference to it (AC-2.9)" do
+    parsed = JSON.parse(JSON.generate(dislodged.to_h))
+    before = Marshal.load(Marshal.dump(parsed))
+    built = described_class.from_h(parsed)
+    expect(parsed).to eq(before)
+    parsed["unit"]["power"] << "x"
+    expect(built).to eq(dislodged)
+    expect(described_class.from_h(Ractor.make_shareable(JSON.parse(JSON.generate(dislodged.to_h))))).to eq(dislodged)
   end
 end
 ```
@@ -490,6 +504,7 @@ module Trucebearer
         raise InvalidInput, "#{message} #{repeated.first.inspect}" if repeated
       end
     end
+    private_constant :Shape
   end
 end
 ```
@@ -589,7 +604,7 @@ bundle exec rspec spec/trucebearer/adjudicator/unit_spec.rb spec/trucebearer/adj
 bundle exec rspec --exclude-pattern "**/starting_position_spec.rb"
 ```
 
-Expected: all pass, 0 failures. Commit (leaving `starting_position_spec.rb` out): "Add Unit and DislodgedUnit value objects".
+Expected: all pass, 0 failures. Commit: "Add Unit and DislodgedUnit value objects".
 
 ---
 
@@ -679,6 +694,8 @@ RSpec.describe Trucebearer::Adjudicator::Position do
       refuse(/"units"/, units: "none")
       refuse(/\{"power"/, units: [army.to_h])
       refuse(/"dislodged_units"/, dislodged_units: nil)
+      refuse(/"x"/, dislodged_units: ["x"])
+      refuse(/1/, standoffs: [1])
       refuse(/"standoffs"/, standoffs: "bur")
       refuse(/"bur"/, standoffs: ["bur"])
       refuse(/:xyz/, standoffs: [:xyz])
@@ -758,6 +775,8 @@ RSpec.describe Trucebearer::Adjudicator::Position do
       bad.call({ "units" => [valid_hash["units"].first.merge("format" => 1)] }, /"format"/)
       bad.call({ "units" => [valid_hash["units"].first.merge("location" => { "province" => "bud", "coast" => nil, "format" => 1 })] }, /"format"/)
       bad.call({ "standoffs" => [:bur] }, /:bur/)
+      bad.call({ "standoffs" => [1] }, /1/)
+      bad.call({ "dislodged_units" => ["x"] }, /"x"/)
       bad.call({ "ownership" => [] }, /\[\]/)
       bad.call({ "ownership" => { bud: "austria" } }, /:bud/)
       bad.call({ "ownership" => { "bud" => :austria } }, /:austria/)
@@ -845,7 +864,9 @@ RSpec.describe Trucebearer::Adjudicator::Position do
         "a province that is not a supply center" => valid_hash.merge("ownership" => { "bur" => "france" }),
         "a standoff in a movement phase" => valid_hash.merge("standoffs" => ["bur"]),
         "a repeated standoff" => valid_hash.merge("phase" => "retreat", "standoffs" => %w[bur bur]),
-        "an unknown power" => valid_hash.merge("ownership" => { "bud" => "atlantis" })
+        "an unknown power" => valid_hash.merge("ownership" => { "bud" => "atlantis" }),
+        "a dislodged unit in a movement phase" => valid_hash.merge("dislodged_units" => [{ "unit" => fleet.to_h, "attacker_from" => "fin", "by_convoy" => false }]),
+        "an unknown attacker_from" => valid_hash.merge("phase" => "retreat", "dislodged_units" => [{ "unit" => fleet.to_h, "attacker_from" => "xyz", "by_convoy" => false }])
       }
       cases.each do |name, hash|
         expect { described_class.from_h(hash) }.to raise_error(TA::InvalidInput), name
@@ -1082,7 +1103,9 @@ RSpec.describe Trucebearer::Adjudicator::Order do
     expect(cases.map { |klass, _, _| klass.members }).to eq(
       [%i[power at], %i[power at destination], %i[power at to], %i[power at target], %i[power at from to], %i[power at from to]]
     )
-    expect(described_class::TYPES.keys).to eq(%w[hold move move_via_convoy support_hold support_move convoy])
+    expect(cases.map { |_, _, hash| O.from_h(hash).class }).to eq(cases.map(&:first))
+    expect(O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa))
+      .not_to eq(O::Convoy.new(power: :france, at: :por, from: :mao, to: :spa))
   end
 
   cases.each do |klass, keywords, hash|
@@ -1167,7 +1190,7 @@ RSpec.describe Trucebearer::Adjudicator::Order do
     end
 
     it "refuses a Location or a string in a province field of new, and a non-Location destination (AC-3.7)" do
-      expect { O::Hold.new(power: :england, at: L.new(province: :lon)) }.to raise_error(TA::InvalidInput, /Location/)
+      expect { O::Hold.new(power: :england, at: L.new(province: :lon)) }.to raise_error(TA::InvalidInput, /#{Regexp.escape(L.new(province: :lon).inspect)}/)
       expect { O::MoveViaConvoy.new(power: :england, at: :lon, to: "wal") }.to raise_error(TA::InvalidInput, /"wal"/)
       [:spa, nil, { "province" => "spa", "coast" => nil }].each do |bad|
         expect { O::Move.new(power: :france, at: :mao, destination: bad) }.to raise_error(TA::InvalidInput, /#{Regexp.escape(bad.inspect)}/)
@@ -1177,10 +1200,10 @@ RSpec.describe Trucebearer::Adjudicator::Order do
 
     it "refuses a destination that is not exactly a location hash (AC-3.12)" do
       valid = cases.find { |k, _, _| k == O::Move }.last
-      ["spa", nil, :spa, { "province" => "spa" }, { "province" => "spa", "coast" => nil, "x" => 1 },
-       { "province" => "par", "coast" => "nc" }].each do |bad|
-        expect { O::Move.from_h(valid.merge("destination" => bad)) }.to raise_error(TA::InvalidInput)
-        expect { O.from_h(valid.merge("destination" => bad)) }.to raise_error(TA::InvalidInput)
+      [["spa", /"spa"/], [nil, /nil/], [:spa, /:spa/], [{ "province" => "spa" }, /"coast"/],
+       [{ "province" => "spa", "coast" => nil, "x" => 1 }, /"x"/], [{ "province" => "par", "coast" => "nc" }, /"nc"/]].each do |bad, pattern|
+        expect { O::Move.from_h(valid.merge("destination" => bad)) }.to raise_error(TA::InvalidInput, pattern)
+        expect { O.from_h(valid.merge("destination" => bad)) }.to raise_error(TA::InvalidInput, pattern)
       end
     end
   end
@@ -1257,7 +1280,7 @@ Add to `interface_examples_spec.rb` (inside the top `RSpec.describe`):
       expect { O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "xyz" }) }.to raise_error(TA::InvalidInput, /"xyz"/)
       expect do
         O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => { "province" => "spa", "coast" => "nc" } })
-      end.to raise_error(TA::InvalidInput, /"at" must be a province identifier.*\{"province" => "spa", "coast" => "nc"\}/)
+      end.to raise_error(TA::InvalidInput, /#{Regexp.escape({ "province" => "spa", "coast" => "nc" }.inspect)}/)
     end
 
     it "gives the TA::Order examples" do
@@ -1378,6 +1401,7 @@ module Trucebearer
       Convoy = define("convoy", :from, :to)
 
       TYPES.freeze
+      private_constant :TYPES
     end
   end
 end
@@ -1433,7 +1457,7 @@ RSpec.describe "Map#starting_position" do
     expect(start.units.size).to eq(22)
     expect(start.units.map { _1.location.province }).to eq(start.units.map { _1.location.province }.sort)
     expect(start.units).to eq(map.starting_units.map { |u| TA::Unit.new(power: u[:power], type: u[:type], location: u[:location]) }.sort_by { _1.location.province })
-    by_power = start.units.group_by(&:power).transform_values { |units| units.map { [_1.type, _1.location.province, _1.location.coast] }.sort_by(&:last) }
+    by_power = start.units.group_by(&:power).transform_values { |units| units.map { [_1.type, _1.location.province, _1.location.coast] } }
     expect(by_power.fetch(:russia)).to contain_exactly(
       [:army, :mos, nil], [:army, :war, nil], [:fleet, :sev, nil], [:fleet, :stp, :sc]
     )
@@ -1558,7 +1582,7 @@ bundle exec rspec
 bundle exec rake
 ```
 
-Expected: all pass, 0 failures, none pending. Commit (now including `starting_position_spec.rb`): "Add Map#starting_position".
+Expected: all pass, 0 failures, none pending. Commit: "Add Map#starting_position".
 
 ---
 
@@ -1594,39 +1618,52 @@ Add to `interface_examples_spec.rb`:
   end
 
   describe "constructions in the excluded sections that need only these objects (AC-7.5)" do
-    it "builds start, retreat, at_sea, ln, pos, vienna, paradox_pos and the order arrays" do
+    # Every unit and order those sections build, so that #11 and #14 can use the examples as they stand.
+    unit = ->(power, type, province, coast = nil) { TA::Unit.new(power: power, type: type, location: L.new(province: province, coast: coast)) }
+    move = ->(power, at, to, coast = nil) { O::Move.new(power: power, at: at, destination: L.new(province: to, coast: coast)) }
+    base = { map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {}, dislodged_units: [], standoffs: [] }
+
+    it "builds the positions" do
       start = TA::Map.classic.starting_position
-      retreat = TA::Position.from_h(start.to_h.merge("phase" => "retreat"))
-      expect(retreat.phase).to eq(:retreat)
-      fleets = ->(*provinces) { provinces.map { |id| TA::Unit.new(power: :france, type: :fleet, location: L.new(province: id)) } }
-      base = { map: "classic", season: :spring, year: 1901, phase: :movement, ownership: {}, dislodged_units: [], standoffs: [] }
-      expect(TA::Position.new(**base, units: fleets.call(:mao, :gol)).units.size).to eq(2)
-      expect(TA::Position.new(**base, units: [TA::Unit.new(power: :england, type: :army, location: L.new(province: :lon)),
-                                              TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :nth))]).units.size).to eq(2)
-      expect(TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement,
-                              units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon))],
-                              ownership: { lon: :england }, dislodged_units: [], standoffs: []).ownership).to eq({ lon: :england })
-      vienna = TA::Position.new(**base, units: [TA::Unit.new(power: :austria, type: :army, location: L.new(province: :vie)),
-                                                TA::Unit.new(power: :germany, type: :army, location: L.new(province: :boh)),
-                                                TA::Unit.new(power: :germany, type: :army, location: L.new(province: :tyr))])
-      expect(vienna.units.size).to eq(3)
-      expect(TA::DislodgedUnit.new(unit: TA::Unit.new(power: :austria, type: :army, location: L.new(province: :vie)),
-                                   attacker_from: :boh, by_convoy: false).to_h["attacker_from"]).to eq("boh")
-      paradox = TA::Position.new(**base, units: [TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :lon)),
-                                                 TA::Unit.new(power: :england, type: :fleet, location: L.new(province: :wal)),
-                                                 TA::Unit.new(power: :france, type: :army, location: L.new(province: :bre)),
-                                                 TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :eng))])
-      expect(paradox.units.size).to eq(4)
-      [O::Move.new(power: :russia, at: :war, destination: L.new(province: :gal)),
-       O::Move.new(power: :austria, at: :vie, destination: L.new(province: :gal)),
-       O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth)),
-       O::Move.new(power: :germany, at: :kie, destination: L.new(province: :hol)),
-       O::SupportMove.new(power: :germany, at: :tyr, from: :boh, to: :vie),
-       O::Hold.new(power: :austria, at: :vie),
-       O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon),
-       O::SupportMove.new(power: :england, at: :lon, from: :wal, to: :eng)].each { |order| expect(order).to be_frozen }
+      expect(TA::Position.from_h(start.to_h.merge("phase" => "retreat")).phase).to eq(:retreat) # retreat
+      at_sea = TA::Position.new(**base, units: [unit.call(:france, :fleet, :mao), unit.call(:france, :fleet, :gol)])
+      ln = TA::Position.new(**base, units: [unit.call(:england, :army, :lon), unit.call(:england, :fleet, :nth)])
+      pos = TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :movement,
+                             units: [unit.call(:england, :fleet, :lon)], ownership: { lon: :england }, dislodged_units: [], standoffs: [])
+      vienna = TA::Position.new(**base, units: [unit.call(:austria, :army, :vie), unit.call(:germany, :army, :boh), unit.call(:germany, :army, :tyr)])
+      paradox_pos = TA::Position.new(**base, units: [unit.call(:england, :fleet, :lon), unit.call(:england, :fleet, :wal),
+                                                     unit.call(:france, :army, :bre), unit.call(:france, :fleet, :eng)])
+      expect([at_sea, ln, pos, vienna, paradox_pos].map { _1.units.size }).to eq([2, 2, 1, 3, 4])
+    end
+
+    it "builds the units used with legal orders" do
+      [unit.call(:england, :fleet, :lon), unit.call(:france, :fleet, :lon), unit.call(:austria, :army, :vie),
+       unit.call(:france, :fleet, :mao), unit.call(:england, :army, :lon)].each { |built| expect(built).to be_frozen }
+      expect(TA::DislodgedUnit.new(unit: unit.call(:austria, :army, :vie), attacker_from: :boh, by_convoy: false)).to be_frozen
+    end
+
+    it "builds the orders used with checking, legal orders and adjudication" do
+      orders = [
+        O::Hold.new(power: :england, at: :lon), O::Hold.new(power: :france, at: :lon), O::Hold.new(power: :england, at: :wal),
+        O::Hold.new(power: :austria, at: :vie),
+        move.call(:england, :lon, :bel), move.call(:russia, :sev, :rum), move.call(:france, :mar, :spa, :nc),
+        move.call(:france, :mao, :spa), move.call(:france, :gol, :spa, :nc), move.call(:england, :lon, :eng),
+        move.call(:england, :lon, :nth), move.call(:germany, :kie, :hol), move.call(:russia, :war, :gal),
+        move.call(:austria, :vie, :gal), move.call(:england, :lon, :yor), move.call(:england, :wal, :eng),
+        move.call(:france, :bre, :lon), move.call(:germany, :boh, :vie),
+        O::MoveViaConvoy.new(power: :england, at: :lvp, to: :wal),
+        O::SupportMove.new(power: :austria, at: :vie, from: :war, to: :gal),
+        O::SupportMove.new(power: :england, at: :lon, from: :wal, to: :eng),
+        O::SupportMove.new(power: :germany, at: :tyr, from: :boh, to: :vie),
+        O::SupportHold.new(power: :germany, at: :mun, target: :ber), O::SupportHold.new(power: :germany, at: :mun, target: :sil),
+        O::Convoy.new(power: :england, at: :lon, from: :lvp, to: :bel), O::Convoy.new(power: :england, at: :nth, from: :lon, to: :yor),
+        O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon)
+      ]
+      expect(orders.size).to eq(27)
+      orders.each { |order| expect(O.from_h(JSON.parse(JSON.generate(order.to_h)))).to eq(order) }
     end
   end
+end
 ```
 
 That nothing else in `interface.md` changes is checked by the `git diff` command in Step 4, not by a spec, since a spec that diffs against `main` would break on a shallow CI checkout.
@@ -1637,7 +1674,7 @@ Run:
 bundle exec rspec spec/trucebearer/adjudicator/interface_examples_spec.rb
 ```
 
-Expected: the two "Impossible objects" examples fail (`expect(impossible).to include(...)` is false) because `interface.md` does not name the two cases yet. The construction example passes (Phases 1 to 3 built everything it uses).
+Expected: the "lists the same standoff province twice..." example fails (`expect(impossible).to include(...)` is false) because `interface.md` does not name the two cases yet. The "raises for both examples" example and the construction example already pass, since Phases 1 to 3 built everything they use; they are kept as the executable form of the new document lines.
 
 ### Step 2: Edit `docs/interface.md` (the only change to it, AC-8.7)
 
@@ -1656,7 +1693,7 @@ TA::Position.new(**spring.merge(phase: :retreat, dislodged_units: [fleet, fleet]
 
 ### Step 3: `CHANGELOG.md`
 
-- Under "Unreleased" → "Added", trim the #9 entry: replace "`Map#starting_position` arrives with #10; until then the starting units are available through an internal reader. (#9)" with "The starting units are available through an internal reader. (#9)".
+- Under "Unreleased" → "Added", trim the #9 entry: delete the sentence "`Map#starting_position` arrives with #10; until then the starting units are available through an internal reader." and keep the "(#9)" that follows it.
 - Add under "Added":
 
 ```markdown
@@ -1675,8 +1712,8 @@ TA::Position.new(**spring.merge(phase: :retreat, dislodged_units: [fleet, fleet]
 bundle exec rspec
 bundle exec rake
 git diff --name-only main...HEAD
-git diff main...HEAD -- adjudicator/docs/interface.md
-grep -rniE "diplomacy|\bdip\b" lib spec docs/specs/010-value-objects || true
+git diff main...HEAD -- docs/interface.md
+grep -rniE 'd[i]plomac|\bd[i]p' lib spec docs/specs/010-value-objects docs/interface.md CHANGELOG.md || true
 ```
 
 Expected:
@@ -1704,7 +1741,7 @@ Commit: "Document the two stricter impossible-object rules and record the change
 | Story 3 (AC-3.1 to AC-3.12) | Phase 3 (`order_spec.rb`) |
 | Story 4 (AC-4.1 to AC-4.6) | Phases 2 and 3 (format, plain data, the `from_h` checks); AC-4.4 and AC-4.6 in review of `shape.rb` |
 | Story 5 (AC-5.1 to AC-5.12) | Phase 1 (units: AC-5.2 to 5.4, 5.11), Phase 2 (positions: the rest) |
-| Story 6 (AC-6.1 to AC-6.9) | Phase 4 (`starting_position_spec.rb`); AC-6.9 by the commit order (Phase 1, Step 1) |
+| Story 6 (AC-6.1 to AC-6.9) | Phase 4 (`starting_position_spec.rb`); AC-6.9 by the red first commit (Phase 1, Step 1) |
 | Story 7 (AC-7.1 to AC-7.5) | `interface_examples_spec.rb`, grown in Phases 1 to 5 |
 | Story 8 (AC-8.1 to AC-8.7) | Phases 4 and 5 |
 | FR-1 to FR-7 | FR-1: Phase 1. FR-2: Phase 2. FR-3: Phase 3. FR-4 and FR-5: Phases 1 to 3 (`shape.rb`). FR-6: Phase 4. FR-7: Phases 4 and 5 |
