@@ -22,10 +22,11 @@ Each section below arrives in the release shown here. Before 1.0, any minor vers
 |---|---|
 | Identifiers | 0.1.0 |
 | Map | 0.1.0 |
-| Value objects | 0.1.0 |
+| Value objects: all but `Outcome` and `Adjudication` | 0.1.0 |
+| Value objects: `Outcome` and `Adjudication` | 0.2.0 |
 | Checking an order | 0.1.0 |
 | Legal orders | 0.1.0 |
-| Errors: building value objects and checking orders | 0.1.0 |
+| Errors: all but adjudication | 0.1.0 |
 | Adjudicating a movement phase | 0.2.0 |
 | Errors: adjudication | 0.2.0 |
 | Retreats | 0.3 |
@@ -147,7 +148,7 @@ In total: 75 provinces (14 inland, 42 coastal, 19 sea), 34 supply centers, and 2
 
 *Arrives in 0.1.0.*
 
-The gem has one map, the classic map, built into the gem. A caller gets it with one call and passes no file path. The map and its records (powers and provinces) are query-only: they are not value objects and have no hash form. A position refers to its map only by identifier, `"classic"` (decided in Issue #56). Every list the map returns is sorted by identifier.
+The gem has one map, the classic map, built into the gem. A caller gets it with one call and passes no file path. The map and its records (powers and provinces) are query-only: they are not value objects, and have no documented hash form and no `from_h`. A position refers to its map only by identifier, `"classic"` (decided in Issue #56). Every list the map returns is sorted by identifier.
 
 ```ruby
 map = TA::Map.classic
@@ -266,16 +267,16 @@ start.ownership.key?(:bel)               # => false
 
 ## Value objects
 
-*Arrives in 0.1.0.*
+*Arrives in 0.1.0, except `TA::Outcome` and `TA::Adjudication`, which arrive in 0.2.0.*
 
-Positions, units, orders and results are value objects. These rules hold for every one of them:
+Locations, units, dislodged units, positions, orders and check results are value objects, and so are the outcome and adjudication results that arrive in 0.2.0. These rules hold for every one of them:
 
 - **Immutable.** Each is a Ruby `Data` class. Its fields can't be changed after it is built.
 - **`new` takes symbols.** Identifiers are passed as symbols, as set out in [Identifiers](#identifiers).
 - **`to_h` gives the hash form.** Its keys are strings all the way down, and its values are only strings, integers, booleans, `nil`, arrays and hashes, so it can be written as JSON with no custom handling.
 - **`from_h` takes exactly that shape.** That is the shape `JSON.parse` returns. A missing key or an unknown key raises `TA::InvalidInput`. So does a `"type"` that doesn't match the order class whose `from_h` was called.
 - **Round trip.** Converting an object with `to_h`, writing it as JSON, parsing that JSON and rebuilding it with `from_h` always gives an object equal to the original.
-- **`format`.** Storable objects (positions, orders, check results and adjudication results) carry a `"format"` key in their hash form. Its value is the integer `1`. There is one value for the whole gem, and it goes up whenever any hash form changes. A storable object's hash form is the same wherever it appears, so an order nested inside an outcome still carries `"format"`. A missing or unknown `format` raises `TA::InvalidInput`. Other value objects only ever appear nested, and carry no `format`.
+- **`format`.** Storable objects (positions, orders and check results, and from 0.2.0 adjudication results) carry a `"format"` key in their hash form. Its value is the integer `1`. There is one value for the whole gem, and it goes up whenever any hash form changes. A storable object's hash form is the same wherever it appears, so an order nested inside another object (from 0.2.0, inside an outcome) still carries `"format"`. A missing or unknown `format` raises `TA::InvalidInput`. Other value objects only ever appear nested, and carry no `format`.
 - **Canonical order.** List fields are put into a fixed order when the object is built, and then frozen (see [Canonical order](#canonical-order)).
 - **Validated on construction.** Every value object is checked against the classic map, whether it is built with `new` or with `from_h`. An object that can't exist on that map raises `TA::InvalidInput` (see [Impossible objects](#impossible-objects)). This will be revisited if other maps arrive.
 - **`Marshal`.** A `Marshal.dump` and `Marshal.load` round trip keeps all of the above: it returns an equal, deeply frozen object, and a payload in the form `Marshal.dump` writes for these objects, edited to describe an impossible object, raises `TA::InvalidInput` on load, as `from_h` would. `Marshal.load` is still never safe on bytes you don't trust: a payload built by hand in Ruby's plain struct format skips every check, and no Ruby code in the gem can stop that. This matters for anything that caches values with `Marshal`, as Rails' default cache does.
@@ -395,7 +396,7 @@ O::Hold.new(power: :england, at: :lon).to_h
 
 #### `TA::Order::Move`
 
-The unit moves to another province. An army's move may go by convoy (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)). Type `"move"`. Fields:
+The unit moves to another province. An army's move may go by convoy when a convoy chain links the two (see [Checking an order](#checking-an-order)). How such a move is adjudicated arrives in 0.2.0 (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)). Type `"move"`. Fields:
 
 - `power` and `at`, as above.
 - `destination`: a location field, a `TA::Location`. A fleet moving to a province with split coasts names the coast.
@@ -471,6 +472,8 @@ TA::CheckResult.new(legal: true, reasons: []).to_h
 
 ### `TA::Outcome`
 
+*Arrives in 0.2.0.*
+
 What happened to one order in an adjudicated phase. It carries no `format` of its own, since it only ever appears inside an adjudication result, but its `order` keeps the order's own `format`. Only the fields are described here. What each value means comes later (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)).
 
 - `order`: one of the six order classes above.
@@ -485,6 +488,8 @@ TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, su
 ```
 
 ### `TA::Adjudication`
+
+*Arrives in 0.2.0.*
 
 The result of adjudicating a phase. It carries `format`. Only the fields are described here. What they mean comes later (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)).
 
@@ -516,7 +521,7 @@ When a value object is built, its list fields are sorted into a fixed order and 
 - A position's `units` and `dislodged_units` are sorted by the unit's province.
 - A position's `standoffs` are sorted by identifier.
 - `to_h` writes a position's `ownership` keys sorted by province.
-- An adjudication's `outcomes` are the exception. They keep the order the adjudication gives them.
+- From 0.2.0, an adjudication's `outcomes` are the exception. They keep the order the adjudication gives them.
 
 ```ruby
 army  = TA::Unit.new(power: :austria, type: :army, location: L.new(province: :bud))
@@ -693,7 +698,7 @@ What each reason means:
 - **Supports for moves nobody has ordered** are included, since checking doesn't look at other orders.
 - **One move per coast.** A fleet that can reach a province with split coasts gets one move for each coast it can reach, and no move without a coast.
 - **Moves by convoy.** For an army with a convoy chain to a province, a province it can't reach by land appears as a plain move only. A province it can reach by land appears both as a plain move and as a move via convoy.
-- **Empty, never an exception.** The list is empty when the position isn't in a movement phase, or when the unit isn't on the board. A unit is on the board only when the position holds a unit with the same power, type and location.
+- **Empty, never an exception.** The list is empty when the position isn't in a movement phase, or when the unit isn't on the board. A unit is on the board only when the position holds a unit with the same power, type and location. Only an argument that isn't a `TA::Position` or a `TA::Unit` raises `TA::InvalidInput`.
 
 ### List order
 
@@ -929,21 +934,23 @@ Under the DATC's preferred rules, 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 hold
 
 ## Errors
 
-*Building value objects and checking orders arrive in 0.1.0. Adjudication errors arrive in 0.2.0.*
+*Arrives in 0.1.0, except the adjudication errors, which arrive in 0.2.0.*
 
-The gem has one error class, `TA::InvalidInput`, a subclass of `StandardError`, with no subclasses of its own. Rescuing it catches every input error the gem raises.
+The gem has one error class, `TA::InvalidInput`, a subclass of `StandardError`, with no subclasses of its own. Rescuing it catches every input error the gem raises, with one exception: calling `new` with a missing or unknown keyword raises Ruby's own `ArgumentError`, as it does for any `Data` class. `from_h` raises `TA::InvalidInput` for a missing or unknown key.
 
 It is raised for:
 
 - a bad hash, or a missing or unknown `format` (see [Value objects](#value-objects));
 - a coast in a province field (see [Province fields and location fields](#province-fields-and-location-fields));
 - an impossible value object (see [Impossible objects](#impossible-objects));
-- one power giving two orders for units in the same province (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
-- adjudicating a position that isn't in the movement phase.
+- an unknown power, province or coast given to a map query, or a bad unit type or location given to `Map#adjacent?` (see [Map](#map));
+- an argument of the wrong class given to `TA.check` or `TA.legal_orders`;
+- from 0.2.0, one power giving two orders for units in the same province (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
+- from 0.2.0, adjudicating a position that isn't in the movement phase.
 
 Every message includes the offending key or value.
 
-A rules failure is never an exception. A broken rule shows up as a rejection reason from `TA.check`, or as an outcome from `TA.adjudicate`. Once positions and orders have been built without raising, checking, listing legal orders and adjudicating raise nothing else.
+A rules failure is never an exception. A broken rule shows up as a rejection reason from `TA.check` (from 0.2.0, also as an outcome from `TA.adjudicate`). Once positions and orders have been built without raising, checking and listing legal orders raise nothing else, and from 0.2.0 neither does adjudicating.
 
 ```ruby
 O.from_h({"format" => 1, "type" => "hold", "power" => "england"})                            # missing "at"
@@ -951,7 +958,7 @@ O.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "xyz"})
 TA::Position.from_h(start.to_h.merge("year" => "1901"))                                      # wrong type
 O.from_h({"format" => 1, "type" => "hold", "power" => "england",
           "at" => {"province" => "spa", "coast" => "nc"}})                                   # coast in a province field
-# each raises TA::InvalidInput, for example: "at" must be a province identifier, got {"province" => "spa", "coast" => "nc"}
+# each raises TA::InvalidInput, for example: "at" must be a province identifier (a String), got {"province" => "spa", "coast" => "nc"}
 ```
 
 ## Retreats
