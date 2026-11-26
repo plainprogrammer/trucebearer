@@ -1,0 +1,96 @@
+# The classic map: provinces, coasts, adjacency, supply centers, home centers
+# and the starting units for spring 1901.
+#
+# Written independently from public geographic knowledge and the game's terms
+# of art. It is not derived from a scan or image of any board, and not copied
+# from any other engine's data files.
+#
+# Every identifier is a quoted string, so YAML never reads one as a boolean or
+# a number. The loader reads this file with the safe loader only.
+map: "classic"
+
+powers:
+  - { id: "austria", name: "Austria" }
+  - { id: "england", name: "England" }
+  - { id: "france", name: "France" }
+  - { id: "germany", name: "Germany" }
+  - { id: "italy", name: "Italy" }
+  - { id: "russia", name: "Russia" }
+  - { id: "turkey", name: "Turkey" }
+
+provinces:
+  - { id: "adr", name: "Adriatic Sea", type: "sea" }
+  - { id: "aeg", name: "Aegean Sea", type: "sea" }
+  - { id: "alb", name: "Albania", type: "coastal" }
+  - { id: "ank", name: "Ankara", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "apu", name: "Apulia", type: "coastal" }
+  - { id: "arm", name: "Armenia", type: "coastal" }
+  - { id: "bal", name: "Baltic Sea", type: "sea" }
+  - { id: "bar", name: "Barents Sea", type: "sea" }
+  - { id: "bel", name: "Belgium", type: "coastal", supply_center: true }
+  - { id: "ber", name: "Berlin", type: "coastal", supply_center: true, home: "germany" }
+  - { id: "bla", name: "Black Sea", type: "sea" }
+  - { id: "boh", name: "Bohemia", type: "inland" }
+  - { id: "bot", name: "Gulf of Bothnia", type: "sea" }
+  - { id: "bre", name: "Brest", type: "coastal", supply_center: true, home: "france" }
+  - { id: "bud", name: "Budapest", type: "inland", supply_center: true, home: "austria" }
+  - { id: "bul", name: "Bulgaria", type: "coastal", supply_center: true, coasts: ["ec", "sc"] }
+  - { id: "bur", name: "Burgundy", type: "inland" }
+  - { id: "cly", name: "Clyde", type: "coastal" }
+  - { id: "con", name: "Constantinople", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "den", name: "Denmark", type: "coastal", supply_center: true }
+  - { id: "eas", name: "Eastern Mediterranean", type: "sea" }
+  - { id: "edi", name: "Edinburgh", type: "coastal", supply_center: true, home: "england" }
+  - { id: "eng", name: "English Channel", type: "sea" }
+  - { id: "fin", name: "Finland", type: "coastal" }
+  - { id: "gal", name: "Galicia", type: "inland" }
+  - { id: "gas", name: "Gascony", type: "coastal" }
+  - { id: "gol", name: "Gulf of Lyon", type: "sea" }
+  - { id: "gre", name: "Greece", type: "coastal", supply_center: true }
+  - { id: "hel", name: "Helgoland Bight", type: "sea" }
+  - { id: "hol", name: "Holland", type: "coastal", supply_center: true }
+  - { id: "ion", name: "Ionian Sea", type: "sea" }
+  - { id: "iri", name: "Irish Sea", type: "sea" }
+  - { id: "kie", name: "Kiel", type: "coastal", supply_center: true, home: "germany" }
+  - { id: "lon", name: "London", type: "coastal", supply_center: true, home: "england" }
+  - { id: "lvn", name: "Livonia", type: "coastal" }
+  - { id: "lvp", name: "Liverpool", type: "coastal", supply_center: true, home: "england" }
+  - { id: "mao", name: "Mid-Atlantic Ocean", type: "sea" }
+  - { id: "mar", name: "Marseilles", type: "coastal", supply_center: true, home: "france" }
+  - { id: "mos", name: "Moscow", type: "inland", supply_center: true, home: "russia" }
+  - { id: "mun", name: "Munich", type: "inland", supply_center: true, home: "germany" }
+  - { id: "naf", name: "North Africa", type: "coastal" }
+  - { id: "nao", name: "North Atlantic Ocean", type: "sea" }
+  - { id: "nap", name: "Naples", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "nth", name: "North Sea", type: "sea" }
+  - { id: "nwg", name: "Norwegian Sea", type: "sea" }
+  - { id: "nwy", name: "Norway", type: "coastal", supply_center: true }
+  - { id: "par", name: "Paris", type: "inland", supply_center: true, home: "france" }
+  - { id: "pic", name: "Picardy", type: "coastal" }
+  - { id: "pie", name: "Piedmont", type: "coastal" }
+  - { id: "por", name: "Portugal", type: "coastal", supply_center: true }
+  - { id: "pru", name: "Prussia", type: "coastal" }
+  - { id: "rom", name: "Rome", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "ruh", name: "Ruhr", type: "inland" }
+  - { id: "rum", name: "Rumania", type: "coastal", supply_center: true }
+  - { id: "ser", name: "Serbia", type: "inland", supply_center: true }
+  - { id: "sev", name: "Sevastopol", type: "coastal", supply_center: true, home: "russia" }
+  - { id: "sil", name: "Silesia", type: "inland" }
+  - { id: "ska", name: "Skagerrak", type: "sea" }
+  - { id: "smy", name: "Smyrna", type: "coastal", supply_center: true, home: "turkey" }
+  - { id: "spa", name: "Spain", type: "coastal", supply_center: true, coasts: ["nc", "sc"] }
+  - { id: "stp", name: "St Petersburg", type: "coastal", supply_center: true, home: "russia", coasts: ["nc", "sc"] }
+  - { id: "swe", name: "Sweden", type: "coastal", supply_center: true }
+  - { id: "syr", name: "Syria", type: "coastal" }
+  - { id: "tri", name: "Trieste", type: "coastal", supply_center: true, home: "austria" }
+  - { id: "tun", name: "Tunis", type: "coastal", supply_center: true }
+  - { id: "tus", name: "Tuscany", type: "coastal" }
+  - { id: "tyr", name: "Tyrolia", type: "inland" }
+  - { id: "tys", name: "Tyrrhenian Sea", type: "sea" }
+  - { id: "ukr", name: "Ukraine", type: "inland" }
+  - { id: "ven", name: "Venice", type: "coastal", supply_center: true, home: "italy" }
+  - { id: "vie", name: "Vienna", type: "inland", supply_center: true, home: "austria" }
+  - { id: "wal", name: "Wales", type: "coastal" }
+  - { id: "war", name: "Warsaw", type: "inland", supply_center: true, home: "russia" }
+  - { id: "wes", name: "Western Mediterranean", type: "sea" }
+  - { id: "yor", name: "Yorkshire", type: "coastal" }
