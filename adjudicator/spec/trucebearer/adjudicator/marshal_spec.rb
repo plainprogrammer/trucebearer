@@ -58,7 +58,25 @@ RSpec.describe "Marshal round trips of the value objects" do
     ["SupportMove", -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) }],
     ["Convoy", -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) }],
     ["CheckResult, legal", -> { TA::CheckResult.new(legal: true, reasons: []) }],
-    ["CheckResult, illegal", -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }]
+    ["CheckResult, illegal", -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }],
+    ["Outcome, an implied hold", -> { TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, submitted: false, dislodged: false) }],
+    ["Outcome, a dislodged move", lambda {
+      TA::Outcome.new(order: O::Move.new(power: :germany, at: :boh, destination: L.new(province: :vie)),
+                      result: :bounced, submitted: true, dislodged: true)
+    }],
+    ["Adjudication, hand built", lambda {
+      held = TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, submitted: true, dislodged: false)
+      TA::Adjudication.new(outcomes: [held], paradox: false, position: TA::Map.classic.starting_position)
+    }],
+    ["Adjudication, with a dislodged unit", lambda {
+      move = O::Move.new(power: :germany, at: :boh, destination: L.new(province: :vie))
+      outcomes = [TA::Outcome.new(order: O::Hold.new(power: :austria, at: :vie), result: :held, submitted: false, dislodged: true),
+                  TA::Outcome.new(order: move, result: :succeeded, submitted: true, dislodged: false)]
+      dislodged = TA::DislodgedUnit.new(unit: Board.army, attacker_from: :boh, by_convoy: false)
+      TA::Adjudication.new(outcomes: outcomes.reverse, paradox: false,
+                           position: TA::Position.new(map: "classic", season: :spring, year: 1901, phase: :retreat,
+                                                      units: [Board.fleet], ownership: {}, dislodged_units: [dislodged], standoffs: []))
+    }]
   ]
 
   it "returns an equal position whose units are frozen, for the 1901 start (the Issue's own example)" do
@@ -185,7 +203,13 @@ RSpec.describe "Marshal round trips of the value objects" do
       [O::Convoy, ->(h) { h.merge("from" => "xyz") }, /"xyz"/],
       [TA::CheckResult, ->(h) { h.merge("format" => 2) }, /format/],
       [TA::CheckResult, ->(h) { h.merge("reasons" => ["bogus"]) }, /"bogus"/],
-      [TA::CheckResult, ->(h) { h.merge("legal" => true) }, /no reasons/]
+      [TA::CheckResult, ->(h) { h.merge("legal" => true) }, /no reasons/],
+      [TA::Outcome, ->(h) { h.merge("result" => "bounced") }, /bounced/],
+      [TA::Outcome, ->(h) { h.merge("result" => "void", "dislodged" => true) }, /void/],
+      [TA::Outcome, ->(h) { h.merge("order" => h["order"].merge("format" => 2)) }, /format/],
+      [TA::Adjudication, ->(h) { h.merge("format" => 2) }, /format/],
+      [TA::Adjudication, ->(h) { h.merge("outcomes" => h["outcomes"].dup.insert(1, h["outcomes"].first)) }, /same power and province/],
+      [TA::Adjudication, ->(h) { h.merge("paradox" => "no") }, /paradox/]
     ]
     bases = {
       TA::Location => -> { L.new(province: :bud) },
@@ -198,7 +222,13 @@ RSpec.describe "Marshal round trips of the value objects" do
       O::SupportHold => -> { O::SupportHold.new(power: :germany, at: :mun, target: :ber) },
       O::SupportMove => -> { O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa) },
       O::Convoy => -> { O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy) },
-      TA::CheckResult => -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }
+      TA::CheckResult => -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) },
+      TA::Outcome => -> { TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, submitted: true, dislodged: false) },
+      TA::Adjudication => lambda {
+        outcomes = [TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, submitted: true, dislodged: false),
+                    TA::Outcome.new(order: O::Hold.new(power: :france, at: :bre), result: :held, submitted: false, dislodged: false)]
+        TA::Adjudication.new(outcomes: outcomes, paradox: false, position: TA::Map.classic.starting_position)
+      }
     }
 
     spots.each_with_index do |(klass, change, message), index|

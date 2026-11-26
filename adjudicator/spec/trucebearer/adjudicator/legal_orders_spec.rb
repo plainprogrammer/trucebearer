@@ -220,7 +220,7 @@ RSpec.describe "TA.legal_orders" do
   describe "the public surface (AC-7.5)" do
     it "adds only legal_orders, and keeps the generator private" do
       expect(TA.singleton_methods(false)).to contain_exactly(:check, :legal_orders)
-      expect(TA.constants).to contain_exactly(:CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map,
+      expect(TA.constants).to contain_exactly(:Adjudication, :CheckResult, :DislodgedUnit, :InvalidInput, :Location, :Map,
                                               :Order, :Outcome, :Position, :Unit, :VERSION)
       expect { TA::LegalOrders }.to raise_error(NameError, /private constant/)
     end
