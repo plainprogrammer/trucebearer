@@ -1,7 +1,7 @@
 # Feature 012: List the legal orders for a unit
 
-**Status:** Draft
-**Version:** 1.1.1
+**Status:** Approved
+**Version:** 1.1.2
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #12
@@ -16,6 +16,7 @@
 | 1.0.0 | 2026-11-25 | Initial draft |
 | 1.1.0 | 2026-11-25 | Folded in the Gate A review (round 1, changes required, three blocking):<br>• AC-5.3 needs two split-coast positions, since a position can't hold two units in one province.<br>• The performance bound no longer claims to catch a fall back to filtering; a same-example relative guard (B at least 10 times faster than A) does, next to coarse ceilings. A mid-game target is added, and the stress position is named.<br>• "No rule written twice" is reworded: the generator may only drop candidates by the four listed narrowings, and every kept order is decided by `Check.reason_for`.<br>• Fixed-seed random boards join the agreement spec; AC-3.7, AC-4.2, AC-3.8, AC-1.3 and AC-7.5 are made literal |
 | 1.1.1 | 2026-11-25 | Gate A round 2 (approve, nothing blocking): AC-6.3 compares sets; AC-7.5 holds the literal lists; the mid-game board is named and AC-5.2 requires a 34-unit board with sea fleets; the running-time estimate is no longer promised |
+| 1.1.2 | 2026-11-25 | Gate A approved by the coordinator under the maintainer's delegation. Open Question 1 decided: a non-position or non-unit argument raises `TA::InvalidInput`. Status is now Approved. Notes for the plan: the relative guard (AC-6.3) uses the median of several runs and may be dropped if it ever flakes, and the plan states how long the agreement spec takes and how CI runs it |
 
 ## Problem Statement
 
