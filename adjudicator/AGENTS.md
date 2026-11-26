@@ -7,7 +7,7 @@ You are working on the rules engine. It is a plain Ruby gem. It takes a position
 - **The gem knows:** maps as data, powers, provinces, coasts, units, order types, checking a single order against a position, adjudicating a full set of orders for a phase, retreat options, adjustment counts, and the resulting position.
 - **The gem does not know:** games, seats, accounts, hosts, clocks, persistence, HTTP, or how anything is displayed.
 - **No Rails.** Don't depend on Rails, ActiveSupport or anything in `web/`. Prefer the standard library. A runtime dependency needs an Issue that explains why first.
-- Inputs and outputs are plain data that can be stored and replayed. `docs/interface.md` is the contract with the app.
+- What crosses the boundary is the gem's value objects: immutable `Data` classes with a documented hash form (`to_h` and `from_h`). Anything the app stores carries a `format` version, so any phase can be replayed. `docs/interface.md` is the contract with the app.
 
 ## Names
 
