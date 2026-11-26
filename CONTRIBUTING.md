@@ -4,7 +4,7 @@ Thank you for helping. There is no contributor agreement to sign and no sign-off
 
 ## How your contribution is licensed
 
-A contribution is licensed under the nearest `LICENSE` file at or above the file it changes. The one exception is brand artwork (the logo, wordmark and icons), which stays CC BY-SA 4.0 wherever it is copied, including into `web/`. The second exception is the one reference copy of the DATC in `adjudicator/docs/reference/`, which keeps its author's own license (see `NOTICE`). This is the same "inbound = outbound" rule that GitHub's Terms of Service already apply to every repository that states a license.
+A contribution is licensed under the nearest `LICENSE` file at or above the file it changes. There are two exceptions. Brand artwork (the logo, wordmark and icons) stays CC BY-SA 4.0 wherever it is copied, including into `web/`. The other is the one reference copy of the DATC in `adjudicator/docs/reference/`, which keeps its author's own license (see `NOTICE`). This is the same "inbound = outbound" rule that GitHub's Terms of Service already apply to every repository that states a license.
 
 | Folder | License |
 |---|---|
