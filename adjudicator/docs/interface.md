@@ -39,7 +39,7 @@ Maps, powers, provinces, coasts, seasons, phases and unit types are all named by
 
 - **In Ruby**, an identifier is a lowercase `Symbol`, such as `:par`.
 - **In the hash form**, it is the same text as a `String`, such as `"par"`. It survives a round trip through JSON unchanged.
-- `new` accepts symbols only, and `from_h` accepts strings only. Anything else raises `TA::InvalidInput` (see Errors).
+- `new` accepts symbols only, and `from_h` accepts strings only. Anything else raises `TA::InvalidInput` (see [Errors](#errors)).
 - The **map** identifier is the exception: it is the `String` `"classic"` both in Ruby and in the hash form.
 
 | Kind | Identifiers |
@@ -383,7 +383,7 @@ O::Hold.new(power: :england, at: :lon).to_h
 
 #### `TA::Order::Move`
 
-The unit moves to another province. An army's move may go by convoy (see Adjudicating a movement phase). Type `"move"`. Fields:
+The unit moves to another province. An army's move may go by convoy (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)). Type `"move"`. Fields:
 
 - `power` and `at`, as above.
 - `destination`: a location field, a `TA::Location`. A fleet moving to a province with split coasts names the coast.
@@ -459,7 +459,7 @@ TA::CheckResult.new(legal: true, reasons: []).to_h
 
 ### `TA::Outcome`
 
-What happened to one order in an adjudicated phase. It carries no `format` of its own, since it only ever appears inside an adjudication result, but its `order` keeps the order's own `format`. Only the fields are described here. What each value means comes later (see Adjudicating a movement phase).
+What happened to one order in an adjudicated phase. It carries no `format` of its own, since it only ever appears inside an adjudication result, but its `order` keeps the order's own `format`. Only the fields are described here. What each value means comes later (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)).
 
 - `order`: one of the six order classes above.
 - `result`: one of `:void`, `:held`, `:no_route`, `:bounced`, `:succeeded`, `:unmatched`, `:cut`, `:given` or `:disrupted`.
@@ -474,7 +474,7 @@ TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, su
 
 ### `TA::Adjudication`
 
-The result of adjudicating a phase. It carries `format`. Only the fields are described here. What they mean comes later (see Adjudicating a movement phase).
+The result of adjudicating a phase. It carries `format`. Only the fields are described here. What they mean comes later (see [Adjudicating a movement phase](#adjudicating-a-movement-phase)).
 
 - `outcomes`: an `Array` of `TA::Outcome`. It keeps the order the adjudication gives it, and is not sorted.
 - `paradox`: `true` or `false`.
@@ -673,6 +673,181 @@ TA.legal_orders(start, fleet).first(3)
 TA.legal_orders(start, TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :lon)))
 # => []   # no French fleet is in London
 ```
+
+## Adjudicating a movement phase
+
+*Arrives in 0.2.0.*
+
+`TA.adjudicate(position, orders)` takes a `TA::Position` in the movement phase and an `Array` of orders, and returns a `TA::Adjudication`: an outcome for every order, whether a convoy paradox was found, and the position after the moves.
+
+It raises `TA::InvalidInput` in two cases only:
+
+- the position isn't in the movement phase;
+- one power gives two orders for units in the same province, whether the two orders are identical or not. The app keeps one order per unit, so this is an input-contract choice, not one of the options in DATC 4.D.3.
+
+Orders from different powers for the same unit never raise. Any order from a power that doesn't own the unit is void, and the owner's order stands.
+
+```ruby
+start = TA::Map.classic.starting_position
+orders = [O::Move.new(power: :england, at: :lon, destination: L.new(province: :nth)),
+          O::Move.new(power: :germany, at: :kie, destination: L.new(province: :hol))]
+result = TA.adjudicate(start, orders)
+result.outcomes.first(2).map(&:result)   # => [:succeeded, :succeeded]
+result.outcomes.count { !_1.submitted }  # => 20   (implied holds for the other units)
+result.paradox                           # => false
+result.position.phase                    # => :retreat
+result.position.dislodged_units          # => []
+
+bounce = [O::Move.new(power: :russia, at: :war, destination: L.new(province: :gal)),
+          O::Move.new(power: :austria, at: :vie, destination: L.new(province: :gal))]
+result = TA.adjudicate(start, bounce)
+result.outcomes.first(2).map(&:result)   # => [:bounced, :bounced]
+result.position.standoffs                # => [:gal]
+
+TA.adjudicate(start, [O::Hold.new(power: :england, at: :lon), O::Hold.new(power: :england, at: :lon)])
+# raises TA::InvalidInput   # two orders from England for the unit in London
+TA.adjudicate(result.position, [])
+# raises TA::InvalidInput   # a retreat position
+```
+
+### The outcome list
+
+`outcomes` holds one `TA::Outcome` for each order passed in, in the order they were given, including orders that turn out to be void. After those comes one implied hold for each unit whose owner gave no legal order for it. An implied hold is a `TA::Order::Hold` given by the unit's owner, with `submitted: false`. The implied holds are sorted by province identifier.
+
+### Terms used in adjudication
+
+- **Matching.** A support to move, or a convoy, matches a move when both name the same origin province and the same destination province. Coasts don't count, and neither does whether the move is plain or via convoy (DATC 6.G.10, 6.G.14, 6.G.17). A support to hold matches a unit that doesn't move.
+- **Moves.** A unit moves when the order it follows is a `Move` or a `MoveViaConvoy`, whether or not the move works (DATC 6.D.8). The order a unit follows is its owner's legal order for it, or else its implied hold.
+- **Working convoy route.** For a move that goes by convoy, a convoy chain (see [Terms used in checking](#terms-used-in-checking)) in which each fleet gives a legal convoy order that matches the move, and no fleet is dislodged. A single working route is enough, so the move loses its route only when every chain is broken (DATC 4.A.1).
+- **Convoy paradox.** A set of orders with no consistent result, or with more than one, because whether a convoying fleet is dislodged turns, directly or by way of other orders, on the move of an army that fleet is carrying (DATC 4.A.2). Units moving in a circle, with no such dependency, are not a paradox (DATC 6.C.4, 6.C.6).
+
+### Outcomes
+
+Each outcome's `result` is one symbol. For each order type, the conditions below are tried in order, and the first that applies gives the result. Every order type tries `:void` first.
+
+| Order type | Outcomes, in precedence order |
+|---|---|
+| every order, checked first | `:void` |
+| Hold | `:held` |
+| Move, MoveViaConvoy | `:no_route`, `:bounced`, `:succeeded` |
+| SupportHold, SupportMove | `:unmatched`, `:cut`, `:given` |
+| Convoy | `:unmatched`, `:disrupted`, `:given` |
+
+What each outcome means:
+
+- `:void`: the order didn't pass [checking](#checking-an-order), so it has no effect (see Void orders, below).
+- `:held`: the unit stayed in place.
+- `:no_route`: the move needed a convoy route and had no working one, either because no fleet convoyed it or because the convoy was disrupted.
+- `:bounced`: the move didn't happen. This covers a bounce against a stronger or equal unit, a standoff, and a lost head-to-head battle.
+- `:succeeded`: the unit moved to its destination.
+- `:unmatched`: for a support, the supported unit isn't following a matching order, so a support to hold for a unit that moves is unmatched. For a convoy, no matching army move went by convoy, which includes an army that went by land.
+- `:cut`: the support was cut, including when the supporter itself was dislodged (DATC 6.D.17).
+- `:disrupted`: this convoying fleet was dislodged. Other fleets on the same route are not marked. This may widen in 0.3, when paradoxes are resolved (#39).
+- `:given`: the support or the convoy was given.
+
+Two further promises:
+
+- The result of a support or a convoy never depends on whether the move it helped succeeded.
+- A condition with the same name gets the same symbol under every order type (`:void`, `:unmatched`, `:given`), and no two different conditions share a symbol.
+
+### The dislodged flag
+
+An outcome's `dislodged` is `true` only on the outcome of the order the unit actually followed: its owner's legal order, or its implied hold. The outcome of a void order always has `dislodged: false`. So a support can be both `:cut` and dislodged, and a hold can be both `:held` and dislodged.
+
+### Void orders
+
+Each of these is `:void`, and none of them raises:
+
+- an order that fails checking;
+- an order from a power that doesn't own the unit;
+- an order for a unit that isn't on the board.
+
+When a unit's owner gave no legal order for it, the unit gets an implied hold, which other units can still support (DATC 4.E.1).
+
+```ruby
+result = TA.adjudicate(start, [O::Hold.new(power: :france, at: :lon)])
+result.outcomes.first.result             # => :void
+result.outcomes.find { _1.order.at == :lon && !_1.submitted }.result   # => :held
+```
+
+### Convoy routing
+
+These rules decide whether an army's move goes by land or by convoy. They give the DATC's preferred results for 4.A.3.
+
+- A move to a province the army can't reach by land goes by convoy.
+- A `MoveViaConvoy` only ever uses the convoy route.
+- A plain `Move` to a province the army can reach by land goes by convoy when a fleet of the army's own power gives a matching convoy order that passes checking (DATC 6.G.1, 6.G.7, 6.G.19). Otherwise it goes by land.
+- Once a move goes by convoy, it never falls back to the land route, even if the convoy is disrupted or was never ordered (DATC 6.G.8, 6.G.11, 6.G.20).
+- The route may use fleets of any power, and it doesn't have to pass through the fleet whose order showed the intent to convoy (DATC 6.G.6).
+
+### Convoy paradoxes
+
+When the orders hold a convoy paradox, `adjudicate` still returns a result, with `paradox: true`. While the flag is set, every outcome value and where each unit ends up are unspecified until 0.3, even for orders that have nothing to do with the paradox (DATC 4.A.2). The next position is still a valid `TA::Position`.
+
+The flag is set for each pending case listed under [DATC scope](#datc-scope), and clear for every case that section requires. Resolving paradoxes is #39.
+
+### The next position
+
+In 0.2, `position` is a snapshot taken after the moves. It has:
+
+- the same season and year, with phase `:retreat`, whether or not any unit was dislodged;
+- in `units`, every unit that wasn't dislodged, at its location after the moves;
+- in `dislodged_units`, each dislodged unit, with `attacker_from` (a province, no coast) and `by_convoy` (DATC 4.A.5, 6.H.11, 6.H.12);
+- in `standoffs`, every province left empty by a standoff;
+- the same supply-center ownership as before.
+
+0.3 will replace this with the real next phase. Until then, the app builds the next movement position itself, from this retreat position and the host's edits, since `adjudicate` rejects a retreat position.
+
+### DATC scope
+
+Adjudication gives the DATC v3.4 preferred results for the movement test cases 6.A to 6.G.
+
+- **Encoding.** A move marked "via convoy" in the DATC's notation is a `MoveViaConvoy`. Every other move is a `Move`.
+- **Matching a result** means the same moves succeed and fail, the same units are dislodged, and the units end in the same places. Outcome labels may differ, since DATC 4.E.2 leaves naming free.
+
+The exceptions are:
+
+- the departures listed in `ruleset.md` (6.B.2, 6.B.9, 6.B.12);
+- 6.B.14, which is a build;
+- the retreat step of 6.F.7. Its movement step is required;
+- the paradox cases, pending #39: 6.F.14 to 6.F.18, 6.F.22 to 6.F.24, 6.F.26 to 6.F.28, and 6.G.11.
+
+Under the DATC's preferred rules, 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 hold no paradox, so they are required.
+
+## Errors
+
+*Building value objects and checking orders arrive in 0.1.0. Adjudication errors arrive in 0.2.0.*
+
+The gem has one error class, `TA::InvalidInput`, a subclass of `StandardError`, with no subclasses of its own. Rescuing it catches every input error the gem raises.
+
+It is raised for:
+
+- a bad hash, or a missing or unknown `format` (see [Value objects](#value-objects));
+- a coast in a province field (see [Province fields and location fields](#province-fields-and-location-fields));
+- an impossible value object (see [Impossible objects](#impossible-objects));
+- one power giving two orders for units in the same province (see [Adjudicating a movement phase](#adjudicating-a-movement-phase));
+- adjudicating a position that isn't in the movement phase.
+
+Every message includes the offending key or value.
+
+A rules failure is never an exception. A broken rule shows up as a rejection reason from `TA.check`, or as an outcome from `TA.adjudicate`. Once positions and orders have been built without raising, checking, listing legal orders and adjudicating raise nothing else.
+
+```ruby
+O.from_h({"format" => 1, "type" => "hold", "power" => "england"})                            # missing "at"
+O.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "xyz"})             # unknown identifier
+TA::Position.from_h(start.to_h.merge("year" => "1901"))                                      # wrong type
+O.from_h({"format" => 1, "type" => "hold", "power" => "england",
+          "at" => {"province" => "spa", "coast" => "nc"}})                                   # coast in a province field
+# each raises TA::InvalidInput, for example: "at" must be a province identifier, got {"province" => "spa", "coast" => "nc"}
+```
+
+## Retreats
+
+*Coming in 0.3.* Issue #36 will fill in this section.
+
+## Adjustments
+
+*Coming in 0.3.* Issue #37 will fill in this section.
 
 ## Change rules
 
