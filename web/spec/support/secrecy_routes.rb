@@ -11,52 +11,52 @@ module SecrecyRoutes
   end
 
   APP = {
-    "GET /up" => { shows: :none, sweep: ->(_c) { "/up" }, why: "health check" },
-    "GET /" => { shows: :none, sweep: ->(_c) { "/" }, why: "home page" },
-    "GET /styleguide" => { shows: :none, sweep: ->(_c) { "/styleguide" }, why: "static samples" },
-    "GET /games/new" => { shows: :none, sweep: ->(_c) { "/games/new" }, why: "a form" },
-    "POST /games" => { shows: :none, why: "creates a game, redirects to the host page" },
-    "GET /join" => { shows: :none, sweep: ->(_c) { "/join" }, why: "a form" },
-    "POST /join" => { shows: :none, why: "looks a code up" },
-    "GET /join/:code" => { shows: :none, sweep: ->(c) { "/join/#{c.code}" }, why: "open powers only" },
-    "POST /join/:code/seat" => { shows: :none, why: "takes a power" },
-    "GET /games/:public_id" => { shows: :own, sweep: ->(c) { "/games/#{c.id}" }, why: "the seat's own count, never an order; the status list of the seven powers (spec 024)" },
-    "GET /games/:public_id/host" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host" }, why: "phase header, history, the seat history of step-ins and reissues (spec 026 D10), dislodged units, the status list of the seven powers (spec 024)" },
-    "GET /games/:public_id/host-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/host-link?token=#{c.host_token}" }, why: "sets a cookie and redirects" },
-    "GET /games/:public_id/seat-link" => { shows: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/seat-link?token=#{c.france_token}" }, why: "sets a cookie and redirects; a host browser is redirected to the step-in confirmation instead and stores nothing (spec 026 D5)" },
-    "GET /games/:public_id/host/close" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/close" }, why: "a confirmation page" },
-    "POST /games/:public_id/host/close" => { shows: :none, why: "closes joining" },
-    "GET /games/:public_id/host/seats/:power/reissue" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/reissue" }, why: "a confirmation page; the reissue itself deletes the seat's saved orders (D9)" },
-    "POST /games/:public_id/host/seats/:power/reissue" => { shows: :none, why: "replaces the token, deletes the seat's saved orders for the open phase, and writes a reissues row (spec 026 D10)" },
-    "GET /games/:public_id/host/seats/:power/qr" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/qr" }, why: "a one-time code; without the flash it redirects" },
-    "GET /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/phases/1/step-in" }, why: "a confirmation page; it shows no order and writes nothing (spec 026)" },
-    "POST /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, why: "records the step-in, sets a cookie that names the row, redirects" },
-    "DELETE /games/:public_id/host/seats/:power/step-in" => { shows: :none, why: "deletes the cookie and redirects" },
-    "GET /games/:public_id/phases/:number/orders" => { shows: :own, sweep: ->(c) { "/games/#{c.id}/phases/1/orders" }, why: "the seat's own orders" },
+    "GET /up" => { shows: :none, revealed: :none, sweep: ->(_c) { "/up" }, why: "health check" },
+    "GET /" => { shows: :none, revealed: :none, sweep: ->(_c) { "/" }, why: "home page" },
+    "GET /styleguide" => { shows: :none, revealed: :none, sweep: ->(_c) { "/styleguide" }, why: "static samples" },
+    "GET /games/new" => { shows: :none, revealed: :none, sweep: ->(_c) { "/games/new" }, why: "a form" },
+    "POST /games" => { shows: :none, revealed: :none, why: "creates a game, redirects to the host page" },
+    "GET /join" => { shows: :none, revealed: :none, sweep: ->(_c) { "/join" }, why: "a form" },
+    "POST /join" => { shows: :none, revealed: :none, why: "looks a code up" },
+    "GET /join/:code" => { shows: :none, revealed: :none, sweep: ->(c) { "/join/#{c.code}" }, why: "open powers only" },
+    "POST /join/:code/seat" => { shows: :none, revealed: :none, why: "takes a power" },
+    "GET /games/:public_id" => { shows: :own, revealed: :all, sweep: ->(c) { "/games/#{c.id}" }, why: "the seat's own count, never an order of the open phase; the status list of the seven powers (spec 024); every power's orders of the latest revealed phase (spec 025)" },
+    "GET /games/:public_id/host" => { shows: :none, revealed: :all, sweep: ->(c) { "/games/#{c.id}/host" }, why: "phase header, history, the seat history of step-ins and reissues (spec 026 D10), the reading view of the latest revealed phase with its dislodged units (spec 025), the status list of the seven powers (spec 024)" },
+    "GET /games/:public_id/host-link" => { shows: :none, revealed: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/host-link?token=#{c.host_token}" }, why: "sets a cookie and redirects" },
+    "GET /games/:public_id/seat-link" => { shows: :none, revealed: :none, fresh: true, sweep: ->(c) { "/games/#{c.id}/seat-link?token=#{c.france_token}" }, why: "sets a cookie and redirects; a host browser is redirected to the step-in confirmation instead and stores nothing (spec 026 D5)" },
+    "GET /games/:public_id/host/close" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/close" }, why: "a confirmation page" },
+    "POST /games/:public_id/host/close" => { shows: :none, revealed: :none, why: "closes joining" },
+    "GET /games/:public_id/host/seats/:power/reissue" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/reissue" }, why: "a confirmation page; the reissue itself deletes the seat's saved orders (D9)" },
+    "POST /games/:public_id/host/seats/:power/reissue" => { shows: :none, revealed: :none, why: "replaces the token, deletes the seat's saved orders for the open phase, and writes a reissues row (spec 026 D10)" },
+    "GET /games/:public_id/host/seats/:power/qr" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/qr" }, why: "a one-time code; without the flash it redirects" },
+    "GET /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/seats/england/phases/#{c.open}/step-in" }, why: "a confirmation page; it shows no order and writes nothing (spec 026)" },
+    "POST /games/:public_id/host/seats/:power/phases/:number/step-in" => { shows: :none, revealed: :none, why: "records the step-in, sets a cookie that names the row, redirects" },
+    "DELETE /games/:public_id/host/seats/:power/step-in" => { shows: :none, revealed: :none, why: "deletes the cookie and redirects" },
+    "GET /games/:public_id/phases/:number/orders" => { shows: :own, revealed: :none, numbered: true, sweep: ->(c) { "/games/#{c.id}/phases/#{c.open}/orders" }, why: "the seat's own orders" },
     "GET /games/:public_id/phases/:number/orders/:province" => {
-      shows: :own,
-      sweep: ->(c) { { "lon" => "/games/#{c.id}/phases/1/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi",
-                       "par" => "/games/#{c.id}/phases/1/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
+      shows: :own, revealed: :none, numbered: true,
+      sweep: ->(c) { { "lon" => "/games/#{c.id}/phases/#{c.open}/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi",
+                       "par" => "/games/#{c.id}/phases/#{c.open}/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
       why: "the seat's own picker steps; a province that is not the viewer's unit is the stranger page"
     },
-    "PUT /games/:public_id/phases/:number/orders" => { shows: :own, why: "saves the seat's own orders; the reply and the redirect show only its own" },
+    "PUT /games/:public_id/phases/:number/orders" => { shows: :own, revealed: :none, why: "saves the seat's own orders; the reply and the redirect show only its own" },
     "GET /games/:public_id/host/seats/:power/phases/:number/orders" => {
-      shows: :stepped_in,
-      sweep: ->(c) { { "england" => "/games/#{c.id}/host/seats/england/phases/1/orders", "france" => "/games/#{c.id}/host/seats/france/phases/1/orders" } },
+      shows: :stepped_in, revealed: :none, numbered: true,
+      sweep: ->(c) { { "england" => "/games/#{c.id}/host/seats/england/phases/#{c.open}/orders", "france" => "/games/#{c.id}/host/seats/france/phases/#{c.open}/orders" } },
       why: "one seat's own orders, to the host, only inside a recorded step-in into that seat (spec 026)"
     },
-    "PUT /games/:public_id/host/seats/:power/phases/:number/orders" => { shows: :stepped_in, why: "saves one seat's orders for the host inside a step-in; the reply shows only that seat" },
+    "PUT /games/:public_id/host/seats/:power/phases/:number/orders" => { shows: :stepped_in, revealed: :none, why: "saves one seat's orders for the host inside a step-in; the reply shows only that seat" },
     "GET /games/:public_id/host/seats/:power/phases/:number/orders/:province" => {
-      shows: :stepped_in,
-      sweep: ->(c) { { "england lon" => "/games/#{c.id}/host/seats/england/phases/1/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi",
-                       "france par" => "/games/#{c.id}/host/seats/france/phases/1/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
+      shows: :stepped_in, revealed: :none, numbered: true,
+      sweep: ->(c) { { "england lon" => "/games/#{c.id}/host/seats/england/phases/#{c.open}/orders/lon?draft%5Bkind%5D=support&draft%5Btarget%5D=edi",
+                       "france par" => "/games/#{c.id}/host/seats/france/phases/#{c.open}/orders/par?draft%5Bkind%5D=support&draft%5Btarget%5D=bre" } },
       why: "one seat's picker steps for the host inside a step-in into that seat"
     },
-    "GET /games/:public_id/phases/:number/results" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/phases/#{c.open}/results" }, why: "every power's orders of a revealed phase, to a seat; the open phase is the stranger page (spec 025)" },
-    "GET /games/:public_id/host/phases/:number/results" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/#{c.open}/results" }, why: "the reading view of a revealed phase, to the host; the open phase is the stranger page (spec 025)" },
-    "GET /games/:public_id/host/phases/:number/reveal" => { shows: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/1/reveal" }, why: "names the powers that have not submitted" },
-    "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, why: "reveals; redirects to the host page" },
-    "MOUNT /cable" => { shows: :none, why: "state-only stream of the seven submitted states (spec 024): its signed name is only in pages behind a seat or the host cookie" }
+    "GET /games/:public_id/phases/:number/results" => { shows: :none, revealed: :all, numbered: true, sweep: ->(c) { "/games/#{c.id}/phases/#{c.open}/results" }, why: "every power's orders of a revealed phase, to a seat; the open phase is the stranger page (spec 025)" },
+    "GET /games/:public_id/host/phases/:number/results" => { shows: :none, revealed: :all, numbered: true, sweep: ->(c) { "/games/#{c.id}/host/phases/#{c.open}/results" }, why: "the reading view of a revealed phase, to the host; the open phase is the stranger page (spec 025)" },
+    "GET /games/:public_id/host/phases/:number/reveal" => { shows: :none, revealed: :none, sweep: ->(c) { "/games/#{c.id}/host/phases/#{c.open}/reveal" }, why: "names the powers that have not submitted" },
+    "POST /games/:public_id/host/phases/:number/reveal" => { shows: :none, revealed: :none, why: "reveals; redirects to the host page" },
+    "MOUNT /cable" => { shows: :none, revealed: :none, why: "two streams, each behind a signed name that only pages behind a seat or the host cookie carry: the seven submitted states (spec 024), and a contentless refresh when a phase is revealed (spec 025)" }
   }.freeze
 
   # Routes the framework engines add. They hold no game data and no model attaches to a game.
@@ -75,10 +75,16 @@ module SecrecyRoutes
 
   # Every page the sweep requests, as { label => { path:, entry: } }.
   def self.sweeps(context)
-    readable.flat_map do |key, entry|
-      result = entry[:sweep].call(context)
-      if result.is_a?(Hash) then result.map { |name, path| [ "#{key} [#{name}]", { path: path, entry: entry } ] }
-      else [ [ key, { path: result, entry: entry } ] ]
+    passes = [ [ context, "" ] ]
+    # The revealed number, for the numbered routes (spec 025). The two confirmations are left out: for a revealed phase each answers with a redirect
+    # and a flash banner that the next request would show, which a sweep cannot compare (spec 022 AC-4.11 and spec 026 AC-1.7 test those redirects).
+    passes << [ context.dup.tap { |c| c.open = c.revealed }, " (revealed)" ] if context.revealed
+    passes.flat_map do |ctx, suffix|
+      readable.select { |_key, entry| suffix.empty? || entry[:numbered] }.flat_map do |key, entry|
+        result = entry[:sweep].call(ctx)
+        if result.is_a?(Hash) then result.map { |name, path| [ "#{key} [#{name}]#{suffix}", { path: path, entry: entry } ] }
+        else [ [ "#{key}#{suffix}", { path: result, entry: entry } ] ]
+        end
       end
     end.to_h
   end
