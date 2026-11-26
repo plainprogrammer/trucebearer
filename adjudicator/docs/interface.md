@@ -565,6 +565,12 @@ TA::Position.new(**spring.merge(standoffs: [:bur]), units: [army], ownership: {}
 TA::Position.new(**spring.merge(dislodged_units: [TA::DislodgedUnit.new(unit: fleet, attacker_from: :fin, by_convoy: false)]),
   units: [army], ownership: {})
 
+# The same province twice in the standoffs.
+TA::Position.new(**spring.merge(phase: :retreat, standoffs: [:bur, :bur]), units: [army], ownership: {})
+
+# Two dislodged units in one province.
+TA::Position.new(**spring.merge(phase: :retreat, dislodged_units: [fleet, fleet].map { TA::DislodgedUnit.new(unit: _1, attacker_from: :fin, by_convoy: false) }), units: [army], ownership: {})
+
 # A check result whose legal flag and reasons disagree.
 TA::CheckResult.new(legal: true, reasons: [:own_province])
 TA::CheckResult.new(legal: false, reasons: [])
