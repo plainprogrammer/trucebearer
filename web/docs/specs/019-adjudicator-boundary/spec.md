@@ -1,7 +1,7 @@
 # Feature 019: The adjudicator boundary and a stand-in adjudicator
 
-**Status:** Draft
-**Version:** 1.2.0
+**Status:** Approved
+**Version:** 1.2.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #19
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | First draft |
+| 1.2.1 | 2026-11-26 | Approved at Gate A (two Fable review rounds). Rule 4 says outright that swaps and rotations succeeding is a fake result that 0.2.0 corrects |
 | 1.2.0 | 2026-11-26 | Changed after the second independent review.<br>• The guard's module pattern no longer flags the app's name at the end of a sentence (it did flag `manifest.json.erb`), skips binary files, and also scans `spec/` for the gem's constants.<br>• The attribute types raise at assignment (`assert_valid_value`).<br>• Wording: the stand-in does the loading for an adjudication before 0.2.0; `load_order` tests the six documented classes by name; the stand-in's wrong-argument error is called its own choice; `github:` shorthand dropped from the pin check; `standoffs` is a set; a column holding JSON `null` is nil |
 | 1.1.0 | 2026-11-26 | Changed after the first independent review.<br>• The boundary gets four loaders (`load_position`, `load_order`, `load_check_result`, `load_adjudication`) that take a gem object, a string-keyed hash or nil, so the attribute types never name a gem class.<br>• The attribute types subclass `ActiveRecord::Type::Value`, never `Type::Json`, and let errors out. Unparsable JSON text is stated.<br>• Rule 4 of the stand-in is now a stated procedure with one result, and the swap, rotation, chain and coast cases get ACs, plus a sweep over legal orders.<br>• The guard gets exact patterns, negatives and a wider file set. The gem is declared `require: false`.<br>• "One file" is reworded to what really changes at 0.2.0. The stand-in's result classes are `Data` classes with fixed names.<br>• Verification fixes: no timing number, drop-table check, pin spec reads `Gemfile` text only |
 
@@ -212,7 +213,7 @@ The stand-in is a private part of `app/models/rules_engine.rb`. **Its outcomes a
    1. Every legal move starts as `:succeeded`.
    2. Every move whose target is also the target of another legal move becomes `:bounced`.
    3. Repeat until nothing changes: a move that is still `:succeeded` becomes `:bounced` when its target province holds a unit that is not making a move that is still `:succeeded`.
-   Each step only turns moves into bounces, so it ends, and it has one answer. Moves that swap two units, or rotate three or more, succeed. A convoy chain is not looked at.
+   Each step only turns moves into bounces, so it ends, and it has one answer. Moves that swap two units, or rotate three or more, succeed. That is a fake result: under the real rules a swap bounces unless convoyed, and the real adjudicator in 0.2.0 corrects it. A convoy chain is not looked at.
 5. A unit stays when its order is a hold, a support, a convoy, is void, or is a move that is `:bounced`. A unit with no legal order from its owner gets an implied hold.
 6. The outcome list is the submitted orders in the order given, then one implied hold per remaining unit, sorted by province, with `submitted` false. No outcome is ever dislodged. `paradox` is always false.
 7. The next position keeps the season, year and ownership, has the phase `:retreat`, moves each unit whose move succeeded (an army keeps no coast, a fleet takes the destination's coast), has no dislodged units, and lists in `standoffs`, once each, every province that two or more legal moves targeted and that is empty afterward.
