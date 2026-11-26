@@ -32,6 +32,16 @@ stays under the license note inside the document itself. In short, that
 note says anyone may copy and use the document, and anyone who changes it
 must keep the note and maintain its change log.
 
+Two kinds of file inside web/ are not under that folder's license:
+web/app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2, IBM Plex Mono Medium
+(Latin subset), (C) 2017 IBM Corp. with Reserved Font Name "Plex", under the
+SIL Open Font License 1.1, with its license text beside it in
+web/app/assets/fonts/OFL.txt; and the five unit and supply-center SVGs in
+web/app/assets/images/icons/ (army.svg, army-small.svg, fleet.svg,
+fleet-small.svg, supply-center.svg), unchanged copies of the masters in
+assets/icons/, which stay under CC BY-SA 4.0 (see assets/LICENSE). See
+web/NOTICE for the details.
+
 Trademarks
 ----------
 The Trucebearer name and logo are trademarks of James Thompson. Anyone may
