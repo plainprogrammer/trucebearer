@@ -12,7 +12,8 @@ Each part of this repository carries its own LICENSE file.
                                          and a section 7(e) trademark term
                                          (see web/NOTICE)
   Root files                             AGPL-3.0-or-later
-  adjudicator/ (trucebearer-adjudicator) AGPL-3.0-or-later
+  adjudicator/ (trucebearer-adjudicator) AGPL-3.0-or-later, with one
+                                         file excepted (see below)
   Native app shells (when they exist)    MPL-2.0
   assets/ (artwork, icons, the logo      CC BY-SA 4.0
     and wordmark artwork)
@@ -23,6 +24,13 @@ app to say, in its interface, that it has been modified and how.
 
 The wordmark is set in Fraunces, (C) The Fraunces Project Authors, under
 the SIL Open Font License 1.1, outlined to vector shapes.
+
+One file inside adjudicator/ is not under that folder's license:
+adjudicator/docs/reference/datc-v3.4.html, an unmodified copy of version 3.4
+of the DATC (Diplomacy Adjudicator Test Cases) by Lucas B. Kruijswijk. It
+stays under the license note inside the document itself. In short, that
+note says anyone may copy and use the document, and anyone who changes it
+must keep the note and maintain its change log.
 
 Trademarks
 ----------
@@ -41,7 +49,8 @@ Credits
 -------
 The adjudicator's test suite is specified by the Diplomacy Adjudicator Test
 Cases (DATC) by Lucas B. Kruijswijk. The scenarios are encoded as original
-test fixtures; no text from that document is reproduced here.
+test fixtures; apart from the one reference copy named above, no text from
+that document is reproduced here.
 
 The adjudication approach follows Lucas B. Kruijswijk's "The Math of
 Adjudication".
