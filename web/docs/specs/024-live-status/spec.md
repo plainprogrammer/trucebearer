@@ -1,7 +1,7 @@
 # Feature 024: Show live submission status
 
-**Status:** Draft
-**Version:** 0.2.1
+**Status:** Approved
+**Version:** 1.0.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #24
@@ -13,6 +13,8 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.1 | 2026-11-26 | Found while planning, within what Gate A approved: whitespace between a row's two elements is allowed by the payload allowlist (AC-3.1) |
+| 1.0.0 | 2026-11-26 | Approved at Gate A. The maintainer ruled that the stale list after a phone wakes stays a stated known limit with no custom channel, and opened Issue #105 for it (Known limits). Origins are named in `docs/architecture.md` by a root pull request, not by this one |
 | 0.2.1 | 2026-11-26 | Changed after the second Fable review (wording only, no design change): the scan of AC-2.7 is stated as patterns that can pass; AC-3.4 checks text nodes and whole words, on JSON-decoded payloads; `.seat-status` shares `.list`'s rules without the `list` class (FR-1); the cache-control change is stated (D9); the specs that change are listed in full (AC-8.3); AC-4.4 is stated as an observable; D5 names the explicit `require`; D3 names what the writers must report |
 | 0.2.0 | 2026-11-26 | Changed after the first Fable review: the stream is a dedicated status stream named by the game's public id, not the game's general stream (D1, D4); the name is a permanent capability, said plainly (D4); the live region is an `aria-live` list updated by morph, so only a changed row is announced (D6); the payload allowlist is exact (AC-3.1); the helper takes the statuses, so `/styleguide` can show samples (D6, AC-8.1); a failed cable call is rescued, a broken render is not (D7); origin parsing is a small module (D5, AC-7); named the existing specs that change (AC-8.3); heading levels, reconnect and half-stale-after-reveal limits stated |
 | 0.1.0 | 2026-11-26 | First draft |
@@ -48,7 +50,7 @@ This feature shows, on every seat page and on the host's controls, seven rows: e
 
 ## Decisions
 
-Gate A asks about D1, D2, D4, D5 and D7, and about the reconnect snapshot (Known limits).
+Gate A settled D1, D2, D4, D5 and D7, and ruled that the reconnect snapshot is Issue #105 (Known limits).
 
 **D1. A dedicated stream per game, Turbo's own channel.** The seat page and the host page each contain `turbo_stream_from :seat_status, @game.public_id`, which renders `<turbo-cable-stream-source>` with a signed name for the stream `seat_status:<public id>`. The server side is `Turbo::StreamsChannel`, unmodified; no channel class is added. It rejects a subscription whose signed name does not verify. The stream is not the game's general stream (`turbo_stream_from @game`), so a later broadcast to the game itself can never reach a status subscriber, and the name carries the public id (which every seat already holds) and not the game's sequential database id. Broadcasting is `Turbo::StreamsChannel.broadcast_update_to(:seat_status, public_id, target: "seat-status", content: html, attributes: { method: :morph })`, in one method (D3). The stream is per game and not per phase, so one subscription lasts through every phase of a sitting.
 
@@ -69,7 +71,7 @@ Gate A asks about D1, D2, D4, D5 and D7, and about the reconnect snapshot (Known
 - `/cable` itself does no sign-in: the connection is anonymous, as Turbo expects. The signed name is the capability, and it names one thing: the status stream of one game. Nothing else is broadcast to that stream (a scan spec enforces that only one method broadcasts at all, AC-2.7), so a later feature that broadcasts to the game cannot reach status subscribers by accident, and #25 uses a stream of its own.
 - **If the name leaks** (a screenshot of page source, a browser extension), the holder can subscribe and receives exactly what the page shows: the seven rows. D2 makes that the whole content of every message. The name is not a cookie or a token and no controller accepts it.
 - **Limit: the name never expires.** Turbo's verifier is a plain signed message with no expiry, so a name copied once works for as long as the app's secret key base stays the same, and a subscription lasts as long as the page that opened it. A seat that the host reissues keeps receiving the status on its old page, or on a name it saved. What it receives is the seven rows, which any seat sees; no order or count of its own is in it. This is stated here, not closed.
-- **Not added:** a custom connection or channel that checks the seat cookie. The two cookies are named per game, a connection cannot know which game a subscription means, and a custom channel would be new code carrying the secrecy rule. The decision is the Rails default, a dedicated stream, and the payload proof of D2. (Gate A asks about one custom-channel option that would also repair missed messages: see Known limits.)
+- **Not added:** a custom connection or channel that checks the seat cookie. The two cookies are named per game, a connection cannot know which game a subscription means, and a custom channel would be new code carrying the secrecy rule. The decision is the Rails default, a dedicated stream, and the payload proof of D2. (One custom-channel option would also repair missed messages; Gate A ruled it out for this feature: see Known limits and Issue #105.)
 
 **D5. Allowed origins.** `config/environments/production.rb` sets `config.action_cable.allowed_request_origins` from the environment variable **`TRUCEBEARER_CABLE_ORIGINS`** (named for the project, like `TRUCEBEARER_PASSPHRASE`): origins such as `https://play.example.org`, separated by commas or spaces. A trailing slash is dropped from each and blank entries are ignored. The parsing is one small module, `CableOrigins.parse(value)` in `lib/cable_origins.rb`, required by `production.rb` with an explicit `require_relative` (the autoloader is not set up when that file runs; the module has no dependency), so it can be tested without booting production (the way `Passphrase` is a plain model).
 - **Unset or blank:** the list is empty, which is Rails' own default. Action Cable then accepts a connection only when the browser's `Origin` equals the request's own scheme and host (`allow_same_origin_as_host` stays on). A deployment where players reach the app at the same address the app sees works with no setting. Because the app assumes SSL behind its proxy, "same origin" means `https://<the Host header>`; a plain-http deployment must list its origin. A deployment where players do not reach the app at the address the app sees (a proxy that rewrites the `Host` header, or a second public name) has its sockets refused: Action Cable logs "Request origin not allowed", nothing is shown to the player, pages are still correct on every load, and only the live updates are missing. The README says so. No boot-time warning is logged, because an unset variable is correct for a plain single-host deployment.
@@ -111,7 +113,7 @@ Gate A asks about D1, D2, D4, D5 and D7, and about the reconnect snapshot (Known
 
 **As a** player **I want** the table to learn only that I submitted **So that** my orders stay secret until the reveal
 
-- [ ] **AC-3.1** Given a game and the test adapter When England saves, submits and edits orders, and France does the same (the model spec drives `Seat#save_orders!`) Then every raw payload on the game's stream (read from `ActionCable.server.pubsub.broadcasts(name)`, not from Turbo's parsed helper, and JSON-decoded: Action Cable stores the string JSON-encoded) is parsed and matches this allowlist exactly: one `<turbo-stream>` with `action="update"`, `method="morph"` and `target="seat-status"`, whose one `<template>` holds exactly seven `li.seat-status__row` in power order; each `li` has the attributes `class` and `data-power` (a power's id) and exactly two children, a `span.power-badge.power-badge--<id>` whose text is the power's name and a `span.seat-status__state` whose text is "Submitted" or "Not submitted". No other element, attribute, id, number or text appears
+- [ ] **AC-3.1** Given a game and the test adapter When England saves, submits and edits orders, and France does the same (the model spec drives `Seat#save_orders!`) Then every raw payload on the game's stream (read from `ActionCable.server.pubsub.broadcasts(name)`, not from Turbo's parsed helper, and JSON-decoded: Action Cable stores the string JSON-encoded) is parsed and matches this allowlist exactly: one `<turbo-stream>` with `action="update"`, `method="morph"` and `target="seat-status"`, whose one `<template>` holds exactly seven `li.seat-status__row` in power order; each `li` has the attributes `class` and `data-power` (a power's id) and exactly two children, a `span.power-badge.power-badge--<id>` whose text is the power's name and a `span.seat-status__state` whose text is "Submitted" or "Not submitted". No other element, attribute, id, number or text appears (whitespace between elements aside: a space separates the badge from the state, so a row reads "England Not submitted" to a reader that ignores markup)
 - [ ] **AC-3.2** Given two games with the same sequence of submitted-state flips but different orders (different units ordered, different order kinds and provinces, 0 and 3 orders at the moment of submitting, a mid-sequence edit that changes one order and one that changes three) When the same flips are driven through `save_orders!` in each Then the list of captured payloads is byte-for-byte equal between the games, in count and in order (the stream names differ and are not compared)
 - [ ] **AC-3.3** Given a seat that saves orders and does not submit, or edits a submitted seat's orders and re-submits in the same call Then no broadcast is captured, in either game (so the message count cannot hint at editing)
 - [ ] **AC-3.4** Given the decoded payloads of AC-3.1 and AC-3.2 Then the text nodes of the template contain, as whole words and case-insensitively, no province abbreviation or name, no order word ("Move", "Hold", "Support", "Convoy", "by convoy") and none of "ordered", "units"; and the whole decoded payload contains no digit, no phase title and no game public id. (The markup's own attribute values and class names are not text nodes and are covered by the allowlist of AC-3.1.)
@@ -212,7 +214,7 @@ As AC-4.6 and AC-3.5: `/cable` is classified, the sweep's submitted-state pair h
 
 ## Known limits
 
-- **Missed messages.** Action Cable does not replay, and a phone that sleeps and wakes reconnects without being told what it missed. Its list shows the old state until the next flip or a reload; a reload is always correct, and the reveal confirmation page is server-rendered and accurate. It is not repaired here. One repair needs no JavaScript: a small subclass of `Turbo::StreamsChannel` that sends the current snapshot when a client subscribes. It is a custom channel, which D4 and the rulings leave out, and Gate A asks whether to add it now or open an Issue for it.
+- **Missed messages.** Action Cable does not replay, and a phone that sleeps and wakes reconnects without being told what it missed. Its list shows the old state until the next flip or a reload; a reload is always correct, and the reveal confirmation page is server-rendered and accurate. It is not repaired here. One repair needs no JavaScript: a small subclass of `Turbo::StreamsChannel` that sends the current snapshot when a client subscribes. It is a custom channel, which D4 and the rulings leave out, The maintainer ruled at Gate A that it is not added here; Issue #105 tracks it.
 - **After a reveal the seat page is half stale.** The list moves to the new phase, but the phase header, the order count and the "Enter orders" link (which answers 409 for the old phase) stay until the phone reloads. #25 reveals results to every phone and refreshes the page; this feature does not.
 - **A reissued seat's open page** keeps its subscription until closed, and a copied stream name never expires (D4).
 - **Unseated powers** read "Not submitted" until #48.
@@ -220,7 +222,7 @@ As AC-4.6 and AC-3.5: `/cable` is classified, the sweep's submitted-state pair h
 
 ## Open Questions
 
-None unresolved. The maintainer is asked about D1, D2, D4, D5 and D7, and whether to add the snapshot-on-subscribe channel now or later (Known limits).
+None unresolved. The maintainer is asked about D1, D2, D4, D5 and D7, (settled at Gate A).
 
 ## Out of Scope (Future Considerations)
 
