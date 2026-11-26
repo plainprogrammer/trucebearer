@@ -1,5 +1,5 @@
 case: "6.F.23"
-summary: A second-order paradox with two exclusive convoys
+summary: Two convoys whose fleets each turn on the other army's move, with two consistent results
 paradox: true
 position:
   units:

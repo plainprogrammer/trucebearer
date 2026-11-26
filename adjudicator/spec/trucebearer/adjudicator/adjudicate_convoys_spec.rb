@@ -160,6 +160,8 @@ RSpec.describe "TA.adjudicate: convoys" do
       result = run(units, orders)
       expect(result.paradox).to be(true)
       expect(result.position.units.size + result.position.dislodged_units.size).to eq(10)
+      # The circle is outside the paradox, so its results stand; the paradox's own outcomes are
+      # unspecified until #39 and are not checked here.
       expect(results(result, 10).last(6)).to eq(%i[succeeded succeeded succeeded given given given])
     end
 

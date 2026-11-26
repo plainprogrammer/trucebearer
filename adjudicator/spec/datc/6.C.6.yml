@@ -1,5 +1,5 @@
 case: "6.C.6"
-summary: Two armies swap places by two convoys
+summary: Two armies exchange places, each carried by its own fleet
 position:
   units:
     - {power: england, type: fleet, at: nth}

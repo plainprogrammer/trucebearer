@@ -1,5 +1,5 @@
 case: "6.F.14"
-summary: "The simplest paradox: the attacked unit supports an attack on a convoying fleet"
+summary: "The simplest paradox: the army's target backs the attack on the fleet that carries it"
 paradox: true
 position:
   units:

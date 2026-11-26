@@ -1,5 +1,5 @@
 case: "6.F.4"
-summary: An attack on a convoying fleet that doesn't dislodge it changes nothing
+summary: Attacking a carrying fleet without dislodging it changes nothing
 position:
   units:
     - {power: england, type: fleet, at: nth}

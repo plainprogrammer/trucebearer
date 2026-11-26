@@ -1,5 +1,5 @@
 case: "6.F.20"
-summary: A convoy whose other route keeps the move alive, so the support is cut and the fleet falls
+summary: "A second route keeps the move alive: the support gets cut and the fleet is lost"
 position:
   units:
     - {power: france, type: army, at: tun}

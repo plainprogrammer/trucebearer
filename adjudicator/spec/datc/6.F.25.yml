@@ -1,5 +1,5 @@
 case: "6.F.25"
-summary: "A support cut last: cuts from convoyed armies unwind a whole chain of dependencies"
+summary: Cuts from convoyed armies settle a long chain of dependencies, the supports being decided last
 position:
   units:
     - {power: germany, type: army, at: ruh}
