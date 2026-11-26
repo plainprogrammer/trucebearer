@@ -143,6 +143,12 @@ RSpec.describe ReleaseTools::Release do
       expect(head_message).to eq("Start")
     end
 
+    it "prints the new CHANGELOG section as it will be written, not indented" do
+      release.run("minor", dry_run: true)
+
+      expect(out.string).to include("\n## 0.1.0 (2026-11-25)\n\n### Added\n\n- A new thing. (#1)\n")
+    end
+
     it "still refuses what a real run would refuse" do
       write("scratch.txt", "x")
 

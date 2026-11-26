@@ -71,7 +71,7 @@ module ReleaseTools
 
         CHANGELOG.md gets this section, under a fresh empty Unreleased:
 
-        #{released.gsub("\n", "\n        ")}
+        #{released}
 
         Then:
           - regenerate #{LOCK_FILE} (bundle lock --local)
