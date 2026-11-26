@@ -1,7 +1,7 @@
 # Feature 027: The host's position editor
 
 **Status:** Draft
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #27
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.0.2 | 2026-11-26 | Minor fixes from the second Fable review (approved with minor fixes): the "Choose ..." checks run before any gem call and unknown identifiers are `other` (D5); `RulesEngine.coast_name` added; AC-1.5 and AC-1.9 agree with the stage order; the unit that vanishes under the lock is the stranger response (D7, AC-7.12); AC-3.3 covers a non-province value; spec 023's note is amended too (AC-10.2); stale Open Question references and the status-scan wording corrected. |
 | 1.0.1 | 2026-11-26 | Changed after the first Fable review (verdict: changes required).<br>• **D5/D8:** the plain words no longer rest on the gem's message text, which `web/AGENTS.md` forbids using. `RulesEngine` builds each edit in stages and explains a refusal from the documented map queries (province type, coasts, occupied provinces), only after the gem has refused. Open Question 1 is gone.<br>• **D3:** the clearing rule is now "an edit that changes where units stand". A season-and-year edit keeps orders, as an ownership edit does (orders are keyed to the phase and checked against units); the notice shows only the latest clearing time.<br>• **D7:** the guard on `Phase#position` is new behaviour (a model validation) and has ACs; `edit_position!` compares the locked open phase with the phase the URL named; stale and in-lock cases both go to the host page like the reveal.<br>• **D4:** `change` becomes `detail`, `kind` becomes `action`, moves carry `from_coast` and `to_coast`, removals carry the coast, years are integers; one `Game` method reads the notice's times.<br>• **D6/D8/AC-1.x:** coast field and the "Choose ..." sentences defined; which reason wins; both "set" forms use PUT.<br>• **Story 7/10:** route-table entries (`revealed: :none`, not `numbered`) and the `why` texts of three existing entries; named versions for the amended specs and the amendments spec; the stylesheet budget; ACs rewritten as Given/When/Then and the untestable ones replaced. |
 | 1.0.0 | 2026-11-26 | First draft |
 
@@ -25,7 +26,7 @@ Players can already save orders in the next phase before the host has fixed the 
 ## Goals
 
 - The host can add a unit, move a unit, remove a unit, set who owns a supply center, and set the season and year, all for the **open phase's position**.
-- Every edit is built as a new position by the rules engine, so an impossible board (two units in one province, a fleet inland, an army at sea, a missing or wrong coast) is refused with the engine's reason put in plain words, and nothing is stored.
+- Every edit is built as a new position by the rules engine, so an impossible board (two units in one province, a fleet inland, an army at sea, a missing or wrong coast) is refused by the engine, with a plain-word reason (D5), and nothing is stored.
 - An edit that changes where units stand clears every seat's saved orders and submission for the open phase. An edit of ownership, or of the season and year, clears nothing. Each seat is told on its own pages, and the submitted states on every phone follow through the existing status stream.
 - Every edit is recorded in the game's history: what changed, the phase and the time. The host's Seat history list shows it, in the order spec 026 D10 set.
 - Only the host reaches the editor. No page of it shows any saved order, and every new route is classified in the secrecy table and covered by the sweep.
@@ -41,7 +42,7 @@ Players can already save orders in the next phase before the host has fixed the 
 - Changing a phase's type (movement, retreat, adjustment).
 - Undoing an edit. The host edits again.
 - Showing the history to anyone but the host. The seats see only that the board changed, and when (D3).
-- A live reload of order screens that are already open on a phone (Open Question 2).
+- A live reload of order screens that are already open on a phone (Open Question 1).
 - Folding the host page's lists into one (#112), the shared display, the phase clock, any rendered map.
 - Any change to `adjudicator/`, `.github/` or the root files.
 
@@ -97,7 +98,7 @@ If the maintainer prefers (b) or (c), this spec is amended (spec-update) and the
 - **What the host sees.** Every editor page that clears says, before the host saves, "Saving this clears every seat's saved orders for this phase." The page after a save says the same in the past tense, whether or not any order existed ("Saved. Saved orders for this phase were cleared."). The sentence does not depend on the orders: the host learns nothing about them. After an ownership or date edit it says "Saved. Orders are kept." The host sees no count, no name, no seat.
 - **What a player sees.** On the seat page and on the order screen of the seat's own phone, a `.banner` (kind `warning`) when the open phase has had at least one clearing edit: "The host changed the board at 8:42 PM UTC. Orders saved before then were cleared, so check yours." The time is the **latest** clearing edit's. It is drawn from the edit records (D4) through one `Game` method, carries only a time (the `table_time` helper of spec 026 D6) and is the same for every seat, so it says nothing about whether that seat had ordered. Like the step-in notice, it is not drawn on a stepped-in page.
 - **The status stream.** If the edit withdrew at least one submission, `Game#broadcast_seat_status` is called once after the transaction, as `reissue_seat!` does (spec 024 D3): only a flip of a submitted state is news. A failed cable call never fails a stored edit.
-- **What an open order screen does.** A phone that still shows the old board can send a save. `Seat#save_orders!` reads the phase under its lock, so it checks the order against the **new** position and refuses an illegal order with the existing sentence ("You have no unit in BUR."). Nothing changes there. Open Question 2 asks whether to reload open screens.
+- **What an open order screen does.** A phone that still shows the old board can send a save. `Seat#save_orders!` reads the phase under its lock, so it checks the order against the **new** position and refuses an illegal order with the existing sentence ("You have no unit in BUR."). Nothing changes there. Open Question 1 asks whether to reload open screens.
 - **An edit that changes nothing is refused** ("That is already the position."), writes no record and clears nothing, so an accidental double tap does not wipe the table's orders twice.
 
 **D4. History: a third append-only table, `position_edits`, read into the existing Seat history list. (Gate A)**
@@ -122,7 +123,7 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
 - **Which phase** is the open phase the edit ran in. **When** is `created_at`, in UTC.
 - **Reads.** `Game#position_edit_history` reads every row whose phase belongs to the game, oldest first, through the game's phases and with no `through:` association, as `step_in_history` and `reissue_history` do. `Game#seat_history` merges it with the other two. Each entry answers `kind` (`:position_edit` here; `:step_in` and `:reissue` as today) and its own `phase`, `created_at` and `id`, so the list partial names no constant. **The notice's reader** is one more `Game` method, `Game#board_cleared_at(phase)`, that returns the time of the latest clearing edit of a phase or nil, so no view or controller reads the table.
 - **Order of the list: #104's order, extended.** Oldest first by `created_at`; at the same instant a reissue comes before a step-in (spec 026 D10), and a position edit comes after both, then by id. The order is stable.
-- **The row on the host page.** In the Seat history list: the phase title, the words "board changed", and the change in words, then the time: "Fall 1901 · Movement · board changed: France's army added in BUR · 8:42 PM UTC". The list keeps its heading, "Seat history", its hook `data-seat-history` and its empty text, so #104's specs stand. Its name is now a little narrow, since it also holds board edits; #112 can rename it when it folds the host page's lists (Open Question 3).
+- **The row on the host page.** In the Seat history list: the phase title, the words "board changed", and the change in words, then the time: "Fall 1901 · Movement · board changed: France's army added in BUR · 8:42 PM UTC". The list keeps its heading, "Seat history", its hook `data-seat-history` and its empty text, so #104's specs stand. Its name is now a little narrow, since it also holds board edits; #112 can rename it when it folds the host page's lists (Open Question 2).
 - **A changed date and old titles.** A row shows its phase's title as it is when the page is drawn. After a date edit, earlier rows of the same phase carry the new title, and the date edit's own row says "season and year set from Spring 1901 to Fall 1901". The phase's number never changes.
 - **Who sees the history: only the host**, on the host page. Seats see only the notice of D3.
 
@@ -134,14 +135,15 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
   - `RulesEngine.remove_unit(position, province:)`
   - `RulesEngine.set_owner(position, center:, power:)` (a nil power removes the entry)
   - `RulesEngine.set_date(position, season:, year:)`
-  - the lists the forms need: `RulesEngine.provinces` (each with its id, full name and coasts) and `RulesEngine.supply_centers` (identifiers), read from the map; the province list in the forms is sorted by name in the view.
+  - the lists the forms need: `RulesEngine.provinces` (each with its id, full name and coasts), `RulesEngine.supply_centers` (identifiers) and `RulesEngine.coast_name(id)` ("north", "south", "east", the app's own labels for the three coast identifiers), read from the map or its identifiers; the province list in the forms is sorted by name in the view.
 - These are **new methods in `rules_engine.rb`**. #29 (the gem upgrade) also edits that file, so the pull request says so, and `main` is merged when told. The methods use only what gem 0.1.0 documents (`TA::Position.new`, `TA::Unit.new`, `TA::Location.new`, `Map#province`, `Map#provinces`, `Map#supply_centers`) and need nothing from 0.2.0, so #29 should keep them as they are.
 - **No map rule is written in the app, and the engine decides.** The gem builds the position: one unit per province, no fleet inland, no army at sea, a coast exactly when a fleet is in a split-coast province, an owner only for a supply center. The forms offer every province and let the engine refuse, instead of the app filtering lists by rules it would have to know.
 - **The reason is found without reading the gem's messages.** The gem documents only that an error message "includes the offending key or value", so the app does not read it (`web/AGENTS.md`: use nothing beyond the interface). Each method builds in the documented stages, and the stage that raises names the reason, with the documented map queries used only to word a refusal the gem has already made:
-  1. `Location.new` raises: the province has no such coast (the reason is `no_such_coast` when a coast was given, `other` otherwise).
+  0. *Before any gem call* the controller's "Choose ..." checks (D8) refuse a power, type, province, coast or season that is not one of the offered values, using the engine's lists (`RulesEngine.powers`, `provinces`, `coasts`, `supply_centers`). The engine's methods called directly with an unknown identifier (not through a form) raise `EditRefused` with the reason `other`.
+  1. `Location.new` raises for a known province: the province has no such coast (the reason is `no_such_coast`; with no coast given it is `other`).
   2. `Unit.new` raises: the reason is read from `Map#province(id)`: an army on a sea province is `army_at_sea`; an army with a coast is `army_coast`; a fleet on an inland province is `fleet_inland`; a fleet with no coast on a province that has coasts is `fleet_needs_coast`; anything else is `other`.
   3. `Position.new` raises: `province_taken` when the target province already holds a unit in the old position (`units` is documented), `not_a_center` for an owner of a province that is not a supply center (`Map#province(id).supply_center`), otherwise `other`.
-  When two rules break at once, the earlier stage wins (a fleet inland with a coast chosen gets the coast sentence if the province has no such coast, the inland sentence otherwise).
+  When two rules break at once, the earlier stage wins (a fleet put with the north coast in an occupied Paris gets the coast sentence, not the occupied one).
 - **A reason is never a rule.** If the table of reasons were wrong, a position the gem accepts would still be accepted and one it refuses would still be refused; only the sentence would be off. A spec drives each impossible position of the gem's "Impossible objects" that an edit can reach and checks both the refusal and the reason.
 
 **D6. The pages: a host-only editor under `/host/phases/:number/position`.**
@@ -169,7 +171,7 @@ The five shapes of `detail`, plain data like the position's own hash form. Every
 **D7. Concurrency: the phase lock decides, the reveal wins.**
 
 - `Game#edit_position!(number, change)` takes the phase lock first and reads the open phase under it, as `Seat#save_orders!` and `Game#reissue_seat!` do, and **compares the locked open phase's number with the number the URL named**. If they differ (the phase was revealed in the meantime, so the open phase is the next one) it raises `Phase::Revealed`, the host is sent to the host page with "That phase was already revealed.", and nothing is written. A stale form for phase N can never edit phase N+1.
-- Two edits at the same moment run one after the other: the second is built from the position the first stored.
+- Two edits at the same moment run one after the other: the second is built from the position the first stored. If the first removed or moved the unit the second names (the unit's page was opened before), the second finds no unit under the lock and is the stranger response with nothing written.
 - **A guard on the model, new in this spec:** `Phase` refuses (a validation) to change `position` once `revealed_at` is set. A revealed phase's position is what it was adjudicated from and can be replayed from.
 
 **D8. The words.** Every sentence below is original wording for this app, cites no rulebook and names no section. A province is its full name.
@@ -221,11 +223,11 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 - [ ] **AC-1.2** *(the second half of the first test)* Given that position When the host adds a fleet in Burgundy for France Then the response is 422, its banner reads "A fleet can't stand in Burgundy: it is inland.", and the stored position is unchanged
 - [ ] **AC-1.3** Given the add form When the host opens it Then its fields are `unit[power]`, `unit[type]` (a `.segmented` of army and fleet, army selected), `unit[province]` and `unit[coast]` ("No coast" selected), every field is labelled, and the page needs no JavaScript
 - [ ] **AC-1.4** Given a fleet and Spain When the host adds it with the south coast chosen Then the unit is stored with that coast; with "No coast" the response is 422 with "A fleet in Spain must say which coast it is on."
-- [ ] **AC-1.5** Given an army When the host adds it with a coast chosen Then the response is 422 with "An army doesn't stand on a coast. Leave the coast blank."; and given a fleet in Paris with the north coast chosen the response is 422 with "Paris has no north coast."
+- [ ] **AC-1.5** Given an army When the host adds it in Spain with the north coast chosen Then the response is 422 with "An army doesn't stand on a coast. Leave the coast blank."; and given an army or a fleet in Paris with the north coast chosen Then the response is 422 with "Paris has no north coast."
 - [ ] **AC-1.6** Given a province that already holds a unit (any power) When the host adds a unit there Then the response is 422 with "Paris already holds a unit. A province holds one unit." and the position is unchanged
 - [ ] **AC-1.7** Given a sea province When the host adds an army Then the response is 422 with "An army can't stand in North Sea: it is a sea province."
 - [ ] **AC-1.8** Given a power, type, province, coast or season field that is missing, not one of the offered values, or not a string (a nested hash, an array) When the host submits Then the response is 422 with the matching "Choose ..." sentence of D8, nothing is stored, and no request raises a 500
-- [ ] **AC-1.9** Given a fleet inland with a coast chosen that the province has no such coast When the host submits Then the response is the `no_such_coast` sentence (the earlier stage wins, D5)
+- [ ] **AC-1.9** Given a fleet and an occupied Paris When the host submits it with the north coast chosen Then the response is "Paris has no north coast.", not the occupied sentence (the earlier stage wins, D5)
 
 ### Story 2: The host moves and removes a unit
 
@@ -252,7 +254,7 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 
 - [ ] **AC-3.1** Given the owners form When the host picks a center and a power Then the stored ownership holds that entry and nothing else changed
 - [ ] **AC-3.2** Given the owners form When the host picks a center and "Nobody" Then the entry is removed from the stored ownership
-- [ ] **AC-3.3** Given a province that is not a supply center, or an unknown power When the host submits Then the response is 422 with "%{province} is not a supply center." or "Choose a power." and nothing is stored
+- [ ] **AC-3.3** Given a real province that is not a supply center, a value that is not a province at all, or an unknown power When the host submits Then the response is 422 with "%{province} is not a supply center.", "Choose a province." or "Choose a power." respectively, and nothing is stored
 - [ ] **AC-3.4** Given a center already owned by that power (or already unowned) When the host sets it again Then the response is 422 with "That is already the position."
 - [ ] **AC-3.5** Given the owners form When the host opens it Then its center list holds exactly the map's 34 supply centers, each by name and abbreviation
 
@@ -322,7 +324,7 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 - [ ] **AC-7.9** Given the saved-orders boundary spec of spec 022, the order-write scan of spec 023 (`seat_write_scan_spec`) and the status scan of spec 024 When they run Then they pass; the status scan's count of calls to `broadcast_seat_status` changes from two in `game.rb` to three (the edit's call) and no other count changes; and `Game#edit_position!` reads and clears orders only through `Seat#clear_orders!`
 - [ ] **AC-7.10** Given the host is stepped into a seat When the host makes an edit Then it is recorded as a position edit like any other, and the step-in bar still shows on the editor pages
 - [ ] **AC-7.11** Given an edit and a reveal When the reveal wins the lock first Then the edit raises `Phase::Revealed`, writes nothing, and the host is sent to the host page with "That phase was already revealed."; and given a form for phase N submitted after phase N was revealed (phase N+1 now open) Then phase N+1's position is unchanged
-- [ ] **AC-7.12** Given two edits made at once When both run Then the second is built from the position the first stored (a spec in the style of `spec/models/phase_concurrency_spec.rb`)
+- [ ] **AC-7.12** Given two edits made at once When both run Then the second is built from the position the first stored, and when the first removed the unit the second names, the second is refused as the stranger response and writes nothing (a spec in the style of `spec/models/phase_concurrency_spec.rb`)
 - [ ] **AC-7.13** Given a revealed phase When something assigns a different `position` and saves Then the `Phase` model refuses it
 
 ### Story 8: The validation and the words come from the engine
@@ -335,7 +337,7 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 
 - [ ] **AC-8.1** Given each new engine method When it is called with valid arguments Then it returns a position that `RulesEngine.load_position` accepts (a round trip through `to_h`) and leaves the argument position unchanged; and When it is called with each impossible object of the gem's "Impossible objects" that an edit can reach Then it raises `RulesEngine::EditRefused`
 - [ ] **AC-8.2** Given each reason of D8 When the matching impossible edit is made Then the error's reason is the one named in D5's stages, and a refusal the stages don't name has the reason `other`
-- [ ] **AC-8.3** Given the source When the boundary spec runs Then no file but `rules_engine.rb` names a gem constant, and no view, controller or model other than `RulesEngine` holds a list of provinces, coasts or supply centers (the lists come from `RulesEngine.provinces` and `RulesEngine.supply_centers`)
+- [ ] **AC-8.3** Given the source When the boundary spec runs Then no file but `rules_engine.rb` names a gem constant, and no view, controller or model other than `RulesEngine` holds a list of provinces, coasts or supply centers (the lists come from `RulesEngine.provinces`, `RulesEngine.supply_centers` and `RulesEngine.coast_name`)
 - [ ] **AC-8.4** Given a refusal When the host sees the page Then it shows the sentence of D8 only; the gem's message is neither shown nor logged
 
 ### Story 9: The screens at 360 pixels
@@ -361,11 +363,12 @@ All under `/games/:public_id/host/phases/:number/position` (D6). No new query pa
 **Acceptance criteria:**
 
 - [ ] **AC-10.1** Given spec 022 When this feature ships Then it is version 1.6.0 and its new changelog row names spec 027 and AC-5.1, and its notes on the editor ("re-checks or clears" and "dislodged units, later") say what this spec decided (clear for units that move; dislodged units left to gem 0.3.0)
-- [ ] **AC-10.2** Given spec 024 When this feature ships Then it is version 1.2.0 and its new changelog row names spec 027 and AC-7.9 (`Game#edit_position!` is a third caller of `broadcast_seat_status`), and its AC-2.7 reads three
-- [ ] **AC-10.3** Given spec 026 When this feature ships Then it is version 1.2.0 and its new changelog row says its Seat history also lists position edits (spec 027 D4) and its Out of Scope line for #27 now says orders are cleared by edits that move units
-- [ ] **AC-10.4** Given `spec/docs/spec_amendments_spec.rb` When this feature ships Then its version assertions for specs 022 and 024 (1.5.0 and 1.1.0) are changed to the new versions, and examples for the rows of AC-10.1 to AC-10.3 are added
-- [ ] **AC-10.5** Given `web/docs/design-system.md` When this feature ships Then the catalog line for `.segmented` says "built" with #27 and its partial `shared/_segmented`, and the design-system spec checks it
-- [ ] **AC-10.6** Given `web/README.md` When this feature ships Then it tells the host where the editor is and that an edit that moves units clears everyone's orders
+- [ ] **AC-10.3** Given spec 024 When this feature ships Then it is version 1.2.0 and its new changelog row names spec 027 and AC-7.9 (`Game#edit_position!` is a third caller of `broadcast_seat_status`), and its AC-2.7(b) is amended to add `Game#edit_position!` to the callers of `broadcast_seat_status` in `game.rb`, and the status scan's example title and its `reissue_seat!` body check stand, with only the count hash going to three
+- [ ] **AC-10.2** Given spec 023 When this feature ships Then it is version 1.2.0 and its new changelog row names spec 027 and AC-5.1, and its line about #27 "re-check or clear" says what this spec decided
+- [ ] **AC-10.4** Given spec 026 When this feature ships Then it is version 1.2.0 and its new changelog row says its Seat history also lists position edits (spec 027 D4) and its Out of Scope line for #27 now says orders are cleared by edits that move units
+- [ ] **AC-10.5** Given `spec/docs/spec_amendments_spec.rb` When this feature ships Then its version assertions for specs 022, 023 and 024 (1.5.0, 1.1.0 and 1.1.0) are changed to the new versions, and examples for the rows of AC-10.1 to AC-10.4 are added
+- [ ] **AC-10.6** Given `web/docs/design-system.md` When this feature ships Then the catalog line for `.segmented` says "built" with #27 and its partial `shared/_segmented`, and the design-system spec checks it
+- [ ] **AC-10.7** Given `web/README.md` When this feature ships Then it tells the host where the editor is and that an edit that moves units clears everyone's orders
 
 ## Functional Requirements
 
