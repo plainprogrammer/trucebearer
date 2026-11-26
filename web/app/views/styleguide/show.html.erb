@@ -272,6 +272,13 @@
     <%= seat_status(sample_powers.map { |power| Phase::Status.new(power: power, submitted: %w[england france].include?(power)) }, id: "sg-seat-status-mix") %>
   </section>
 
+  <section data-component="segmented" class="stack" aria-labelledby="sg-segmented">
+    <h2 id="sg-segmented">Segmented toggle</h2>
+    <p>A choice of two or three, drawn as joined buttons. The radios stay real radios, so it works by touch, by keyboard and with no script.</p>
+    <%= render "shared/segmented", legend: "Unit, army selected", name: "sg-unit-army", options: [ %w[army Army], %w[fleet Fleet] ], selected: "army" %>
+    <%= render "shared/segmented", legend: "Unit, fleet selected", name: "sg-unit-fleet", options: [ %w[army Army], %w[fleet Fleet] ], selected: "fleet" %>
+  </section>
+
   <% player_group, reading_group = sample_result_groups %>
   <section data-component="results" class="stack" aria-labelledby="sg-results">
     <h2 id="sg-results">Results</h2>

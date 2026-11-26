@@ -1,7 +1,7 @@
 # Feature 024: Show live submission status
 
 **Status:** Approved
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #24
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.0 | 2026-11-26 | Amended by spec 027 (the position editor, #27).<br>• AC-2.7(b): `broadcast_seat_status` is named in `app/models/game.rb` for its definition, `reissue_seat!` and `edit_position!` (a third caller: an edit that moves units withdraws submissions and tells the stream once, after the commit, as the reissue does; AC-7.9). The scan's example title and its `reissue_seat!` body check stand; its count of `game.rb` goes from two to three and an `edit_position!` body check is added. No other count changes. |
 | 1.1.0 | 2026-11-26 | Amended by spec 025 (reveal results to every phone, #25).<br>• AC-2.7 allows a second broadcast method, `broadcast_results_refresh` in `app/models/game.rb`, called once from `Phase#reveal!`, on a stream of its own (`results:<public id>`); the status stream and its payload proof (AC-3.1) are unchanged, and nothing else broadcasts.<br>• AC-4.1 is read as "each of the seat page and the host page holds exactly one **status** source and one results source"; the order screen and the picker hold the results source only.<br>• AC-4.5 is read as "the signed **status** name appears only on the seat page and the host page; the signed **results** name also appears on the seat's own order screen and picker", and the sweep verifies each name rather than matching the text.<br>• The Known limit "after a reveal the seat page is half stale" is closed: a reveal refreshes every subscribed page, and the seat page then shows the new phase and the results (spec 025 D1). Every other criterion holds unchanged. |
 | 1.0.2 | 2026-11-26 | Found by the implementation review, wording only: AC-8.2 also lists spec 022's AC-7.4 (the seat page shows its own count and the seven-power status list), which the amendment already does; origins are lowercased as well as stripped of a trailing slash (D5), because a browser writes the Origin header in lowercase |
 | 1.0.1 | 2026-11-26 | Found while planning, within what Gate A approved: whitespace between a row's two elements is allowed by the payload allowlist (AC-3.1) |
@@ -109,7 +110,7 @@ Gate A settled D1, D2, D4, D5 and D7, and ruled that the reconnect snapshot is I
 - [ ] **AC-2.4** Given the host reissues England's seat while England has submitted Then one broadcast goes out, and the list reads England "Not submitted"
 - [ ] **AC-2.5** Given the host reveals When the next phase opens Then one broadcast goes out and all seven rows read "Not submitted"; a reveal that finds the phase already revealed (`:already`) sends none
 - [ ] **AC-2.6** Given Seat#save_orders! runs and raises (stale seat, revealed phase, refused order) Then nothing is broadcast
-- [ ] **AC-2.7** Given the app code Then, enforced by a scan spec in the style of `seat_write_scan_spec`: (a) `Submission` rows are created or destroyed (`Submission.create/new/delete/destroy`, or `submissions.` followed by `create`, `find_or_create_by`, `destroy` or `delete`) only in `app/models/seat.rb`, the `has_many :submissions, dependent: :destroy` associations being the only other mention; (b) `broadcast_seat_status` is named only in `app/models/game.rb` (its definition and `reissue_seat!`), `app/models/seat.rb` (`save_orders!`) and `app/models/phase.rb` (`reveal!`); and (c) `Turbo::StreamsChannel`, `broadcasts` and any other `broadcast_…` method are named in `app/` and `lib/` only in `app/models/game.rb`, inside `broadcast_seat_status`
+- [ ] **AC-2.7** Given the app code Then, enforced by a scan spec in the style of `seat_write_scan_spec`: (a) `Submission` rows are created or destroyed (`Submission.create/new/delete/destroy`, or `submissions.` followed by `create`, `find_or_create_by`, `destroy` or `delete`) only in `app/models/seat.rb`, the `has_many :submissions, dependent: :destroy` associations being the only other mention; (b) `broadcast_seat_status` is named only in `app/models/game.rb` (its definition, `reissue_seat!` and, since spec 027, `edit_position!`), `app/models/seat.rb` (`save_orders!`) and `app/models/phase.rb` (`reveal!`); and (c) `Turbo::StreamsChannel`, `broadcasts` and any other `broadcast_…` method are named in `app/` and `lib/` only in `app/models/game.rb`, inside `broadcast_seat_status`
 
 ### Story 3: Nothing about an order is ever in a broadcast
 

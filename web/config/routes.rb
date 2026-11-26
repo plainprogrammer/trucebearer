@@ -44,6 +44,20 @@ Rails.application.routes.draw do
     get "host/phases/:number/results", to: "host_results#show", as: :game_host_results, constraints: { number: %r{[^/]+} }
     get "host/phases/:number/reveal", to: "reveals#show", as: :game_reveal, constraints: { number: %r{[^/]+} }
     post "host/phases/:number/reveal", to: "reveals#create", as: nil, constraints: { number: %r{[^/]+} }
+
+    # The host's position editor (spec 027). Host only; the phase number is matched in the controller, as the reveal's is.
+    scope "host/phases/:number/position", constraints: { number: %r{[^/]+} } do
+      get "/", to: "positions#show", as: :game_position
+      get "units/new", to: "position_units#new", as: :new_game_position_unit
+      post "units", to: "position_units#create", as: :game_position_units
+      get "units/:province", to: "position_units#show", as: :game_position_unit, constraints: { province: %r{[^/]+} }
+      patch "units/:province", to: "position_units#update", constraints: { province: %r{[^/]+} }
+      delete "units/:province", to: "position_units#destroy", constraints: { province: %r{[^/]+} }
+      get "owners", to: "position_owners#show", as: :game_position_owners
+      put "owners", to: "position_owners#update"
+      get "date", to: "position_dates#show", as: :game_position_date
+      put "date", to: "position_dates#update"
+    end
   end
 
   get "join", to: "joins#index", as: :join
