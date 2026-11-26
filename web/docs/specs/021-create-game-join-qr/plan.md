@@ -1,7 +1,7 @@
 # Plan 021: Create a game and join it by QR code
 
 **Spec:** `web/docs/specs/021-create-game-join-qr/spec.md` v1.2.1 (Approved at Gate A)
-**Issue:** #21 · **Branch:** `web/21-create-game-join-qr` · **Plan version:** 1.1.0 (after the first Opus review; see the table at the end)
+**Issue:** #21 · **Branch:** `web/21-create-game-join-qr` · **Plan version:** 1.2.0 (after the second Opus review; see the tables at the end)
 
 ## Goal
 
@@ -89,7 +89,7 @@ RSpec.describe "Creating a game", type: :request do
 end
 ```
 
-Run `bundle exec rspec spec/requests/games_spec.rb` and watch it fail for the route. Commit the failing spec on its own ("Add the failing request spec for creating a game").
+Run `bundle exec rspec spec/requests/games_spec.rb` and watch it fail with the `NameError` for `Game` (1a above). Commit the failing spec on its own ("Add the failing request spec for creating a game").
 
 ### 1b. Plain-Ruby units (red, then green)
 
@@ -475,7 +475,7 @@ class GamesController < ApplicationController
 end
 ```
 
-Views: `games/new.html.erb` (title "Create a game", one `h1`, an error paragraph with `role="alert"` when `@error`, `form_with url: games_path` holding a `.field` whose `label` reads "Passphrase" and whose input is `type="text"`, `name="passphrase"`, `autocomplete="off"`, `autocapitalize="off"` and has no `value`, so a wrong guess is never echoed back (spec FR-5); then `<%= power_tiles %>` inside the form); `games/turned_off.html.erb` (an `h1` that is the sentence "Creating games is turned off on this instance. Ask whoever runs it." and a link home); `strangers/show.html.erb` (`<h1>We can't find that page.</h1>` and a link home); `strangers/too_many.html.erb` (one `h1` that is the sentence "Too many tries. Wait a few minutes and try again." and nothing else in `main`, so the sentence is the only text besides the page's header, AC-8.8).
+Views: `games/new.html.erb` (title "Create a game", one `h1`, an error paragraph with `role="alert"` when `@error`, `form_with url: games_path` holding a `.field` whose `label` reads "Passphrase" and whose input is `type="text"`, `name="passphrase"`, `autocomplete="off"`, `autocapitalize="off"` and has no `value`, so a wrong guess is never echoed back (spec FR-5); then `<%= power_tiles %>` inside the form); `games/turned_off.html.erb` (an `h1` that is the sentence "Creating games is turned off on this instance. Ask whoever runs it." and a link home with `class="button button--secondary"`); `strangers/show.html.erb` (`<h1>We can't find that page.</h1>` and a link home with `class="button button--secondary"`); `strangers/too_many.html.erb` (one `h1` that is the sentence "Too many tries. Wait a few minutes and try again." and nothing else in `main`, so the sentence is the only text besides the page's header, AC-8.8).
 
 `app/helpers/power_tiles_helper.rb`:
 
@@ -539,7 +539,7 @@ Config:
 
 ### 1e. More request examples in `games_spec.rb` (red first, then green)
 
-Written before the controller code in 1d, in the same file as 1a: AC-1.1 (`GET /games/new` shows a passphrase field and seven `button.power-tile` with the seven names, no game exists); AC-1.4 (a table of guesses: `""`, missing, one short `"open sesam"`, one long `"open sesamee"`, a case change `"Open sesame"` each give 422, the same message, and a body equal to the body for `"wrong"`); AC-1.5 (right passphrase, power `""`, missing, `"narnia"` give 422 "Pick one of the seven powers." and no game); AC-1.6 (`ENV[...] = nil` and `"  "`: `GET /games/new` and `POST /games` give 403, the text "Creating games is turned off on this instance. Ask whoever runs it.", no `name="passphrase"` field, no game, and `expect(Rails.logger).to receive(:warn).with(/TRUCEBEARER_PASSPHRASE/)`); AC-1.7 (`allow(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original`, then a post makes it receive two 64-character digests; and with `Rails.logger.broadcast_to(Logger.new(io))` for the example (removed in `ensure`; `ActionController::LogSubscriber` logs through the broadcast logger, not through a swapped-in object) the log `io` contains `[FILTERED]` for the passphrase and does not contain `open sesame`); AC-11.2 (stub `allow(Rails.configuration).to receive(:force_ssl).and_return(true)`, `https!`, post; then the `host_` and `seat_` lines (from `cookie_line`) match `/;\s*httponly/i`, `/;\s*samesite=lax/i` and `/;\s*secure/i`; with it stubbed `false` they match the first two and not the third; the session cookie line, if present, matches the first two); AC-11.3 (the raw `host_<id>` value is not the host token, and `ActionDispatch::Cookies::CookieJar.build(request, cookies.to_hash).signed["host_#{game.public_id}"]` verifies; since the host token is only on the next page, the example reads the seat token the same way and checks `Token.match?(that, seat.token_digest)`).
+Written before the controller code in 1d, in the same file as 1a: AC-1.1 (`GET /games/new` shows a passphrase field and seven `button.power-tile` with the seven names, no game exists); AC-1.4 (a table of guesses: `""`, missing, one short `"open sesam"`, one long `"open sesamee"`, a case change `"Open sesame"` each give 422, the same message, and a body equal to the body for `"wrong"`); AC-1.5 (right passphrase, power `""`, missing, `"narnia"` give 422 "Pick one of the seven powers." and no game); AC-1.6 (`ENV[...] = nil` and `"  "`: `GET /games/new` and `POST /games` give 403, the text "Creating games is turned off on this instance. Ask whoever runs it.", no `name="passphrase"` field, no game, and `expect(Rails.logger).to receive(:warn).with(/TRUCEBEARER_PASSPHRASE/)`); AC-1.7 (`allow(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original`, then a post makes it receive two 64-character digests; and with `Rails.logger.broadcast_to(Logger.new(io))` for the example (removed in `ensure`; `ActionController::LogSubscriber` logs through the broadcast logger, not through a swapped-in object) the log `io` contains `[FILTERED]` for the passphrase and does not contain `open sesame`); AC-11.2 (stub `allow(Rails.configuration).to receive(:force_ssl).and_return(true)`, `https!`, post; then the `host_` and `seat_` lines (from `cookie_line`) match `/;\s*httponly/i`, `/;\s*samesite=lax/i` and `/;\s*secure/i`; with it stubbed `false` they match the first two and not the third; the session cookie line (the flash writes it after a successful post, so it must be present) matches the first two); AC-11.3 (the raw `host_<id>` value is not the host token, and `ActionDispatch::Cookies::CookieJar.build(request, cookies.to_hash).signed["host_#{game.public_id}"]` verifies; since the host token is only on the next page, the example reads the seat token the same way and checks `Token.match?(that, seat.token_digest)`).
 
 **Verify Phase 1:** `bundle exec rspec spec/requests/games_spec.rb spec/models spec/config` green, then the whole suite green (the layout, styleguide and words specs read new files: `words_spec` forbids the trademarked name in new files, and nothing here contains it). Run `bin/rails db:migrate` and commit `db/schema.rb`. Commits: one for the red spec, then one per green step ("Add tokens, join codes and the passphrase", "Add the games and seats tables", "Create a game with the instance passphrase").
 
@@ -659,7 +659,7 @@ end
     </ul>
   </section>
 
-  <p><%= link_to "Your own seat", game_path(@game.public_id) %></p>
+  <%= link_to "Your own seat", game_path(@game.public_id), class: "button button--secondary" %>
 </div>
 ```
 
@@ -734,7 +734,7 @@ end
 - AC-2.2, 5.6: for `host-link` and for `seat-link` alike, a wrong token, an empty token, a missing token and an unknown game each give the stranger page (404, `We can't find that page.`) with no `host_` or `seat_` `Set-Cookie` value, and `Referrer-Policy: no-referrer`.
 - AC-2.3: the host page for a phone with the cookie shows `.host-section`; for a phone without, with a cookie for another game, and with the seat cookie only, the stranger page.
 - AC-2.5: a phone with a valid host cookie and valid seat cookie requests a wrong-token `host-link`, a wrong-token `seat-link`, and `/games/<id>/host` carrying the seat cookie only after the host cookie is removed; both cookies still verify afterwards (read with `host?`-equivalent: `GET /games/<id>/host` still gives 200 and `GET /games/<id>` still gives 200).
-- AC-5.5: the sameness table. For each of four conditions (no cookie; a junk cookie named for the id in the path; a valid cookie of another game; the existing game's own valid seat cookie sent on the host page, which both requests carry) it requests `/games/<existing id>/host` and `/games/<missing id>/host`, and compares status, normalized body, and the headers `Content-Type`, `Cache-Control`, `Referrer-Policy` and the `host_`/`seat_` `Set-Cookie` lines with the id replaced by `ID`. A small helper `comparable(response, id)` in `spec/support/responses.rb` returns that tuple.
+- AC-5.5: the sameness table. For each of four conditions (no cookie; a junk cookie named for the id in the path; a valid cookie of another game; the existing game's own valid seat cookie sent on the host page, which both requests carry) it requests, for each of `/games/<id>` and `/games/<id>/host`, the existing game's path and a missing game's path, and compares status, normalized body, and the headers `Content-Type`, `Cache-Control`, `Referrer-Policy` and the `host_`/`seat_` `Set-Cookie` lines with the id replaced by `ID`. A small helper `comparable(response, id)` in `spec/support/responses.rb` returns that tuple.
 - AC-3.1 to 3.3: the host page has `.qr-card svg[role=img]`, `.join-code` text `ABC DEF` for the game's code, and `.qr-card__link` text `https://play.example.org/join/<code>` when requested with `headers: { "HOST" => "play.example.org" }` after `https!`; the svg equals `qr_code_svg(that url, "QR code to join the game")` (rendered through `ApplicationController.helpers`); with another host name (and `http`) it follows the request and differs; with a port (`"HOST" => "play.example.org:8443"`) the URL includes the port.
 - AC-3.8: the page has no `img`, no `script` outside the importmap tags, no `fill`/`style` attribute in the `svg`, and every `src`/`href` on the page is relative or the page's own host (the QR card's link text is text, not a `href`).
 - AC-4.10: a phone with a valid seat sees `/games/<id>` with its badge name and no other seat's details; a stranger sees the stranger page.
@@ -796,7 +796,7 @@ class JoinSeatsController < ApplicationController
     power = RulesEngine.powers.find { |candidate| candidate.id.to_s == params[:power].to_s }
     return tiles_error(game, "Pick one of the seven powers.") unless power
 
-    seat, token = game.take_seat!(power.id.to_s)
+    _seat, token = game.take_seat!(power.id.to_s)
     remember(:seat, game, token)
     redirect_to game_path(game.public_id)
   rescue Game::SeatTaken
@@ -887,7 +887,7 @@ class ReissuesController < ApplicationController
 end
 ```
 
-Views use `.stack`, `.button`, `.button--danger`, `.button--secondary` and `button_to`. `closings/show` (title "Close joining"): `h1`, "Closing cannot be undone. The players who joined keep their seats. Nobody new can join with the code.", `button_to "Close joining", game_close_path(@game.public_id), class: "button button--danger"`, a "Back" link to the host page. `reissues/show` (title "Reissue a seat"): `h1` "Reissue <power name>", "The phone that holds this seat loses it at once. Show the new QR code to the player who takes it over.", `button_to "Reissue seat", game_reissue_path(@game.public_id, @seat.power), class: "button button--danger"`, a "Back" link. `reissues/qr` (title "New seat code"; `turbo-cache-control` meta): `qr_card(game_seat_link_url(@game.public_id, token: @token), label: "QR code for this seat", caption: power_badge(@seat.power))` and the sentence "Scan this once. It cannot be shown again."
+Views use `.stack`, `.button`, `.button--danger`, `.button--secondary` and `button_to`. `closings/show` (title "Close joining"): `h1`, "Closing cannot be undone. The players who joined keep their seats. Nobody new can join with the code.", `button_to "Close joining", game_close_path(@game.public_id), class: "button button--danger"`, a "Back" link to the host page (`class="button button--secondary"`). `reissues/show` (title "Reissue a seat"): `h1` "Reissue <power name>", "The phone that holds this seat loses it at once. Show the new QR code to the player who takes it over.", `button_to "Reissue seat", game_reissue_path(@game.public_id, @seat.power), class: "button button--danger"`, a "Back" link (`class="button button--secondary"`). `reissues/qr` (title "New seat code"; `turbo-cache-control` meta): `qr_card(game_seat_link_url(@game.public_id, token: @token), label: "QR code for this seat", caption: power_badge(@seat.power))` and the sentence "Scan this once. It cannot be shown again."
 
 Specs (red first), in `closing_spec.rb`: AC-6.1 (the page says "cannot be undone", has a danger button posting to the same path, and a link back); AC-6.2 (post closes, redirects to the host page, which says "Joining is closed." and has no `.qr-card` and no `.join-code`); AC-6.4 (a request without the host cookie, with a seat cookie only, shows the stranger page and `joining_closed_at` stays nil, for both GET and POST); AC-6.5 (a second post changes nothing: `updated_at` and `joining_closed_at` are the same). `reissue_spec.rb`: AC-7.1 (the host page lists seven rows: taken ones link to `/games/<id>/host/seats/<power>/reissue`, open ones say "Open"); AC-7.2 (the confirm page says the old phone loses the seat at once); AC-7.3 (post replaces `token_digest` and redirects to `/qr`); AC-7.4 (the qr page after the redirect has the card with the power badge, `.qr-card__link` equal to `http://www.example.com/games/<id>/seat-link?token=<32 chars>`, the svg equals `qr_code_svg` of that URL, `Cache-Control: no-store`, the turbo meta; a second GET redirects to the host page whose `[role=status]` says "shown once"); AC-7.5 (the old seat cookie, sent after the reissue, gets the stranger page and a deletion `Set-Cookie` for `seat_<id>`; the same session's host cookie is untouched); AC-7.6 (a fresh session opens the new link: sets `seat_<id>`, redirects to `/games/<id>`, whose `h1` names the power); AC-7.7 (the old token in a seat link gives the stranger page and sets no `seat_` value); AC-7.8 (a power with no seat, and `"narnia"`: both the GET and the POST give the stranger page and nothing changes); AC-7.9 (without the host cookie both give the stranger page and the digest is unchanged); AC-7.10 (the host reissues their own power; the host's old seat cookie then fails).
 
@@ -903,6 +903,13 @@ Specs (red first), in `closing_spec.rb`: AC-6.1 (the page says "cannot be undone
 
 ```ruby
 RSpec.describe "Rate limits", type: :request do
+  around do |example|
+    original = ENV["TRUCEBEARER_PASSPHRASE"]
+    example.run
+  ensure
+    ENV["TRUCEBEARER_PASSPHRASE"] = original
+  end
+
   let(:code) { Game.start!(power: "england").game.join_code }
   let(:one_address) { { "REMOTE_ADDR" => "203.0.113.7" } }
   let(:other_address) { { "REMOTE_ADDR" => "203.0.113.8" } }
@@ -932,8 +939,6 @@ RSpec.describe "Rate limits", type: :request do
     10.times { post "/games", params: { passphrase: "wrong", power: "england" }, headers: one_address }
     expect { post "/games", params: { passphrase: "open sesame", power: "england" }, headers: one_address }.not_to change(Game, :count)
     expect(limited?).to be(true)
-  ensure
-    ENV["TRUCEBEARER_PASSPHRASE"] = nil
   end
 
   it "limits host links and seat links together to 20 a minute (AC-8.6)" do
@@ -953,20 +958,19 @@ RSpec.describe "Rate limits", type: :request do
 
   it "answers every bucket with the same status and body (AC-8.8)" do
     ENV["TRUCEBEARER_PASSPHRASE"] = "open sesame"
-    bodies = []
+    responses = []
     11.times { post "/games", params: { passphrase: "x", power: "england" }, headers: one_address }
-    bodies << response.body
+    responses << [ response.status, response.body ]
     31.times { get "/join/#{code}", headers: { "REMOTE_ADDR" => "203.0.113.20" } }
-    bodies << response.body
+    responses << [ response.status, response.body ]
     31.times { post "/join/#{code}/seat", params: { power: "narnia" }, headers: { "REMOTE_ADDR" => "203.0.113.21" } }
-    bodies << response.body
+    responses << [ response.status, response.body ]
     21.times { get "/games/x/host-link", params: { token: "t" }, headers: { "REMOTE_ADDR" => "203.0.113.22" } }
-    bodies << response.body
+    responses << [ response.status, response.body ]
 
-    expect(response).to have_http_status(:too_many_requests)
-    expect(bodies.map { |body| body.gsub(/\s+/, " ") }.uniq.size).to eq(1)
-  ensure
-    ENV["TRUCEBEARER_PASSPHRASE"] = nil
+    expect(responses.map(&:first)).to all(eq(429))
+    expect(responses.map { |_status, body| body.gsub(/\s+/, " ") }.uniq.size).to eq(1)
+    expect(Nokogiri::HTML5(responses.first.last).at_css("main").text.strip).to eq("Too many tries. Wait a few minutes and try again.")
   end
 
   it "shares one bucket across an IPv6 /64 and keeps an IPv4 address apart (AC-8.9)" do
@@ -1146,7 +1150,7 @@ Add to `Contrast::DOCUMENTED_PAIRS` in `spec/support/stylesheets.rb` and, in the
 ### 6d. Production config, deploy, README
 
 - `config/environments/production.rb`: uncomment `config.assume_ssl = true`. **Pending the maintainer:** uncomment `config.force_ssl = true` and `config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }`. If the maintainer declines `force_ssl`, only `assume_ssl` is set and `GameAccess#remember` takes `secure: Rails.env.production?` in place of `Rails.configuration.force_ssl`; the AC-11.2 examples then stub `Rails.env`, and the force-ssl lines of `production_config_spec` are dropped.
-- `spec/config/production_config_spec.rb` (AC-11.4): reads `config/environments/production.rb` as text, strips comments, and expects `config.assume_ssl = true` (and, pending, `config.force_ssl = true` and an `ssl_options` redirect excluding `/up`); and an example wraps `Rails.application` in `ActionDispatch::SSL.new(app)` with an `https` request to a page that sets the flash session cookie, and expects its `Set-Cookie` to include `secure`.
+- `spec/config/production_config_spec.rb` (AC-11.4): reads `config/environments/production.rb` as text, strips comments, and expects `config.assume_ssl = true` (and, pending, `config.force_ssl = true` and an `ssl_options` redirect excluding `/up`); and an example wraps `Rails.application` in `ActionDispatch::SSL.new(app)` makes an `https` request that is a correct `POST /games` (the flash write is what sets the session cookie in test), and expects every `Set-Cookie` line of the response, the session cookie included, to include `secure`.
 - `config/deploy.yml`: `env.secret` gains `- TRUCEBEARER_PASSPHRASE`. `.kamal/secrets`: add `TRUCEBEARER_PASSPHRASE=$TRUCEBEARER_PASSPHRASE` (read from the deploy machine's environment; no value in the file).
 - `README.md`: a short section "Playtest access": what `TRUCEBEARER_PASSPHRASE` is, that creating games is refused (403) when it is unset or blank, that host and seat links carry a token in the query string which proxy and tunnel logs and browser history may keep, and that the host token cannot be rotated.
 
@@ -1160,8 +1164,8 @@ Add to `Contrast::DOCUMENTED_PAIRS` in `spec/support/stylesheets.rb` and, in the
 
 `styleguide_layout_spec.rb`: `tappable` gains `".power-tile:not(.power-tile--taken)"`. Two new examples at 360 pixels:
 
-- AC-9.7: every `.join-code` has the class `mono`; its computed font size is at least that of a probe element given `font-size: var(--text-2xl)` (the probe is created in the page with `document.createElement` and a class from `.sg-type-step--2xl`, which the style guide already has); it fits (`scrollWidth <= clientWidth`) and is one line (`height < 1.5 * font size * line height`, read from `getBoundingClientRect` and the computed `line-height`).
-- AC-9.3: `.power-tile--taken` has a computed `border-top-style` of `dashed` and the same computed `color` as an element with the `text-muted` class; an open `button.power-tile` has `solid`.
+- AC-9.7: every `.join-code` has the class `mono`; its computed font size is at least that of a probe element given `font-size: var(--text-2xl)` (the probe is created in the page with `document.createElement` and a class from `.sg-type-step--2xl`, which the style guide already has); it fits (`scrollWidth <= clientWidth`) and is one line (`getBoundingClientRect().height < 1.5 * parseFloat(getComputedStyle(el).lineHeight)`, the computed line height being in pixels).
+- AC-9.3: `.power-tile--taken` has a computed `border-top-style` of `dashed`, a `background-color` of `rgb(255, 255, 255)` and the same computed `color` as an element with the `text-muted` class; an open `button.power-tile` has `solid`.
 - AC-9.8: each `.qr-card` has a computed `background-color` of `rgb(255, 255, 255)` (the `surface` token); for each `.qr-card__code`, `getBoundingClientRect().width >= 200`; and the quiet zone, in modules, is at least 4 on every side: with `scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width` and `path.getBoundingClientRect()`, `(path.left - svg.left) / scale >= 4 - 0.05`, the same for the top, and `(svg.right - path.right) / scale` and `(svg.bottom - path.bottom) / scale` at least `4 - 0.05`.
 
 `create_and_join_spec.rb`:
@@ -1287,7 +1291,7 @@ end
 
 (The fields have the labels "Passphrase" and "Game code"; the buttons are "Join" and the tile names. The host's `current_path` is the host page because the redirect landed there.) Every screen the host and players pass through is measured for sideways scroll at 360.
 
-`spec/system/screens_layout_spec.rb` covers every screen the feature adds, at 360 and 768 (AC-9.2, 10.4). It makes a game with `Game.start!`, signs in the browser by visiting a host link and a seat link, then for each of these paths visits it and checks `scrollWidth <= clientWidth` and that every `a, button, input, select, .power-tile:not(.power-tile--taken)` in `main` is at least 44 by 44 (half a pixel of tolerance, as in the style guide spec): `/`, `/games/new`, `/games/new` with the variable unset (the turned-off page), `/join`, `/join/<code>`, `/join/ZZZZZZ` (the not-open page), `/games/<id>` as a seat holder, `/games/<id>/host`, `/games/<id>/host/close`, `/games/<id>/host/seats/<power>/reissue`, `/games/<id>/host/seats/<power>/qr` (reached by posting the reissue form, since the page is shown once), `/games/<id>` as a stranger (the stranger page), and a 429 page (31 quick visits to `/join/<code>`). Each path is checked with `expect(page).to have_css("h1")` first, so a blank page cannot pass.
+`spec/system/screens_layout_spec.rb` covers every screen the feature adds, at 360 and 768 (AC-9.2, 10.4). It makes a game with `Game.start!`. Screens a signed-out phone sees are visited first, in a fresh session, and each visit asserts it reached the screen (the named element or text below); then the browser is signed in by visiting a host link and a seat link, and the signed-in screens follow. For each visit it first asserts `have_css("h1")`, then checks `scrollWidth <= clientWidth` and that every tappable control in `main` is at least 44 by 44 (half a pixel of tolerance, as in the style guide spec). Tappable means `a:not(p a), button, input:not([type=hidden]), select, .power-tile:not(.power-tile--taken)`; a link inside a paragraph is running text and exempt, as in the existing spec, and every other link on these screens is a `.button` or a `.list__row`. Signed out: `/`, `/games/new`, `/games/new` with the variable unset (text "turned off"), `/join`, `/join/<code>` (`button.power-tile` present), `/join/ZZZZZZ` (the not-open text), `/games/<id>` and `/games/<id>/host` (each with the text "We can't find that page."), and the 429 page (31 quick visits to `/join/<code>`). Signed in: `/games/<id>` (`h1` "You hold"), `/games/<id>/host`, `/games/<id>/host/close`, `/games/<id>/host/seats/<power>/reissue`, and `/games/<id>/host/seats/<power>/qr` reached by posting the reissue form (the page is shown once).
 
 **Verify Phase 7:** `bundle exec rspec spec/system` green (needs Chrome), then the whole suite. Commit: "Test creating and joining a game in a real browser".
 
@@ -1340,3 +1344,12 @@ end
 | NB1 to NB13 | `RQRCodeCore::QRCodeRunTimeError`; the support file is required; Phase 1a's stated failure reason; `turned_off` in the file list; `power_name` defined and used; one notice slot in the layout; `Referrer-Policy` declared before `rate_limit`; cookie deletion only for a 12-character id; AC-5.5 setup written out; the passphrase field's label and no echo; the AC-1.8 token check; Rails' own `no_store`; `require "rails_helper"` in each spec |
 | Coverage gaps | AC-9.2 and 10.4: `screens_layout_spec.rb` at 360 and 768 over every new screen; AC-9.3: computed style of the taken tile; AC-9.6: an example on the design-system page; AC-9.8: the card's white ground; AC-8.8: the 429 page's `h1` is the sentence; AC-5.6: seat-link cases |
 | NB14 (trailer name) | Not changed: this session's attribution line is "Claude Sonnet 5.5" |
+
+## Changes after the Opus plan review (round 2)
+
+| Finding | Change |
+|---|---|
+| B1 plain links cannot reach 44 by 44 | Standalone links (the stranger page's, the turned-off page's, "Back", "Your own seat") are `.button button--secondary`; links inside paragraphs are exempt, as in the existing spec |
+| B2 cookie state hid two screens | Signed-out screens are visited first, each asserting it was reached, then the browser signs in |
+| NB1 to NB9 | One-line check on the pixel line height; the session cookie must be present; the taken tile's white ground; the named page for the SSL middleware example; the passphrase restored in an `around` hook; every bucket's status collected; the Phase 1 sentence; `_seat`; the flash note goes in the PR |
+| Gap: AC-5.5 `/games/<id>` | The sameness table runs on both paths |
