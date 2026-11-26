@@ -89,9 +89,15 @@ RSpec.describe Trucebearer::Adjudicator::Order do
         expect { order.with(at: :xyz) }.to raise_error(TA::InvalidInput, /:xyz/)
       end
 
-      it "writes only plain data (AC-4.3)" do
-        expect(JSON.generate(order.to_h)).to be_a(String)
-        expect(order.to_h.values.grep(Symbol)).to be_empty
+      it "writes only plain data, with string keys all the way down (AC-4.3)" do
+        plain = lambda do |value|
+          case value
+          when Hash then value.all? { |k, v| k.is_a?(String) && plain.call(v) }
+          when Array then value.all? { plain.call(_1) }
+          else [String, Integer, true, false, nil].any? { |type| type === value }
+          end
+        end
+        expect(plain.call(order.to_h)).to be(true)
       end
     end
   end
@@ -183,7 +189,8 @@ RSpec.describe Trucebearer::Adjudicator::Order do
 
     it "round-trips each province in each province field of each class" do
       Board.provinces.each do |id|
-        orders = [O::Hold.new(power: :italy, at: id), O::MoveViaConvoy.new(power: :italy, at: id, to: id),
+        orders = [O::Hold.new(power: :italy, at: id), O::Move.new(power: :italy, at: id, destination: L.new(province: :nth)),
+                  O::MoveViaConvoy.new(power: :italy, at: id, to: id),
                   O::SupportHold.new(power: :italy, at: id, target: id), O::SupportMove.new(power: :italy, at: id, from: id, to: id),
                   O::Convoy.new(power: :italy, at: id, from: id, to: id)]
         orders.each do |order|

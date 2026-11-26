@@ -67,7 +67,7 @@ module Trucebearer
       end
 
       def canonical_standoffs(standoffs)
-        list = Shape.array!(standoffs, "standoffs").dup
+        list = Shape.array!(standoffs, "standoffs")
         list.each { |province| Shape.symbol_of(province, Shape::PROVINCES, "standoffs", "province") }
         Shape.unique!(list, "the standoff province is listed twice:")
         list.sort.freeze

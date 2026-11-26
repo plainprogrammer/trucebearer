@@ -61,9 +61,10 @@ module Trucebearer
         -value
       end
 
-      # Returns a new array, so the caller's array is never frozen or changed.
+      # Checks the list and returns it. The callers sort it into a new array before
+      # freezing, so the caller's own array is never frozen or changed.
       def list_of(value, klass, name)
-        array!(value, name).each { |element| instance_of!(element, klass, name) }.dup
+        array!(value, name).each { |element| instance_of!(element, klass, name) }
       end
 
       def array!(value, name)

@@ -85,7 +85,7 @@ RSpec.describe "docs/interface.md examples" do
   describe "TA::Order and its six classes, and the format examples" do
     it "gives the examples of the Value objects introduction and the Errors section" do
       expect { O.from_h({ "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput, /"format"/)
-      expect { O.from_h({ "format" => 2, "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput, /2/)
+      expect { O.from_h({ "format" => 2, "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput, /unknown format 2/)
       expect { O.from_h({ "format" => 1, "type" => "hold", "power" => "england" }) }.to raise_error(TA::InvalidInput, /"at"/)
       expect { O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "xyz" }) }.to raise_error(TA::InvalidInput, /"xyz"/)
       expect do

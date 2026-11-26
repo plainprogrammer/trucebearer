@@ -117,7 +117,7 @@ module Trucebearer
 
       # The position the game starts from: spring 1901, the movement phase, each power's
       # units, and each power owning its own home centers. The neutral centers are absent
-      # from ownership. Built on each call, since a frozen map cannot hold one.
+      # from ownership. Built on each call: the map is frozen, and Position and Unit load after it.
       def starting_position
         Position.new(
           map: id, season: :spring, year: 1901, phase: :movement,

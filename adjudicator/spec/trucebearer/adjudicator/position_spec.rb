@@ -53,7 +53,10 @@ RSpec.describe Trucebearer::Adjudicator::Position do
       expect(built.units).to eq([spa, stp])
       expect(built.dislodged_units).to eq([d_spa, d_stp])
       expect(built.standoffs).to eq(%i[bur ruh tyr])
-      expect(described_class.from_h(built.to_h).units).to eq([spa, stp])
+      rebuilt = described_class.from_h(built.to_h)
+      expect(rebuilt.units).to eq([spa, stp])
+      expect(rebuilt.dislodged_units).to eq([d_spa, d_stp])
+      expect(rebuilt.standoffs).to eq(%i[bur ruh tyr])
     end
 
     it "sorts the ownership it holds, as to_h writes it (AC-2.10)" do
@@ -75,7 +78,7 @@ RSpec.describe Trucebearer::Adjudicator::Position do
       refuse(/\{"power"/, units: [army.to_h])
       refuse(/"dislodged_units"/, dislodged_units: nil)
       refuse(/"x"/, dislodged_units: ["x"])
-      refuse(/1/, standoffs: [1])
+      refuse(/got 1\z/, standoffs: [1])
       refuse(/"standoffs"/, standoffs: "bur")
       refuse(/"bur"/, standoffs: ["bur"])
       refuse(/:xyz/, standoffs: [:xyz])
@@ -155,7 +158,7 @@ RSpec.describe Trucebearer::Adjudicator::Position do
       bad.call({ "units" => [valid_hash["units"].first.merge("format" => 1)] }, /"format"/)
       bad.call({ "units" => [valid_hash["units"].first.merge("location" => { "province" => "bud", "coast" => nil, "format" => 1 })] }, /"format"/)
       bad.call({ "standoffs" => [:bur] }, /:bur/)
-      bad.call({ "standoffs" => [1] }, /1/)
+      bad.call({ "standoffs" => [1] }, /got 1\z/)
       bad.call({ "dislodged_units" => ["x"] }, /"x"/)
       bad.call({ "ownership" => [] }, /\[\]/)
       bad.call({ "ownership" => { bud: "austria" } }, /:bud/)
