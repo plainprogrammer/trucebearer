@@ -15,7 +15,7 @@
 - **Test first.** Each phase writes its specs, runs them, and sees them fail for the right reason before it writes any code.
 - Run every command from `adjudicator/`. Spec files begin with `require "trucebearer/adjudicator"` and `require_relative "../../support/board"`. `.rspec` already loads `spec_helper`. Code files begin with `# frozen_string_literal: true`.
 - `TA`, `L` and `O` stand for `Trucebearer::Adjudicator`, `TA::Location` and `TA::Order`, as in `interface.md`.
-- Commit messages are plain imperative sentences, one commit per phase (plus the red first commit of Phase 1), each ending with the trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. One git operation per shell call.
+- Commit messages are plain imperative sentences, one commit per phase (plus the red first commit of Phase 1), each ending with the `Co-Authored-By:` trailer that the executing session's attribution reminder gives (at the time of writing, `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`). One git operation per shell call.
 - A phase is committed only when its own specs pass and the rest of the suite is green, with one exception: Phase 1, Step 1 commits the starting-position spec on its own, red, as the first code commit, so the history shows it was written first. Nothing is pushed before the end, so CI never sees a red commit. Until Phase 3 turns that spec green, the earlier phases run the suite with `--exclude-pattern "**/check_spec.rb"`.
 - Fixtures hold exactly the units and orders of their DATC case and nothing more. Extra checks go in ordinary specs.
 
@@ -109,7 +109,7 @@ RSpec.describe "TA.check" do
 end
 ```
 
-- [ ] **Step 2: run it and confirm it fails.** `bundle exec rspec spec/trucebearer/adjudicator/check_spec.rb` — expect: FAIL with `NameError: uninitialized constant Trucebearer::Adjudicator::CheckResult`.
+- [ ] **Step 2: run it and confirm it fails.** `bundle exec rspec spec/trucebearer/adjudicator/check_spec.rb` — expect: FAIL with `NoMethodError: undefined method 'check' for module Trucebearer::Adjudicator` (the call runs before `CheckResult` is looked up).
 - [ ] **Step 3: commit it, red, on its own.** `git add spec/trucebearer/adjudicator/check_spec.rb`, then `git commit -m "Add the first spec for checking an order, red"` (with the trailer).
 - [ ] **Step 4: write the `CheckResult` specs.** Create `spec/trucebearer/adjudicator/check_result_spec.rb`:
 
@@ -248,6 +248,10 @@ RSpec.describe TA::CheckResult do
     it "leaves its argument unchanged and accepts a frozen one (AC-1.7)" do
       hash = { "format" => 1, "legal" => false, "reasons" => ["no_unit"] }
       before = Marshal.load(Marshal.dump(hash))
+      refused_hash = good.merge("legal" => "yes", "reasons" => ["no_unit"])
+      refused_before = Marshal.load(Marshal.dump(refused_hash))
+      expect { described_class.from_h(refused_hash) }.to raise_error(TA::InvalidInput)
+      expect(refused_hash).to eq(refused_before)
       result = described_class.from_h(hash)
       expect(hash).to eq(before)
       hash["reasons"] << "own_province"
@@ -267,7 +271,7 @@ end
   - add to `bases`, after the `Convoy` entry (add the comma): `TA::CheckResult => -> { TA::CheckResult.new(legal: false, reasons: [:no_unit]) }`.
 
   The two `objects` entries make every generic example of that file (equal and deeply frozen after a round trip, `freeze: true`, the same bytes as a hand-built payload, hooks private, a payload that isn't a hash form, a missing or extra key) run for `CheckResult`. The three `spots` and the `bases` entry make a tampered payload raise `TA::InvalidInput` on load, as `from_h` would.
-- [ ] **Step 5: run and confirm the failure.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb spec/trucebearer/adjudicator/marshal_spec.rb` — expect: FAIL with `uninitialized constant Trucebearer::Adjudicator::CheckResult` (both files; `marshal_spec.rb` fails when it builds its `objects` list).
+- [ ] **Step 5: run and confirm the failure.** `bundle exec rspec spec/trucebearer/adjudicator/check_result_spec.rb spec/trucebearer/adjudicator/marshal_spec.rb` — expect: FAIL with `uninitialized constant Trucebearer::Adjudicator::CheckResult` (for `marshal_spec.rb` the failure comes at load, from the `spots` and `bases` entries that name `TA::CheckResult`; its `objects` entries are lambdas and run later).
 - [ ] **Step 6: implement.** Create `lib/trucebearer/adjudicator/check_result.rb`:
 
 ```ruby
@@ -375,7 +379,7 @@ RSpec.describe "TA::Reach (internal)" do
   let(:army) { ->(at) { Board.unit(:france, :army, at) } }
 
   it "is not reachable from outside the module (AC-9.6)" do
-    expect { TA::Reach }.to raise_error(NameError)
+    expect { TA::Reach }.to raise_error(NameError, /private constant/)
     expect { TA::Check }.to raise_error(NameError)
   end
 
@@ -392,7 +396,7 @@ RSpec.describe "TA::Reach (internal)" do
       expect(reach.step_coasts(fleet.("gas"), :spa)).to eq([:nc])
       expect(reach.step_coasts(fleet.("gol"), :spa)).to eq([:sc])
       expect(reach.step_coasts(fleet.("spa/nc"), :gol)).to eq([])
-      expect(reach.step_coasts(fleet.("spa/sc"), :gol)).to eq([:nil.to_proc.call(nil)].compact + [nil])
+      expect(reach.step_coasts(fleet.("spa/sc"), :gol)).to eq([nil])
       expect(reach.step_coasts(fleet.("lon"), :nth)).to eq([nil])
     end
 
@@ -480,8 +484,6 @@ RSpec.describe "TA::Reach (internal)" do
   end
 end
 ```
-
-Replace the one deliberately silly expectation before running: the line `expect(reach.step_coasts(fleet.("spa/sc"), :gol)).to eq([:nil.to_proc.call(nil)].compact + [nil])` must read `expect(reach.step_coasts(fleet.("spa/sc"), :gol)).to eq([nil])`.
 
 - [ ] **Step 3: run and confirm the failure.** `bundle exec rspec spec/trucebearer/adjudicator/reach_spec.rb` — expect: FAIL (`uninitialized constant Trucebearer::Adjudicator::Reach`, and `TA::Check` raising `NameError` already, which is a pass).
 - [ ] **Step 4: implement.** Create `lib/trucebearer/adjudicator/reach.rb`:
@@ -740,10 +742,11 @@ RSpec.configure { |config| config.include PrecedenceHelpers }
   end
 
   it "judges a support for a foreign unit like one for the supporter's own (AC-2.6)" do
-    own = O::SupportHold.new(power: :germany, at: :mun, target: :ber)
-    foreign = O::SupportHold.new(power: :italy, at: :ven, target: :tri)
-    expect(Board.verdict(start, own)).to eq([])
-    expect(Board.verdict(start, foreign)).to eq([])
+    order = O::SupportHold.new(power: :italy, at: :ven, target: :tri)
+    foreign = Board.position(Board.unit(:italy, :army, "ven"), Board.unit(:austria, :army, "tri"))
+    own = Board.position(Board.unit(:italy, :army, "ven"), Board.unit(:italy, :army, "tri"))
+    expect(TA.check(foreign, order)).to eq(TA.check(own, order))
+    expect(Board.verdict(foreign, order)).to eq([])
   end
 
   it "raises InvalidInput, naming the argument, for something that isn't a position or an order (AC-2.7)" do
@@ -1152,8 +1155,8 @@ RSpec.describe "TA.check: supports" do
     it "is :move_impossible when the supported unit couldn't move there itself (AC-5.4)" do
       two_armies = Board.position(u(:england, :army, "lon"), u(:england, :army, "bel"))
       expect(verdict(two_armies, move_support(:england, :lon, :bel, :yor))).to eq([:move_impossible])
-      fleet = Board.position(u(:italy, :fleet, "rom"), u(:italy, :army, "apu"))
-      expect(verdict(fleet, move_support(:italy, :rom, :apu, :ven))).to eq([:not_reachable])
+      supported_fleet = Board.position(u(:italy, :army, "tus"), u(:italy, :fleet, "rom"))
+      expect(verdict(supported_fleet, move_support(:italy, :tus, :rom, :ven))).to eq([:move_impossible])
       fleets = Board.position(u(:france, :fleet, "wes"), u(:france, :fleet, "gas"))
       expect(verdict(fleets, move_support(:france, :wes, :gas, :spa))).to eq([])
     end
@@ -1479,6 +1482,11 @@ RSpec.describe "TA.check: the reasons table" do
                      u(:england, :army, "lon"), u(:russia, :fleet, "stp/sc"), u(:france, :fleet, "spa/nc"),
                      u(:turkey, :fleet, "bul/ec"), u(:italy, :army, "tus"), u(:germany, :fleet, "kie"))
     end
+    # The other three split coasts, so units stand on all six.
+    let(:other_coasts) do
+      Board.position(u(:russia, :fleet, "stp/nc"), u(:france, :fleet, "spa/sc"), u(:turkey, :fleet, "bul/sc"),
+                     u(:italy, :fleet, "ion"), u(:austria, :army, "tri"))
+    end
 
     def all_orders(power, at, provinces)
       locations = Board.locations
@@ -1494,7 +1502,7 @@ RSpec.describe "TA.check: the reasons table" do
 
     it "never raises, and every result agrees with itself, for every order of every unit" do
       provinces = Board.provinces
-      [start, at_sea].each do |position|
+      [start, at_sea, other_coasts].each do |position|
         position.units.each do |unit|
           [unit.power, :turkey == unit.power ? :austria : :turkey].each do |power|
             all_orders(power, unit.location.province, provinces).each do |order|
@@ -1610,22 +1618,22 @@ require "trucebearer/adjudicator"
 require_relative "../support/datc"
 
 # Runs every DATC fixture through TA.check (AC-8.1), and keeps the set of fixtures
-# exactly the one the spec lists (AC-8.2). #14 adds its cases to ENCODED.
+# exactly the one the spec lists (AC-8.2). #14 adds its cases to `encoded`.
 RSpec.describe "DATC fixtures: checking" do
   # The cases encoded for checking: 6.A and 6.B, except the four left out, and three
   # from 6.D and 6.G that interface.md cites. See spec 011, "Cases encoded".
-  ENCODED = (
+  encoded = (
     (1..10).map { |n| "6.A.#{n}" } +
     [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18, 19].map { |n| "6.B.#{n}" } +
     %w[6.D.31 6.D.34 6.G.19]
   ).sort.freeze
-  LEFT_OUT = %w[6.A.11 6.A.12 6.B.9 6.B.14].freeze
+  left_out = %w[6.A.11 6.A.12 6.B.9 6.B.14].freeze
 
   it "has one fixture for each encoded case and no other (AC-8.2)" do
     names = Datc.files.map { |path| File.basename(path, ".yml") }
-    expect(ENCODED.size).to eq(30)
-    expect(names).to eq(ENCODED)
-    expect(names & LEFT_OUT).to eq([])
+    expect(encoded.size).to eq(30)
+    expect(names).to eq(encoded)
+    expect(names & left_out).to eq([])
   end
 
   it "marks only 6.B.2 and 6.B.12 as departures (AC-8.4)" do
@@ -1652,7 +1660,7 @@ RSpec.describe "DATC fixtures: checking" do
 end
 ```
 
-- [ ] **Step 3: run both and confirm the failures.** `bundle exec rspec spec/datc` — expect: FAIL with `cannot load such file -- ../support/datc`.
+- [ ] **Step 3: run both and confirm the failures.** `bundle exec rspec spec/datc` — expect: FAIL with a `LoadError` naming `spec/support/datc`.
 - [ ] **Step 4: write the loader.** Create `spec/support/datc.rb`:
 
 ```ruby
@@ -2197,12 +2205,18 @@ position:
     - {power: germany, type: army, at: sil}
     - {power: germany, type: fleet, at: bal}
     - {power: italy, type: army, at: pru}
+    - {power: russia, type: army, at: war}
+    - {power: russia, type: army, at: lvn}
 orders:
   - order: {type: move, power: germany, at: ber, destination: pru}
     check: {legal: true}
   - order: {type: support_move, power: germany, at: sil, from: ber, to: pru}
     check: {legal: true}
   - order: {type: support_move, power: germany, at: bal, from: ber, to: pru}
+    check: {legal: true}
+  - order: {type: support_move, power: russia, at: war, from: lvn, to: pru}
+    check: {legal: true}
+  - order: {type: move, power: russia, at: lvn, destination: pru}
     check: {legal: true}
   - order: {type: support_move, power: italy, at: pru, from: lvn, to: pru}
     check: {legal: false, reason: own_province}
@@ -2229,7 +2243,7 @@ orders:
 ```
 
 - [ ] **Step 7: run and confirm.** `bundle exec rspec spec/datc` — expect: all PASS (30 fixtures, about 90 order checks, the loader examples). If a fixture's result differs from what the contract gives, stop and work out whether the fixture or the code is wrong against `docs/interface.md` and the DATC section; if the contract itself is at fault, `ask`. Then `bundle exec rspec` — expect: no failures.
-- [ ] **Step 8: mutation check.** Temporarily change one expectation, for example `6.B.3.yml`'s `reason: coast_unreachable` to `reason: coast_required`, run `bundle exec rspec spec/datc/datc_check_spec.rb` — expect FAIL naming `6.B.3`. Restore it with `git checkout spec/datc/6.B.3.yml` (it is not committed yet: instead retype the line) and rerun — expect PASS.
+- [ ] **Step 8: mutation check.** Temporarily change one expectation, for example `6.B.3.yml`'s `reason: coast_unreachable` to `reason: coast_required`, run `bundle exec rspec spec/datc/datc_check_spec.rb` — expect FAIL naming `6.B.3`. Restore the line by hand (the file is not committed yet) and rerun — expect PASS.
 - [ ] **Step 9: commit.** `git add -A adjudicator`, then `git commit -m "Add the DATC fixtures for checking and their runner"` (with the trailer).
 
 ---
@@ -2335,7 +2349,7 @@ end
 - [ ] **Step 4: edit `CHANGELOG.md`.** Under "Unreleased" → "Added", append:
 
 ```markdown
-- `TA::CheckResult` and `TA.check(position, order)`: checking one movement order against a position, with the 17 rejection reasons and the precedence of `docs/interface.md`. A legal order has no reasons; an illegal one has exactly one. The DATC cases about legality (6.A, 6.B, and 6.D.31, 6.D.34, 6.G.19) are fixtures in `spec/datc/`, named by section number. The helpers `legal_orders` (#12) will share are internal. (#11)
+- `TA::CheckResult` and `TA.check(position, order)`: checking one movement order against a position, with the 17 rejection reasons and the precedence of `docs/interface.md`. A legal order has no reasons; an illegal one has exactly one. The DATC cases about legality (6.A, 6.B, and 6.D.31, 6.D.34, 6.G.19) are fixtures in `spec/datc/`, named by section number. `TA::CheckResult` keeps its guarantees through `Marshal`, like the other value objects. The helpers `legal_orders` (#12) will share are internal. (#11)
 ```
 
 and in the #10 entry replace the sentence `` `TA::CheckResult` arrives with #11, and `TA::Outcome` and `TA::Adjudication` with #14. (#10)`` with `` `TA::Outcome` and `TA::Adjudication` arrive with #14. (#10)``.
@@ -2351,7 +2365,7 @@ and in the #10 entry replace the sentence `` `TA::CheckResult` arrives with #11,
   - `bundle exec rspec` — expect: 0 failures (record the example count).
   - `bundle exec rake` — expect: exit 0.
   - `git diff --name-only main...HEAD` — expect: every path begins with `adjudicator/`, and `adjudicator/docs/interface.md` is not listed.
-  - `grep -rn "Dip" lib spec docs/specs/011-check-order | grep -v "Dip\\?" | head` — expect: no output (no name echoing the game's name: also scan for the trademarked name in full).
+  - `grep -rniE 'diplom|\bdip' lib spec data` — expect: no output (no name echoing the game's name in code, specs or fixtures). Read the spec and plan folder for the same by eye: this plan's own text never uses it.
 - [ ] **Step 7: commit.** `git add -A adjudicator`, then `git commit -m "Run the interface examples for checking and record the check choices"` (with the trailer).
 
 ---
