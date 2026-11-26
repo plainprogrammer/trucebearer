@@ -1,7 +1,7 @@
 # Feature 015: Adjudicate convoys
 
 **Status:** Approved
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #15
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | Initial draft |
+| 1.2.1 | 2026-11-26 | Wording only, from the plan review: AC-8.2 names `spec/support/reference.rb`, not `conditions.rb`, as the place the convoy conditions are restated (the reason is in the AC). No behavior changes; brought to the coordinator at Gate B |
 | 1.2.0 | 2026-11-26 | Gate A approved by the coordinator under the maintainer's delegation, as proposed. Two conditions: if the independent reference ever disagrees with the resolver on a board, or any pending case has exactly one consistent result, stop and ask (do not widen the rule inside the plan); and `ruleset.md` names which 4.A option 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on, so #39 can find them. Status is now Approved |
 | 1.1.1 | 2026-11-26 | Gate A review round 2 (approve, seven non-blocking): the reasoning paragraph and AC-5.4 no longer overclaim, AC-3.4 and the size bound of the reference (moves, not units) are fixed, and `CHECKING_ONLY` is said to be removed everywhere |
 | 1.1.0 | 2026-11-26 | Folded in the Gate A review (round 1, changes required, two blocking):<br>• The paradox rule is now "a residue after the ranges and circular movement is a paradox", with no search: the draft's search was under-specified (a guess can leave moves undecided) and its one-solution branch looks unreachable. The independent reference (AC-8.3, AC-5.4) is the guard, and a counting step is written only if a board shows the simple rule is wrong.<br>• Counts and wording of 6.F.27 and 6.F.28 corrected; AC-3.2, AC-3.4, AC-2.3, AC-2.4 and the 6.C.7 note corrected; AC-6.1, AC-6.5, AC-8.1, AC-8.3 made exact; AC-6.7 and AC-8.6 no longer pin outcomes of a flagged board; the loader says "must have no `result:`" |
@@ -293,7 +294,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 **Acceptance criteria:**
 
 - [ ] **AC-8.1** The generator makes boards with convoys: armies on the coast, fleets at sea that form chains of one to three, `Move`, `MoveViaConvoy` and `Convoy` orders (from own fleets and foreign fleets), attacks on carrying fleets, supporters attacked from the destination of a convoyed move, swaps by convoy, and circles with a convoyed move. At least 20 boards each hold a move that goes by convoy, a dislodged carrying fleet and a swap by convoy, counted by the spec from the orders and the result. The flagged-paradox minimum is AC-8.3's, since only the reference's flag is independent. The boards of #14 stay and still pass
-- [ ] **AC-8.2** On **every** board, `TA.adjudicate` returns an `Adjudication` and raises nothing, every unit appears once, and no unit is dislodged by a unit of its own power. When `paradox` is `false`, the result satisfies the conditions of spec 014 as extended for convoys (route, cut with a route, no head-to-head with a convoy), re-stated independently in `spec/support/conditions.rb` from the contract and the DATC, not from the resolver
+- [ ] **AC-8.2** On **every** board, `TA.adjudicate` returns an `Adjudication` and raises nothing, every unit appears once, and no unit is dislodged by a unit of its own power. When `paradox` is `false`, the result satisfies the conditions of spec 014 as extended for convoys (route, cut with a route, no head-to-head with a convoy), re-stated independently from the contract and the DATC, not from the resolver, in `spec/support/reference.rb` (the conditions of #14 in `conditions.rb` read the outcomes and assume every move has a route, so the convoy conditions live beside the reference and `conditions.rb` is unchanged)
 - [ ] **AC-8.3** On boards of at most 12 moves, a reference written in the spec, apart from the resolver, tries every set of move results (success or failure for each move), keeps those that satisfy the conditions, applies circular movement, and says the board holds a paradox when **none or more than one** is left. `paradox` equals that on every such board. Circular movement in the reference means this: a **circle** is moves each into the province the next one leaves, of three or more, or of two when at least one goes by convoy; a consistent set is **dropped** when some circle's moves all fail although flipping exactly the moves of that circle to success, and nothing else, gives another consistent set. At least 20 small boards are flagged, and at least 20 hold a convoy and are not
 - [ ] **AC-8.4** On every board, a flagged board holds at least one move that goes by convoy, and the converse is not claimed
 - [ ] **AC-8.5** A position of 34 units, with convoys, adjudicates in under a second
@@ -323,5 +324,5 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - The one place a route is decided is `Resolver#path?`, which #14 left as a stub. It becomes a three-valued question, `route(move)`, answering sure, lost or open, built on `Reach` with the carrying fleets only. `Reach` gets one new method that takes a set of seas, and its existing chain check calls it; nothing else in `reach.rb` or `check.rb` changes.
 - A fleet's dislodgement is three-valued like a support's cut: dislodged when some move into it has succeeded, not when every move into it has failed, open otherwise.
 - The strengths and the cut take the open route as a wider range. The ranges must stay sound: a range may be wider than the truth, never narrower, so a decision made from it holds under every outcome.
-- The reference of AC-8.3 is a small, slow, separate piece of spec code (`spec/support/`): it tries every set of results for at most 12 moves (6.F.28 has 12 moves, so its fixture is within the bound), and checks each against the conditions written in `conditions.rb`. It is not the resolver in disguise.
+- The reference of AC-8.3 is a small, slow, separate piece of spec code (`spec/support/`): it tries every set of results for at most 12 moves (6.F.28 has 12 moves, so its fixture is within the bound), and checks each against the conditions it states itself. It is not the resolver in disguise.
 - Fixtures are derived by hand from the DATC position and our own reading of the rules, with the contract's result names: for example, a convoy order whose army went by land is `:unmatched` where the DATC's own label differs (labels are free, DATC 4.E.2).

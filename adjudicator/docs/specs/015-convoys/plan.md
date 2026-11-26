@@ -1,6 +1,6 @@
 # Implementation Plan: Adjudicate convoys
 
-**Spec:** adjudicator/docs/specs/015-convoys/spec.md (v1.2.0, Approved at Gate A)
+**Spec:** adjudicator/docs/specs/015-convoys/spec.md (v1.2.1, Approved at Gate A; v1.2.1 is one wording patch, see "Decisions the plan settles")
 **Decisions:** none in `docs/adr/`. The recorded decisions are `docs/architecture.md` and the contract in `adjudicator/docs/interface.md`. The algorithm is spec 014's decision-based resolution, extended as in the spec's "How convoys are adjudicated". The Gate A rulings are in the spec's changelog.
 **Created:** 2026-11-26
 
@@ -24,10 +24,10 @@
 
 In the scratch copy, with every file of this plan applied:
 
-- The full suite: `2719 examples, 0 failures, 12 pending`; the 12 pending are the skipped "preferred result" examples of the twelve paradox cases, and nothing else. Spec 014's 80 cases and its random-board specs pass unchanged.
+- The full suite: `2720 examples, 0 failures, 12 pending`; the 12 pending are the skipped "preferred result" examples of the twelve paradox cases, and nothing else. Spec 014's 80 cases and its random-board specs pass unchanged.
 - All 58 convoy fixtures (46 encoded, 12 pending) were produced from the notation of Phase 3. The generator asserts the DATC's own success, failure, dislodgement and illegal-order marks for every case, and the flag for the twelve; its `PROBLEMS` list came out empty.
-- The reference of Phase 5 agrees with the resolver on all 58 cases: each encoded case has exactly one consistent result and it equals the fixture's; each pending case has none (6.F.16, 6.F.17, 6.F.18, 6.F.24, 6.F.27) or two (6.F.14, 6.F.15, 6.F.22, 6.F.23, 6.F.26, 6.F.28, 6.G.11).
-- The reference agrees with the resolver on about 6 600 seeded random convoy boards of 4 to 12 units (flag, and every result and dislodged mark when the flag is clear; about 10 % of boards are paradoxes), and on 300 boards of 13 to 34 units (valid, consistent).
+- The reference of Phase 5 agrees with the resolver on all 58 cases: each encoded case has exactly one consistent result and it equals the fixture's results, dislodged marks, attackers and by-convoy marks (only the standoffs are checked by hand, in Phase 3); each pending case has none (6.F.16, 6.F.17, 6.F.18, 6.F.24, 6.F.27) or two (6.F.14, 6.F.15, 6.F.22, 6.F.23, 6.F.26, 6.F.28, 6.G.11).
+- The reference agrees with the resolver on more than 17 000 seeded random convoy boards of 4 to 12 units, on many seeds (flag, and every result and dislodged mark when the flag is clear; about 10 % of boards are paradoxes), and on 300 boards of 13 to 34 units (valid, consistent). The plan reviewer ran about as many again on other seeds with the same result. No board was found where the flag is set and the reference finds exactly one result.
 - Mutations, each in the scratch resolver, each caught: widening an open route to full strength (1 of 1 000 boards, and the extra-support example of Phase 4); a move with an open route cuts (59 of 600); a route that needs every carrying fleet instead of one chain (34 of 1 000, and 6.F.9 to 6.F.11); a route kept alive by fleets that are surely dislodged (165 of 1 000). One more, circular movement that ignores routes, is equivalent on every board (an open route never sits in a circle), which is why AC-8.3 and the rule's wording both treat it as unreachable.
 
 ## Goal
@@ -56,6 +56,7 @@ In the scratch copy, with every file of this plan applied:
 | Fixtures | Written from the compact notation of Phase 3 by a one-off generator that is **not committed**. The DATC's marks are asserted by the generator; labels and standoffs come from the scratch resolver and are confirmed independently by the reference in Phase 5 | AC-6.1, AC-6.6 |
 | Pending cases | A `paradox: true` fixture with no `after:`; a `skip`ped "preferred result" example per case | AC-6.2 |
 | Reference | `spec/support/reference.rb`: tries every set of move results for at most 12 moves, derives every fact from them, keeps the consistent sets, applies the circle tie-break of AC-8.3 | AC-8.2, AC-8.3 |
+| Where the convoy conditions are restated | In `reference.rb`, not in `conditions.rb`. AC-8.2 named `conditions.rb`, but that file reads the outcomes of a board and assumes every move has a route; the convoy conditions need routes, cuts and dislodgements derived from a choice of results, which is what the reference does. `conditions.rb` is unchanged and still checks the convoy-free boards. **This is a wording departure from AC-8.2, patched into the spec as v1.2.1 and brought to the coordinator at Gate B** | AC-8.2 |
 | Split | None: about 960 added lines of code, specs and docs apart from fixtures, under the spec's 1 200 threshold. One pull request | Open Question 4 |
 
 ## Phases at a glance
@@ -157,7 +158,7 @@ Run it: it fails (`unknown key "paradox"`, `undefined method paradox`).
 
 ### 3.1 The notation and the generator (a scratch tool, never committed)
 
-Create a scratch directory outside the repository (for example under the session scratchpad), copy `adjudicator/` into it as `proto/`, and apply Phases 4 and 5's `lib/` code to the copy (this is the resolver the fixtures are read from). Put the two files below in a `gen/` folder beside it. `cases.rb` is the data: each unit is written `"<A|F> <prov>[/coast]<order>"`, where the order is `-dest` (a move), `-dest via` (move via convoy), ` c from-to` (convoy), ` s from-to` (support move), ` s prov` (support hold) or ` h` (hold), and the flags after `;` are the DATC's own marks, read from the reference copy and not quoted: `S` the move succeeds, `F` it fails, `D` the unit is dislodged, `I` the order is illegal. The generator refuses to write a fixture unless every flag holds, the legality of every order matches its `I`, and the paradox flag equals "is in `PARADOX`".
+Create a scratch directory outside the repository (for example under the session scratchpad), copy `adjudicator/` into it as `proto/`, and apply Phase 4's Steps 2 and 3 (`Reach.linked?` and the resolver patch) to the copy; this is the resolver the fixtures are read from. Phase 5 adds no `lib/` code. The fields of a fixture beyond the DATC's own marks (labels, attackers, standoffs) therefore come from the implementation until Phase 5; Phase 5's reference confirms the results, dislodged marks, attackers and by-convoy marks independently, and only the standoffs rest on the hand review of Step 2. Put the two files below in a `gen/` folder beside it, and `mkdir -p gen/out`. `cases.rb` is the data: each unit is written `"<A|F> <prov>[/coast]<order>"`, where the order is `-dest` (a move), `-dest via` (move via convoy), ` c from-to` (convoy), ` s from-to` (support move), ` s prov` (support hold) or ` h` (hold), and the flags after `;` are the DATC's own marks, read from the reference copy and not quoted: `S` the move succeeds, `F` it fails, `D` the unit is dislodged, `I` the order is illegal. The generator refuses to write a fixture unless every flag holds, the legality of every order matches its `I`, and the paradox flag equals "is in `PARADOX`".
 
 `gen/cases.rb`:
 
@@ -320,7 +321,7 @@ CASES = {
   "6.G.10" => ["A move explicitly via convoy is not a head-to-head battle",
                { england: ["A nwy-swe via ;S", "F den s nwy-swe", "F fin s nwy-swe"], germany: ["F ska c nwy-swe"],
                  russia: ["A swe-nwy ;F,D", "F bar s swe-nwy"], france: ["F nwg-nwy ;F", "F nth s nwg-nwy"] }],
-  "6.G.11" => ["A convoy to a neighbor, ordered via convoy, whose own support-cut decides its fleet",
+  "6.G.11" => ["A move to a neighbor whose own fleet sets the route, and whose support cut decides that fleet",
                { england: ["F nwy s nth-ska", "F nth-ska"], russia: ["A swe-nwy", "F ska c swe-nwy", "F bar s swe-nwy"] }],
   "6.G.12" => ["Two armies swap with two convoys, both explicitly via convoy",
                { england: ["A lvp-edi via ;S", "F nao c lvp-edi", "F nwg c lvp-edi"],
@@ -363,8 +364,6 @@ require_relative "cases"
 require "board"
 
 OUT = ARGV.fetch(0)
-LOC = ->(text) { prov, coast = text.split("/"); [prov.to_sym, coast&.to_sym] }
-UNIT = %r{\A([AF]) (\w+(?:/\w+)?)}
 
 def parse(text, power)
   main, flags = text.split(";").map(&:strip)
@@ -489,7 +488,7 @@ puts "\nPROBLEMS:", problems
 ```
 
 - [ ] **Step 1:** run it. Expected: 58 lines `<id> paradox=<bool> …`, then `PROBLEMS:` with nothing after it, and 58 files in `gen/out/`. A problem line is a case the scratch resolver gets wrong against the DATC's marks: fix the resolver (Phase 4), never the marks.
-- [ ] **Step 2: review the labels and standoffs by hand.** The DATC's marks fix who moves and who is dislodged. Everything else in a fixture is our reading, and Phase 5's reference confirms it independently. Check the ones that are not obvious from the DATC listing:
+- [ ] **Step 2: review the labels and standoffs by hand.** The DATC's marks fix who moves and who is dislodged. Everything else in a fixture is our reading. Check the ones that are not obvious from the DATC listing, and every standoff:
 
 | Case | What to see in the generated file |
 |---|---|
@@ -506,17 +505,24 @@ puts "\nPROBLEMS:", problems
 
 ### 3.2 The constants and the runners (spec first, then code)
 
-- [ ] **Step 4: the checking runner.** In `spec/datc/datc_check_spec.rb`:
+- [ ] **Step 4: the checking runner.** In `spec/datc/datc_check_spec.rb`, replace the header comment's second line and the comment above `encoded`, the `encoded` line, and the count:
 
 ```ruby
-# header: "#14 added its cases through Datc::ADJUDICATED, and #15 added the convoy cases to it
-# and the paradox cases that wait for #39 (Datc::PARADOX_PENDING)."
+# exactly the one the specs list (AC-8.2). #14 added its cases through Datc::ADJUDICATED, and
+# #15 added the convoy cases to it and the paradox cases that wait for #39 (Datc::PARADOX_PENDING).
+RSpec.describe "DATC fixtures: checking" do
+  # Every fixture is run for checking: the cases adjudicated (Datc::ADJUDICATED), which include
+  # all of 6.A and 6.B except the two left out, and the convoy paradoxes that wait for #39.
+  # See spec 011, "Cases encoded", spec 014 and spec 015, "DATC cases".
   encoded = (Datc::ADJUDICATED + Datc::PARADOX_PENDING).sort.freeze
-  ...
+  left_out = %w[6.B.9 6.B.14].freeze
+
+  it "has one fixture for each encoded case and no other (AC-8.2)" do
+    names = Datc.files.map { |path| File.basename(path, ".yml") }
     expect(encoded.size).to eq(138)
 ```
 
-- [ ] **Step 5: the adjudication runner.** In `spec/datc/datc_adjudicate_spec.rb` replace the first example's body and add the paradox section at the end of the file:
+- [ ] **Step 5: the adjudication runner.** In `spec/datc/datc_adjudicate_spec.rb` replace the first example's body and add the paradox section at the end of the file, inside the `RSpec.describe` block and before its closing `end` (with `disable_monkey_patching!` a top-level `describe` would fail):
 
 ```ruby
   it "has an after: in exactly the encoded files, and in none of the cases left out (AC-11.2)" do
@@ -599,8 +605,8 @@ Also update the file's header comment to say the paradox cases are tested only f
 
 (`CHECKING_ONLY` is deleted.) Confirm from a console: `Datc::ADJUDICATED.size` is 126 and `Datc::PARADOX_PENDING.size` is 12.
 
-- [ ] **Step 7: batches.** Commit the encoded fixtures with their runner changes in three commits by section, then the pending ones: "Encode the convoy cases of 6.B to 6.E" (6.B.18, 6.B.19, 6.C.4 to 6.C.7, 6.D.6, 6.D.16, 6.E.11), "Encode the convoy cases of 6.F" (6.F.2 to 6.F.13, 6.F.19 to 6.F.21, 6.F.25, 6.F.29, 6.F.30), "Encode the convoy cases of 6.G" (6.G.1 to 6.G.10, 6.G.12 to 6.G.20), and, last, copy the 12 pending files from `gen/out/` and commit "Encode the twelve convoy paradoxes that wait for #39". The constants and runner edits go in the first commit; the suite is red (the stub resolver) from then on until Phase 4, except the loader, checking and legality specs.
-- [ ] **Step 8:** run `bundle exec rspec spec/datc`. Expected before Phase 4: the checking runner is green (every order's `check:` holds, 138 files); the adjudication runner is red for the convoy cases (46 minus those the stub happens to get right) and for the twelve flags; the DATC overlap check is run in Phase 6.
+- [ ] **Step 7: batches.** Commit the encoded fixtures with their runner changes in three commits by section, then the pending ones: "Encode the convoy cases of 6.B to 6.E" (6.B.18, 6.B.19, 6.C.4 to 6.C.7, 6.D.6, 6.D.16, 6.E.11), "Encode the convoy cases of 6.F" (6.F.2 to 6.F.13, 6.F.19 to 6.F.21, 6.F.25, 6.F.29, 6.F.30), "Encode the convoy cases of 6.G" (6.G.1 to 6.G.10, 6.G.12 to 6.G.20), and, last, copy the 12 pending files from `gen/out/` and commit "Encode the twelve convoy paradoxes that wait for #39". The constants and runner edits go in the first commit. From then on the suite is red until Phase 4: the checking runner's file-count example is red until the last batch has landed, and the adjudication runner is red for the convoy cases (the stub resolver) from the first batch.
+- [ ] **Step 8:** run `bundle exec rspec spec/datc`. Expected before Phase 4, once the last batch is in: the checking runner is green (every order's `check:` holds, 138 files); the adjudication runner is red for the convoy cases (46 minus those the stub happens to get right) and for the twelve flags. The DATC overlap check is run in Phase 6.
 
 ---
 
@@ -659,7 +665,7 @@ RSpec.describe "TA.adjudicate: convoys" do
       expect(results(result, 2)).to eq(%i[succeeded unmatched])
     end
 
-    it "uses a route made of other powers' fleets, and needs no help from the fleet that gave the intent (6.G.6)" do
+    it "carries an army over a fleet of another power that gives a matching convoy order (6.F.10, 6.F.11)" do
       units = [u(:england, :army, "lon"), u(:england, :fleet, "eng"), u(:germany, :fleet, "nth"), u(:france, :army, "bel")]
       result = run(units, [mv(:england, :lon, "bel"), cv(:germany, :nth, :lon, :bel)])
       expect(results(result, 2)).to eq(%i[bounced given])
@@ -825,7 +831,7 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/reach_spec.rb spec/trucebear
 
 ```diff
 --- lib/trucebearer/adjudicator/resolver.rb	2026-11-26 03:04:40
-+++ /private/tmp/claude-501/-Users-james-orca-workspaces-trucebearer-tb-15-convoys/f5b8b8d3-56a5-4b94-ac88-3c8b6c7f0396/scratchpad/proto/lib/trucebearer/adjudicator/resolver.rb	2026-11-26 03:34:30
++++ /private/tmp/claude-501/-Users-james-orca-workspaces-trucebearer-tb-15-convoys/f5b8b8d3-56a5-4b94-ac88-3c8b6c7f0396/scratchpad/proto/lib/trucebearer/adjudicator/resolver.rb	2026-11-26 03:57:15
 @@ -6,12 +6,16 @@
    module Adjudicator
      # Internal: decides every move of a movement phase, following the decision-based approach
@@ -907,7 +913,7 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/reach_spec.rb spec/trucebear
 +        Reach.linked?(possible, move.province, move.destination) ? :open : :lost
 +      end
 +
-+      # Only called once everything is decided (by `result`, `standoffs`).
++      # Only called once everything is decided (by `result`).
 +      def path?(move) = route(move) == :sure
 +
 +      # true when some move into the unit's province has succeeded, false when none can,
@@ -951,8 +957,12 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/reach_spec.rb spec/trucebear
          @paradox = true
        end
  
-@@ -187,11 +222,17 @@
-       # Moves that wait on each other in a circle of three or more units, each into the
+@@ -184,14 +219,20 @@
+         progressed
+       end
+ 
+-      # Moves that wait on each other in a circle of three or more units, each into the
++      # Moves that wait on each other in a circle (see `circle?`), each into the
        # province the next one leaves, all succeed (circular movement).
        def circle_pass
 -        circles = cycles.select { |circle| circle.size >= 3 }
@@ -1053,6 +1063,7 @@ Run `bundle exec rspec spec/trucebearer/adjudicator/reach_spec.rb spec/trucebear
     def self.adjudicate(position, orders) = Adjudicate.call(position, orders)
 ```
 
+- [ ] **Step 4b: the stale text.** Reword these example names, which still describe the stub; none changes behavior. In `adjudicate_battles_spec.rb`, `whose convoy order is unmatched in this release (AC-9.2)` becomes `whose convoy order is unmatched, since no army moves by convoy (AC-9.2)`. In `adjudicate_random_spec.rb`, `never sets the paradox flag; the last-resort branch can't run unseen (AC-12.2)` becomes `never sets the paradox flag: without a convoy no move can wait on a route (AC-12.2)`. The resolver's own comments (the header, `paradox`, `path?`, the `circle_pass` comment) are already in the patch of Step 3.
 - [ ] **Step 5:** run `bundle exec rspec`. Expected: 0 failures, 12 pending (the twelve skipped "preferred result" examples, and nothing else). The `by_sea` and `paradox_pos` examples pass for real. Run `bundle exec rake`.
 - [ ] **Step 6:** commit "Give convoys a route and flag the paradox".
 
@@ -1272,6 +1283,15 @@ module Reference
 
   def paradox?(entries) = solutions(entries).size != 1
 
+  # {dislodged province => [the attacker's province, whether it went by convoy]} under `success`.
+  def attackers(entries, success)
+    facts = facts(entries, success)
+    facts[:dislodged].select { |_, dislodged| dislodged }.to_h do |entry, _|
+      move = facts[:into][entry.province].find { |candidate| success[candidate] }
+      [entry.province, [move.province, facts[:convoyed].include?(move)]]
+    end
+  end
+
   # The result symbol each entry's order must get, and whether it is dislodged, under `success`.
   def results(entries, success)
     facts = facts(entries, success)
@@ -1332,9 +1352,24 @@ RSpec.describe "DATC fixtures: the reference of the conditions" do
               expect(fixture.result).to eq(:void)
             end
           end
+          recorded = kase.after.dislodged_units.to_h { |lost| [lost.unit.location.province, [lost.attacker_from, lost.by_convoy]] }
+          expect(Reference.attackers(entries, solutions.first)).to eq(recorded)
         end
       end
     end
+  end
+
+  # The two named ways a paradox shows (AC-5.3): two consistent results, and none.
+  it "finds two results for the simplest paradox (the paradox_pos example) and none for the betrayal case" do
+    units = [Board.unit(:england, :fleet, "lon"), Board.unit(:england, :fleet, "wal"),
+             Board.unit(:france, :army, "bre"), Board.unit(:france, :fleet, "eng")]
+    orders = [O::Move.new(power: :england, at: :wal, destination: L.new(province: :eng)),
+              O::SupportMove.new(power: :england, at: :lon, from: :wal, to: :eng),
+              O::Move.new(power: :france, at: :bre, destination: L.new(province: :lon)),
+              O::Convoy.new(power: :france, at: :eng, from: :bre, to: :lon)]
+    expect(Reference.solutions(Reference.entries(Board.position(*units), orders)).size).to eq(2)
+    betrayal = Datc.load_all.find { |kase| kase.id == "6.F.18" }
+    expect(Reference.solutions(Reference.entries(betrayal.position, betrayal.entries.map(&:order))).size).to eq(0)
   end
 end
 ```
@@ -1374,7 +1409,11 @@ module RandomConvoyBoards
     end
     path += alternative(rng, units, orders, army, from, path, to) if path.size == 1 && rng.rand < 0.5
     2.times { attack_carrier(rng, units, orders, path, to) if rng.rand < 0.7 }
-    swap(rng, units, orders, from, to) if rng.rand < 0.25
+    if rng.rand < 0.25
+      swap(rng, units, orders, from, to)
+    elsif rng.rand < 0.8
+      circle(rng, units, orders, from, to)
+    end
     fill(rng, units, size)
     position = Board.position(*units.values)
     given = orders.map(&:at)
@@ -1452,6 +1491,23 @@ module RandomConvoyBoards
 
     other = place(units, rng, :army, to)
     orders << O::Move.new(power: other.power, at: to, destination: L.new(province: from))
+  end
+
+  # The convoyed army's destination holds an army that moves to a province next to both ends
+  # on land, whose army moves to the convoyed army's province: a circle of three.
+  def circle(rng, units, orders, from, to)
+    return if units.key?(to)
+
+    options = RandomBoards::LAND.select do |other|
+      !units.key?(other) && RandomBoards::NEIGHBORS[to].include?(other) && RandomBoards::NEIGHBORS[other].include?(from)
+    end
+    return if options.empty?
+
+    other = options.sample(random: rng)
+    second = place(units, rng, :army, to)
+    third = place(units, rng, :army, other)
+    orders << O::Move.new(power: second.power, at: to, destination: L.new(province: other))
+    orders << O::Move.new(power: third.power, at: other, destination: L.new(province: from))
   end
 
   def fill(rng, units, size)
@@ -1551,10 +1607,12 @@ RSpec.describe "TA.adjudicate on random boards with convoys" do
       counts[:convoyed] += 1 if entries.any? { |entry| entry.move? && Reference.convoy?(entry, entries) }
       counts[:carrier_dislodged] += 1 if adjudication.outcomes.any? { |o| o.order.is_a?(O::Convoy) && o.result == :disrupted }
       counts[:swap_by_convoy] += 1 if Reference.circles(entries).any? { |circle| circle.size == 2 }
+      counts[:circle_with_convoy] += 1 if Reference.circles(entries).any? { |circle| circle.size >= 3 && circle.any? { |move| Reference.convoy?(move, entries) } }
       counts[:paradox] += 1 if Reference.paradox?(entries)
       counts[:convoyed_no_paradox] += 1 if entries.any? { |entry| entry.move? && Reference.convoy?(entry, entries) } && !Reference.paradox?(entries)
     end
-    expect(counts.values_at(:convoyed, :carrier_dislodged, :swap_by_convoy, :paradox, :convoyed_no_paradox).min).to be >= 20, counts.inspect
+    expect(counts.values_at(:convoyed, :carrier_dislodged, :swap_by_convoy, :circle_with_convoy, :paradox, :convoyed_no_paradox).min).to be >= 20,
+           counts.inspect
   end
 
   it "gives a result that is consistent with the conditions on every large board with no paradox flagged (AC-8.2)" do
@@ -1604,15 +1662,62 @@ RSpec.describe "TA.adjudicate on random boards with convoys" do
 end
 ```
 
-Run both files: green (about 3 s). The existing `adjudicate_random_spec.rb` stays as it is: its boards hold no convoy, so its "never sets the paradox flag" example still states what is true of them.
+Run both files: green (about 3 s). The reference spec also compares each fixture's dislodged units (`attacker_from` and `by_convoy`) with the reference, and names the two ways a paradox shows (AC-5.3): two results for `paradox_pos` and none for 6.F.18. The existing `adjudicate_random_spec.rb` stays as it is: its boards hold no convoy, so its "never sets the paradox flag" example still states what is true of them.
 - [ ] **Step 5: mutation check.** In the scratch copy only (never in the repository), make each of these changes to `resolver.rb`, run `bundle exec rspec spec/datc spec/trucebearer/adjudicator`, see failures, and restore the file: (a) in `widen`, `else [0, strength[1]]` becomes `else strength`; (b) in `cuts?`, an open route returns `true`; (c) in `route`, `safe` requires every carrying fleet instead of one chain; (d) in `route`, `possible` ignores dislodgement. Each must fail at least one example. (The scratch run saw 1, 59, 34 and 165 failing boards of 1 000, 600, 1 000 and 1 000, and the fixtures and the convoys spec fail too.)
-- [ ] **Step 6:** `bundle exec rake`; commit "Check convoys against a brute-force reference and on random boards".
+- [ ] **Step 6: the wide sweep (AC-5.4).** In the scratch copy, run the sweep script below for seeds 1 to 5 (`bundle exec ruby -I lib -I spec/support ../gen/random_check.rb 2000 <seed>`). It compares the resolver with the reference on 2 000 boards a run, prints counts and a `PROBLEMS` list. Expected: `PROBLEMS (0)` every time. **A problem line is a stop-and-ask (Global Constraints), not a thing to fix inside the plan.** Add up the boards and note whether any had the flag set while the reference found exactly one result; Phase 6 records the finding in the spec.
+
+```ruby
+module RSpec; def self.configure; end; end
+require "trucebearer/adjudicator"
+require "board"
+require "reference"
+require "random_convoy_boards"
+
+N = Integer(ARGV.fetch(0, "300"))
+rng = Random.new(Integer(ARGV.fetch(1, "15")))
+stats = Hash.new(0)
+problems = []
+N.times do |index|
+  position, orders = RandomConvoyBoards.board(rng)
+  adj = TA.adjudicate(position, orders)
+  ref = Reference.entries(position, orders)
+  stats[:boards] += 1
+  stats[:convoyed] += 1 if ref.any? { |e| e.move? && Reference.convoy?(e, ref) }
+  moves = ref.count(&:move?)
+  if moves > 12
+    stats[:skipped] += 1
+    next
+  end
+  sols = Reference.solutions(ref)
+  paradox = sols.size != 1
+  stats[:paradox] += 1 if paradox
+  stats[:small] += 1
+  if adj.paradox != paradox
+    problems << "board #{index}: resolver flag #{adj.paradox}, reference solutions #{sols.size}"
+    next
+  end
+  stats[:swap_etc] += 1
+  next if paradox
+
+  want = Reference.results(ref, sols.first)
+  ref.each do |entry|
+    out = adj.outcomes.find { |o| o.order == entry.order && o.submitted } || adj.outcomes.find { |o| o.order.at == entry.province && !o.submitted }
+    got = [out.result, out.dislodged]
+    problems << "board #{index} #{entry.province}: resolver #{got.inspect}, reference #{want[entry].inspect}" unless got == want[entry]
+  end
+  stats[:carrier_dislodged] += 1 if want.any? { |e, (r, d)| e.order.is_a?(O::Convoy) && d }
+end
+puts stats.inspect
+puts "PROBLEMS (#{problems.size}):", problems.first(15)
+```
+
+- [ ] **Step 7:** `bundle exec rake`; commit "Check convoys against a brute-force reference and on random boards".
 
 ---
 
 ## Phase 6: The records and the final checks
 
-**Implements:** AC-9.1 to AC-9.3, AC-6.6 (the overlap check), AC-7.3. **Files:** `docs/ruleset.md`, `CHANGELOG.md`.
+**Implements:** AC-9.1 to AC-9.3, AC-5.4 (the review clause), AC-6.6 (the overlap check), AC-7.3. **Files:** `docs/ruleset.md`, `CHANGELOG.md`, `docs/specs/015-convoys/spec.md` (a changelog row).
 
 - [ ] **Step 1: `docs/ruleset.md`.** Delete the row `4.A.1, 4.A.3 | (Temporary) Does a convoy route work in this build? ...`. Replace the existing `4.A.1` row with:
 
@@ -1620,13 +1725,18 @@ Run both files: green (about 3 s). The existing `adjudicate_random_spec.rb` stay
 | 4.A.1 | When does a convoy with several routes fail, and what carries a convoyed army? | Only when every route is broken. A route is a chain of fleets whose own legal convoy orders match the move, of any power; only dislodging a fleet breaks it, and an attack that fails to dislodge changes nothing | The DATC's preferred option. 6.F.9 to 6.F.13, 6.F.19 and 6.F.20 rest on it |
 ```
 
-Add after the `4.A.3` row:
+Add these rows directly after the new `4.A.1` row (so the 4.A rows stay together), and one after the `4.A.3` row:
 
 ```markdown
-| 4.A.2 | Does a convoyed army cut the support of a unit that supports an attack on one of the fleets that carry it? | Yes, like any move that has a route. No paradox rule (the older rulebooks' or Szykman's) is applied | 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on this together with the "every route broken" option of 4.A.1: with both, each has exactly one consistent result, so the flag is clear. A paradox rule added in #39 must leave these five unchanged; they are the cases to check first |
+| 4.A.2 | When the orders hold no paradox, does a convoyed army cut the support of a unit that supports an attack on one of the fleets that carry it? | Yes, like any move that has a route. No paradox rule (the older rulebooks' or Szykman's) is applied | 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on this together with the "every route broken" option of 4.A.1: with both, each has exactly one consistent result, so the flag is clear. For #39: a Szykman-style or 2000-style rule leaves these unchanged; the 1982 rule would change 6.F.20, 6.F.21 and 6.F.29, and disrupting a convoy when any one route is broken (option a of 4.A.1) would change 6.F.19 and 6.F.20. A paradox rule added in #39 must keep all five clear of the flag |
 | 4.A.2 | What does the engine do with orders that hold a convoy paradox? | It sets `paradox` and returns a valid result: the moves still undecided after strengths and circular movement all fail, and every other decision stands. Outcomes and where units end up are unspecified until #39. Paradox resolution is not attempted | 6.F.14 to 6.F.18, 6.F.22 to 6.F.24, 6.F.26 to 6.F.28 and 6.G.11 are fixtures that check the flag and a valid position only |
+```
+
+```markdown
 | 4.A.3, 5.B.9 | Can two units swap places when only one of them goes by convoy, and do circles with convoyed armies move? | Yes. A move that goes by convoy is never a head-to-head battle, so a swap with one convoy, a swap with two, and a circle that holds convoyed armies are circular movement, which succeeds when nothing else stops one of them and every route is sure | 6.C.4, 6.C.6, 6.E.11, 6.G.1, 6.G.5, 6.G.9, 6.G.12 |
 ```
+
+In the first `5.B.9` row, change "A circle of two is a head-to-head battle and is decided by strength" to "A circle of two plain moves is a head-to-head battle and is decided by strength; a swap in which one army goes by convoy is circular movement (see 4.A.3)".
 
 Replace the second `5.B.9` row (the one that says "#15 decides what it becomes") with:
 
@@ -1634,7 +1744,7 @@ Replace the second `5.B.9` row (the one that says "#15 decides what it becomes")
 | 5.B.9 | What if moves are still undecided when no rule applies? | They fail, and `paradox` is true: it is a convoy paradox (see 4.A.2). Without convoys it can't happen, which seeded random boards check | The DATC advises failing the non-hold orders of a cycle no rule decides |
 ```
 
-- [ ] **Step 2: `CHANGELOG.md`.** In the #14 entry under "Unreleased", "Added": change "adjudicating a movement phase with no convoys," to "adjudicating a movement phase,", and delete the sentence "**Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`." (the sentence about the DATC cases of 6.A to 6.E and 6.F.1 stays: it is still true). Add a new item below it:
+- [ ] **Step 2: `CHANGELOG.md`.** In the #14 entry under "Unreleased", "Added": change "adjudicating a movement phase with no convoys," to "adjudicating a movement phase,"; delete the sentence "The DATC cases of 6.A to 6.E that need no convoy, and 6.F.1, are fixtures in `spec/datc/` with their results; every result is also checked against the DATC's conditions on seeded random boards." only if it now reads wrongly (keep it: it is true); delete the bold sentence "**Convoy routing arrives with #15, before 0.2.0 ships:** until then a move that goes by convoy is `:no_route` and a legal convoy order is `:unmatched`." Add a new item below it:
 
 ```markdown
 - Convoys in `TA.adjudicate`: a move that goes by convoy needs a route of the fleets that convoy it and fails only when every route is broken; a convoy order is `:given`, `:disrupted` or `:unmatched`; a unit dislodged by a convoyed army has `by_convoy: true`; a swap by convoy and a circle that holds a convoyed army move; and `paradox` is set when the orders hold a convoy paradox, whose outcomes stay unspecified until #39. The DATC cases of 6.B to 6.G that need a convoy are fixtures with their results (126 adjudicated fixtures in all), the twelve paradox cases wait for #39 as fixtures that check the flag and a valid position, and a slow reference written in the specs, with seeded random boards that hold convoys, confirms them. (#15)
@@ -1667,12 +1777,15 @@ print('files', len(sys.argv) - 1, 'shared 8-word runs', total)
 ```
 
 ```
-python3 -I overlap.py $(git diff --name-only main...HEAD | sed 's|^adjudicator/||')
+python3 -I overlap.py $(git diff --name-only --diff-filter=d main...HEAD | sed 's|^adjudicator/||')
 ```
 
+(`--diff-filter=d` leaves out the deleted stub spec.)
+
 Expected: `shared 8-word runs 0`. Put the output in the pull request. A hit is a sentence to reword (the 6.E.3 fix of #14 is the precedent).
-- [ ] **Step 4: the final checks.** From `adjudicator/`: `bundle exec rspec` and `bundle exec rake` pass with 0 failures and 12 pending, and the 12 are the skipped paradox examples; `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is not among them; `grep -rn "pending \"convoys" spec` finds nothing; `grep -rn "last_resort\|temporary" lib spec` finds nothing that describes convoys as not working.
-- [ ] **Step 5:** commit "Record the convoy choices and the changelog entry".
+- [ ] **Step 4: record the sweep (AC-5.4).** Add a row to the changelog table of `spec.md` (version 1.2.2, wording only) that says how many boards the Phase 5 sweep compared (the spec's 500 and the sweeps of Step 6), and that no board was found whose flag was set while the reference found exactly one result, so the counting step of "Detecting a paradox" was not written. If one was found, that is a stop-and-ask, not an edit.
+- [ ] **Step 5: the final checks.** From `adjudicator/`: `bundle exec rspec` and `bundle exec rake` pass with 0 failures and 12 pending, and the 12 are the skipped paradox examples; `git diff --name-only main...HEAD` lists only paths under `adjudicator/`, and `docs/interface.md` is not among them; `grep -rn "pending \"convoys" spec` finds nothing; `grep -rniE "last[-_ ]resort|temporary|in this release" lib spec` finds nothing that describes convoys as not working.
+- [ ] **Step 6:** commit "Record the convoy choices and the changelog entry".
 
 ---
 
@@ -1685,7 +1798,7 @@ Expected: `shared 8-word runs 0`. Put the output in the pull request. A hit is a
 
 ## Self-review
 
-- **Spec coverage.** AC-1.x: Phase 1 and 4. AC-2.x and 3.x: the convoys spec and the fixtures (Phases 3 and 4). AC-4.x: 6.C.4 to 6.C.7 and the convoys spec. AC-5.1, 5.2, 5.5, 5.6: the paradox runner and the convoys spec; AC-5.3 and 5.4: the reference spec and the random spec. AC-6.1 to 6.7: Phases 2, 3 and 5. AC-7.x: Phase 4 and 6. AC-8.1 to 8.6: Phase 5. AC-9.1 to 9.3: Phase 6. No gap.
+- **Spec coverage.** AC-1.x: Phase 1 and 4. AC-2.x and 3.x: the convoys spec and the fixtures (Phases 3 and 4). AC-4.x: 6.C.4 to 6.C.7 and the convoys spec. AC-5.1, 5.2, 5.5, 5.6: the paradox runner and the convoys spec; AC-5.3: the named example of the reference spec; AC-5.4: the random spec, the wide sweep of Phase 5 Step 6 and the record of Phase 6 Step 4. AC-6.1 to 6.7: Phases 2, 3 and 5. AC-7.x: Phase 4 and 6. AC-8.1 to 8.6: Phase 5 (AC-8.2's `conditions.rb` is `reference.rb`, the departure of the decisions table). AC-9.1 to 9.3: Phase 6. No gap.
 - **Placeholders.** None: every code step shows code, and the generated files are produced by code that is in this plan.
 - **Type consistency.** `Datc::Case#paradox`, `Datc::ADJUDICATED`, `Datc::PARADOX_PENDING`, `Reach.linked?(seas, from, to)`, `Resolver#route`, `#dislodged_state`, `#widen`, `#circle?`, `#fail_residue`, `Reference.entries`, `.solutions`, `.results`, `.consistent?`, `.circles`, `.convoy?`, `.paradox?` and `RandomConvoyBoards.board(rng, size:)` are named the same in every phase.
 - **Size.** About 960 added lines of code, specs and docs apart from the 58 fixtures; one pull request.
