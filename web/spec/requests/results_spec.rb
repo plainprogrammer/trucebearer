@@ -117,6 +117,8 @@ RSpec.describe "Results after the reveal", type: :request do
       host.get href
       expect(host.response).to have_http_status(:ok)
     end
+    france_phone.get "/games/#{id}"
+    expect(france_phone.response.body).to include("Earlier results") # the seat page keeps its list (spec 025 D7)
   end
 
   describe "the four views of a revealed phase" do

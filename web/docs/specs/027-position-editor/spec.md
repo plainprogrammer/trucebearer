@@ -32,7 +32,7 @@ Players can already save orders in the next phase before the host has fixed the 
 - The host can add a unit, move a unit, remove a unit, set who owns a supply center, and set the season and year, all for the **open phase's position**.
 - Every edit is built as a new position by the rules engine, so an impossible board (two units in one province, a fleet inland, an army at sea, a missing or wrong coast) is refused by the engine, with a plain-word reason (D5), and nothing is stored.
 - An edit that changes where units stand clears every seat's saved orders and submission for the open phase. An edit of ownership, or of the season and year, clears nothing. Each seat is told on its own pages, and the submitted states on every phone follow through the existing status stream.
-- Every edit is recorded in the game's history: what changed, the phase and the time. The host's Seat history list shows it, in the order spec 026 D10 set.
+- Every edit is recorded in the game's history: what changed, the phase and the time. The host's Seat history list (the History list since 1.0.6) shows it, in the order spec 026 D10 set.
 - Only the host reaches the editor. No page of it shows any saved order, and every new route is classified in the secrecy table and covered by the sweep.
 - Every step is a normal page with its own URL, works without JavaScript, and fits a phone 360 pixels wide.
 - The page set adds the `.segmented` component (army or fleet), used with `supply_center_icon`, and lists both in `/styleguide` and the design-system catalog.
@@ -105,7 +105,7 @@ If the maintainer prefers (b) or (c), this spec is amended (spec-update) and the
 - **What an open order screen does.** A phone that still shows the old board can send a save. `Seat#save_orders!` reads the phase under its lock, so it checks the order against the **new** position and refuses an illegal order with the existing sentence ("You have no unit in BUR."). Nothing changes there. Open Question 1 asks whether to reload open screens.
 - **An edit that changes nothing is refused** ("That is already the position."), writes no record and clears nothing, so an accidental double tap does not wipe the table's orders twice.
 
-**D4. History: a third append-only table, `position_edits`, read into the existing Seat history list. (Gate A)**
+**D4. History: a third append-only table, `position_edits`, read into the existing Seat history list (the History list since 1.0.6). (Gate A)**
 
 | Table | Columns | Keys and checks |
 |---|---|---|
@@ -206,7 +206,7 @@ The "Choose ..." sentences are the app's own check that a field holds one of the
 4. A unit's page (move and remove).
 5. Supply-center owner.
 6. Season and year.
-7. The host page with "Edit the board" and the Seat history list holding a board change.
+7. The host page with "Edit the board" and the History list ("Seat history" before 1.0.6) holding a board change.
 8. A seat page with the "board changed" notice.
 
 ## URLs

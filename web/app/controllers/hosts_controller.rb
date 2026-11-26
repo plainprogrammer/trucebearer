@@ -6,7 +6,7 @@ class HostsController < ApplicationController
     @host_token = flash[:host_token]
     @seats = @game.seats.index_by(&:power)
     @phase = @game.current_phase
-    latest = @game.history.order(:number).last
+    latest = @game.history.last
     @results = latest && PhaseResults.new(latest)
   end
 end
