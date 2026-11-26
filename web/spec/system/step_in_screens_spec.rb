@@ -74,21 +74,28 @@ RSpec.describe "The step-in screens", type: :system do
     end
   end
 
-  it "shows the seat history with a step-in row and a reissue row at 360 pixels (AC-9.1)" do
+  it "shows the one History with a step-in, a reissue, board changes and a reveal at 360 pixels (AC-9.1, spec 026 AC-11.8)" do
     started = Game.start!(power: "germany")
     game = started.game
     id = game.public_id
     france, = game.take_seat!("france")
     StepIn.record!(phase: game.current_phase, seat: france)
     game.reissue_seat!(france)
+    # Two long board-change rows, to see that a row wraps and does not push the page sideways.
+    game.edit_position!(1, { "action" => "unit_added", "power" => "france", "type" => "fleet", "province" => "spa", "coast" => "nc" })
+    game.edit_position!(1, { "action" => "unit_moved", "from" => "spa", "to" => "spa", "to_coast" => "sc" })
+    game.current_phase.reveal!
 
     with_viewport(360) do
       visit "/games/#{id}/host-link?token=#{started.host_token}"
       visit "/games/#{id}/host"
-      expect(page).to have_css("[data-seat-history] li", count: 2)
+      expect(page).to have_css("[data-seat-history] h2", text: "History")
+      expect(page).to have_css("[data-seat-history] li", count: 5)
       expect(page).to have_css("[data-seat-history]", text: "seat reissued")
       expect(page).to have_css("[data-seat-history]", text: "stepped in")
-      measure("the host page with the seat history")
+      expect(page).to have_css("[data-seat-history]", text: "board changed: France's fleet moved from SPA (north coast) to SPA (south coast)")
+      expect(page).to have_css("[data-seat-history] a", text: /revealed/)
+      measure("the host page with the History")
       execute_script("document.querySelector('[data-seat-history]').scrollIntoView({ block: 'center' })")
       screenshot("06-seat-history")
     end

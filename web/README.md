@@ -16,7 +16,7 @@ Host and seat links carry a secret token in the query string. Proxy and tunnel l
 
 ## The position editor
 
-The host fixes the board by hand: the host page has an "Edit the board" link next to "Reveal orders". It adds, moves and removes units, sets who owns a supply center, and sets the season and year of the open phase, one change at a time, each on its own page. The rules engine checks every change against the map and refuses an impossible board in plain words. An edit that moves units (add, move, remove) clears every seat's saved orders and submissions for the open phase, and each seat sees a notice with the time; an ownership or date edit keeps them. The host sees no order there, and never a count. Every edit is written to the game's history, in the host page's Seat history list.
+The host fixes the board by hand: the host page has an "Edit the board" link next to "Reveal orders". It adds, moves and removes units, sets who owns a supply center, and sets the season and year of the open phase, one change at a time, each on its own page. The rules engine checks every change against the map and refuses an impossible board in plain words. An edit that moves units (add, move, remove) clears every seat's saved orders and submissions for the open phase, and each seat sees a notice with the time; an ownership or date edit keeps them. The host sees no order there, and never a count. Every edit is written to the game's history, in the host page's History list, which also holds the reveals, step-ins and reissues, oldest first.
 
 ## Live updates
 

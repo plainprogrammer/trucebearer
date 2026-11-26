@@ -720,3 +720,9 @@ Documents, each with its changelog row and `spec_amendments_spec.rb` example wri
 - **Spec coverage.** FR-1 Phase 3; FR-2 Phase 3 and 6; FR-3 Phase 4; FR-4 Phase 2; FR-5 Phase 5. Stories 1 to 4 Phase 4 (engine in Phase 2); Story 5 Phase 3 and 6; Story 6 Phase 3, 5, 6; Story 7 Phase 4 and 5; Story 8 Phase 2 and 5; Story 9 Phase 8; Story 10 Phase 7 and 8. AC-9.5 is Phase 7's verify.
 - **Placeholders.** None: the helper's `position_edit_text` is described by its five branches and the six sentences of AC-6.3, which its helper spec pins; the owners and dates controllers are described by the exact changes from the units controller (a field, a check, the intent hash).
 - **Type consistency.** `edit_position!(number, intent)` takes the phase number and a string-keyed intent hash and returns the `PositionEdit` row; `PositionEdit.apply(position, intent)` returns `Result(position, detail)`; `EditRefused#reason` is one of `:army_at_sea :fleet_inland :fleet_needs_coast :army_coast :no_such_coast :province_taken :not_a_center :no_unit :no_change :other`; `refusal_text` handles all but `:no_unit`, which is the stranger response; intents use `"to"` for the new province and owner, `"to_coast"`, `"from"`, `"to_season"`, `"to_year"` throughout.
+
+## Plan Changelog
+
+| Version | Change |
+|---|---|
+| 1.0.6 | Spec 027 1.0.6 (#112): the host page's "Seat history" is the one "History" list of spec 026 D11 (Phase 6's host-page row and the Phase 8 screenshot `07-host-history.png` follow); the plan for the change is in `026-step-in/plan.md`, "Amendment 1.3.0" |
