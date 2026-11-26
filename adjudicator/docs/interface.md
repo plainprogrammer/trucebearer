@@ -2,7 +2,7 @@
 
 This file is the contract between the gem and anything that uses it, including the Trucebearer web app. Whatever is described here, callers may rely on. Whatever isn't described here is internal and may change in any release.
 
-Everything that crosses the boundary, in either direction, is an immutable value object. Each one that the app may store has a hash form, which can be saved as JSON and rebuilt into an equal object later. The map is the one exception: it is queried, never stored (see [Map](#map)).
+Everything that crosses the boundary, in either direction, is an immutable value object. Every value object has a hash form, which can be saved as JSON and rebuilt into an equal object later. The ones the app stores also carry a `format` version (see [Value objects](#value-objects)). The map is the one exception: it is queried, never stored (see [Map](#map)).
 
 The examples in this file use these abbreviations:
 
@@ -256,6 +256,302 @@ start.units.size                         # => 22
 start.ownership.size                     # => 22 (the 12 other centers are unowned, so absent)
 start.ownership[:lon]                    # => :england
 start.ownership.key?(:bel)               # => false
+```
+
+## Value objects
+
+*Arrives in 0.1.0.*
+
+Positions, units, orders and results are value objects. These rules hold for every one of them:
+
+- **Immutable.** Each is a Ruby `Data` class. Its fields can't be changed after it is built.
+- **`new` takes symbols.** Identifiers are passed as symbols, as set out in [Identifiers](#identifiers).
+- **`to_h` gives the hash form.** Its keys are strings all the way down, and its values are only strings, integers, booleans, `nil`, arrays and hashes, so it can be written as JSON with no custom handling.
+- **`from_h` takes exactly that shape.** That is the shape `JSON.parse` returns. A missing key or an unknown key raises `TA::InvalidInput`. So does a `"type"` that doesn't match the order class whose `from_h` was called.
+- **Round trip.** Converting an object with `to_h`, writing it as JSON, parsing that JSON and rebuilding it with `from_h` always gives an object equal to the original.
+- **`format`.** Storable objects (positions, orders, check results and adjudication results) carry a `"format"` key in their hash form. Its value is the integer `1`. There is one value for the whole gem, and it goes up whenever any hash form changes. A storable object's hash form is the same wherever it appears, so an order nested inside an outcome still carries `"format"`. A missing or unknown `format` raises `TA::InvalidInput`. Other value objects only ever appear nested, and carry no `format`.
+- **Canonical order.** List fields are put into a fixed order when the object is built, and then frozen (see [Canonical order](#canonical-order)).
+- **Validated on construction.** Every value object is checked against the classic map, whether it is built with `new` or with `from_h`. An object that can't exist on that map raises `TA::InvalidInput` (see [Impossible objects](#impossible-objects)). This will be revisited if other maps arrive.
+
+A value object is only checked for being well formed. An order that breaks a rule of the game, such as a move to a province the unit can't reach, is still a valid order object. Judging it is the job of checking (see Checking an order).
+
+### Province fields and location fields
+
+Every field of an order that names a place is one of two kinds:
+
+- A **province field** holds a province identifier and nothing else. It never holds a coast. A coast given in a province field is malformed input, and raises `TA::InvalidInput`.
+- A **location field** holds a `TA::Location`: a province, plus a coast when the province has split coasts.
+
+In orders, `at`, `target`, `from` and `to` are province fields. `Move#destination` is the only location field.
+
+### `TA::Location`
+
+A place on the board. It carries no `format`.
+
+- `province`: a province identifier.
+- `coast`: a coast identifier, or `nil`. It defaults to `nil`. When set, it must be one of the province's own coasts.
+
+```ruby
+L.new(province: :spa, coast: :nc).to_h   # => {"province" => "spa", "coast" => "nc"}
+L.new(province: :bud).to_h               # => {"province" => "bud", "coast" => nil}
+```
+
+### `TA::Unit`
+
+An army or a fleet on the board. It carries no `format`.
+
+- `power`: a power identifier.
+- `type`: `:army` or `:fleet`.
+- `location`: a `TA::Location`. An army's location never names a coast. A fleet's location names a coast exactly when its province has split coasts.
+
+```ruby
+TA::Unit.new(power: :russia, type: :fleet, location: L.new(province: :stp, coast: :sc)).to_h
+# => {"power" => "russia", "type" => "fleet", "location" => {"province" => "stp", "coast" => "sc"}}
+```
+
+### `TA::DislodgedUnit`
+
+A unit pushed out of its province, waiting to retreat. It carries no `format`.
+
+- `unit`: a `TA::Unit`, at the location it was dislodged from.
+- `attacker_from`: a province identifier, with no coast. It names the province the attacking unit came from.
+- `by_convoy`: `true` when the attack came by convoy, otherwise `false`.
+
+```ruby
+TA::DislodgedUnit.new(
+  unit: TA::Unit.new(power: :austria, type: :army, location: L.new(province: :ser)),
+  attacker_from: :bul, by_convoy: false
+).to_h
+# => {"unit" => {"power" => "austria", "type" => "army", "location" => {"province" => "ser", "coast" => nil}},
+#     "attacker_from" => "bul", "by_convoy" => false}
+```
+
+### `TA::Position`
+
+The state of the board at one moment. It carries `format`.
+
+- `map`: the map identifier, the `String` `"classic"`.
+- `season`: `:spring` or `:fall`.
+- `year`: an `Integer`, such as `1901`.
+- `phase`: `:movement`, `:retreat` or `:adjustment`.
+- `units`: an `Array` of `TA::Unit`, the units on the board. No two share a province.
+- `ownership`: a `Hash` from supply-center identifier to power identifier. An unowned center is absent.
+- `dislodged_units`: an `Array` of `TA::DislodgedUnit`. These are kept apart from `units`, so a dislodged unit may share a province with the unit that dislodged it. Always empty in a movement phase.
+- `standoffs`: an `Array` of province identifiers, the provinces left empty by a standoff. Always empty in a movement phase.
+
+```ruby
+position = TA::Position.new(
+  map: "classic", season: :spring, year: 1901, phase: :movement,
+  units: [TA::Unit.new(power: :austria, type: :army, location: L.new(province: :bud)),
+          TA::Unit.new(power: :russia, type: :fleet, location: L.new(province: :stp, coast: :sc))],
+  ownership: {bud: :austria, stp: :russia},
+  dislodged_units: [], standoffs: []
+)
+position.to_h
+# => {"format" => 1, "map" => "classic", "season" => "spring", "year" => 1901, "phase" => "movement",
+#     "units" => [{"power" => "austria", "type" => "army", "location" => {"province" => "bud", "coast" => nil}},
+#                 {"power" => "russia", "type" => "fleet", "location" => {"province" => "stp", "coast" => "sc"}}],
+#     "ownership" => {"bud" => "austria", "stp" => "russia"},
+#     "dislodged_units" => [], "standoffs" => []}
+TA::Position.from_h(JSON.parse(JSON.generate(position.to_h))) == position   # => true
+```
+
+### `TA::Order`
+
+`TA::Order` is a module that holds the six movement order classes. Every order carries `format`, and its hash form has a `"type"` key naming the order class. Every order has these two fields:
+
+- `power`: the power giving the order.
+- `at`: a province field, the province of the ordered unit.
+
+`TA::Order.from_h` reads `"type"` and builds the matching class. The types are `"hold"`, `"move"`, `"move_via_convoy"`, `"support_hold"`, `"support_move"` and `"convoy"`. Any other type raises `TA::InvalidInput`. Each order class also has its own `from_h`, which raises `TA::InvalidInput` when given a hash of another type.
+
+```ruby
+O.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"})
+# => #<data Trucebearer::Adjudicator::Order::Hold power=:england, at=:lon>
+O::Move.from_h({"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"})
+# raises TA::InvalidInput
+```
+
+#### `TA::Order::Hold`
+
+The unit stays where it is. Type `"hold"`. Fields: `power` and `at` only.
+
+```ruby
+O::Hold.new(power: :england, at: :lon).to_h
+# => {"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"}
+```
+
+#### `TA::Order::Move`
+
+The unit moves to another province. An army's move may go by convoy (see Adjudicating a movement phase). Type `"move"`. Fields:
+
+- `power` and `at`, as above.
+- `destination`: a location field, a `TA::Location`. A fleet moving to a province with split coasts names the coast.
+
+```ruby
+O::Move.new(power: :france, at: :mao, destination: L.new(province: :spa, coast: :nc)).to_h
+# => {"format" => 1, "type" => "move", "power" => "france", "at" => "mao", "destination" => {"province" => "spa", "coast" => "nc"}}
+```
+
+#### `TA::Order::MoveViaConvoy`
+
+An army moves to a province next to it, but by convoy rather than by land. Type `"move_via_convoy"`. Fields:
+
+- `power` and `at`, as above.
+- `to`: a province field, the destination.
+
+```ruby
+O::MoveViaConvoy.new(power: :england, at: :lon, to: :wal).to_h
+# => {"format" => 1, "type" => "move_via_convoy", "power" => "england", "at" => "lon", "to" => "wal"}
+```
+
+#### `TA::Order::SupportHold`
+
+The unit supports a unit that isn't moving. Type `"support_hold"`. Fields:
+
+- `power` and `at`, as above.
+- `target`: a province field, the province of the supported unit.
+
+```ruby
+O::SupportHold.new(power: :germany, at: :mun, target: :ber).to_h
+# => {"format" => 1, "type" => "support_hold", "power" => "germany", "at" => "mun", "target" => "ber"}
+```
+
+#### `TA::Order::SupportMove`
+
+The unit supports another unit's move. Type `"support_move"`. Fields:
+
+- `power` and `at`, as above.
+- `from`: a province field, the province the supported unit moves from.
+- `to`: a province field, the province it moves to. A support never names a coast.
+
+```ruby
+O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa).to_h
+# => {"format" => 1, "type" => "support_move", "power" => "france", "at" => "por", "from" => "mao", "to" => "spa"}
+```
+
+#### `TA::Order::Convoy`
+
+A fleet at sea carries an army across. Type `"convoy"`. Fields:
+
+- `power` and `at`, as above.
+- `from`: a province field, the province the army moves from.
+- `to`: a province field, the province it moves to.
+
+```ruby
+O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy).to_h
+# => {"format" => 1, "type" => "convoy", "power" => "england", "at" => "nth", "from" => "lon", "to" => "nwy"}
+```
+
+### `TA::CheckResult`
+
+The answer to checking one order. It carries `format`.
+
+- `legal`: `true` or `false`.
+- `reasons`: an `Array` of rejection-reason symbols. It is empty when `legal` is `true`, and holds exactly one reason when `legal` is `false`. The reasons are listed under Checking an order.
+
+```ruby
+TA::CheckResult.new(legal: false, reasons: [:foreign_unit]).to_h
+# => {"format" => 1, "legal" => false, "reasons" => ["foreign_unit"]}
+TA::CheckResult.new(legal: true, reasons: []).to_h
+# => {"format" => 1, "legal" => true, "reasons" => []}
+```
+
+### `TA::Outcome`
+
+What happened to one order in an adjudicated phase. It carries no `format` of its own, since it only ever appears inside an adjudication result, but its `order` keeps the order's own `format`. Only the fields are described here. What each value means comes later (see Adjudicating a movement phase).
+
+- `order`: one of the six order classes above.
+- `result`: one of `:void`, `:held`, `:no_route`, `:bounced`, `:succeeded`, `:unmatched`, `:cut`, `:given` or `:disrupted`.
+- `submitted`: `true` for an order that was handed in, `false` for an implied hold.
+- `dislodged`: `true` when the unit following this order was dislodged, otherwise `false`.
+
+```ruby
+TA::Outcome.new(order: O::Hold.new(power: :england, at: :lon), result: :held, submitted: false, dislodged: false).to_h
+# => {"order" => {"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"},
+#     "result" => "held", "submitted" => false, "dislodged" => false}
+```
+
+### `TA::Adjudication`
+
+The result of adjudicating a phase. It carries `format`. Only the fields are described here. What they mean comes later (see Adjudicating a movement phase).
+
+- `outcomes`: an `Array` of `TA::Outcome`. It keeps the order the adjudication gives it, and is not sorted.
+- `paradox`: `true` or `false`.
+- `position`: a `TA::Position`, the position after the phase.
+
+```ruby
+adjudication.to_h
+# => {"format" => 1,
+#     "outcomes" => [{"order" => {"format" => 1, "type" => "hold", "power" => "england", "at" => "lon"},
+#                     "result" => "held", "submitted" => true, "dislodged" => false}],
+#     "paradox" => false,
+#     "position" => {"format" => 1, "map" => "classic", "season" => "spring", "year" => 1901, "phase" => "retreat",
+#                    "units" => [{"power" => "england", "type" => "fleet", "location" => {"province" => "lon", "coast" => nil}}],
+#                    "ownership" => {"lon" => "england"}, "dislodged_units" => [], "standoffs" => []}}
+```
+
+### Canonical order
+
+When a value object is built, its list fields are sorted into a fixed order and frozen. Two objects with the same contents are therefore equal, and give the same hash form, whatever order the lists were given in.
+
+- A position's `units` and `dislodged_units` are sorted by the unit's province.
+- A position's `standoffs` are sorted by identifier.
+- `to_h` writes a position's `ownership` keys sorted by province.
+- An adjudication's `outcomes` are the exception. They keep the order the adjudication gives them.
+
+```ruby
+army  = TA::Unit.new(power: :austria, type: :army, location: L.new(province: :bud))
+fleet = TA::Unit.new(power: :russia, type: :fleet, location: L.new(province: :stp, coast: :sc))
+spring = {map: "classic", season: :spring, year: 1901, phase: :movement, dislodged_units: [], standoffs: []}
+a = TA::Position.new(**spring, units: [army, fleet], ownership: {bud: :austria, stp: :russia})
+b = TA::Position.new(**spring, units: [fleet, army], ownership: {stp: :russia, bud: :austria})
+a == b                                   # => true
+a.to_h == b.to_h                         # => true
+b.units.map { _1.location.province }     # => [:bud, :stp]
+b.to_h["ownership"].keys                 # => ["bud", "stp"]
+```
+
+### Impossible objects
+
+Each object below can't exist on the classic map, so building it raises `TA::InvalidInput`. This holds whether it is built with `new` or with `from_h`. The examples reuse `army`, `fleet` and `spring` from [Canonical order](#canonical-order).
+
+```ruby
+# Two units on the board in one province. (A dislodged unit doesn't count.)
+TA::Position.new(**spring, ownership: {},
+  units: [TA::Unit.new(power: :france, type: :army, location: L.new(province: :bur)),
+          TA::Unit.new(power: :germany, type: :army, location: L.new(province: :bur))])
+
+# A fleet in an inland province, or an army in a sea province.
+TA::Unit.new(power: :germany, type: :fleet, location: L.new(province: :mun))
+TA::Unit.new(power: :england, type: :army, location: L.new(province: :nth))
+
+# An army with a coast.
+TA::Unit.new(power: :france, type: :army, location: L.new(province: :spa, coast: :nc))
+
+# A fleet on a province with split coasts, with no coast given.
+TA::Unit.new(power: :france, type: :fleet, location: L.new(province: :spa))
+
+# A coast the province doesn't have.
+L.new(province: :par, coast: :nc)
+L.new(province: :bul, coast: :nc)
+
+# An unknown identifier, or a map other than "classic".
+L.new(province: :xyz)
+TA::Position.from_h(JSON.parse(JSON.generate(a.to_h)).merge("map" => "modern"))
+
+# Ownership of a province that isn't a supply center.
+TA::Position.new(**spring, units: [army], ownership: {bur: :france})
+
+# A movement-phase position with dislodged units or standoffs.
+TA::Position.new(**spring.merge(standoffs: [:bur]), units: [army], ownership: {})
+TA::Position.new(**spring.merge(dislodged_units: [TA::DislodgedUnit.new(unit: fleet, attacker_from: :fin, by_convoy: false)]),
+  units: [army], ownership: {})
+
+# A check result whose legal flag and reasons disagree.
+TA::CheckResult.new(legal: true, reasons: [:own_province])
+TA::CheckResult.new(legal: false, reasons: [])
+TA::CheckResult.new(legal: false, reasons: [:own_province, :not_reachable])
 ```
 
 ## Change rules
