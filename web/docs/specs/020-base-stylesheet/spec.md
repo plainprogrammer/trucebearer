@@ -1,7 +1,7 @@
 # Feature 020: Mobile-first base stylesheet
 
-**Status:** Draft
-**Version:** 1.2.0
+**Status:** Approved
+**Version:** 1.2.1
 **Created:** 2026-11-25
 **Last Updated:** 2026-11-25
 **Issue:** #20
@@ -16,6 +16,7 @@
 | 1.0.0 | 2026-11-25 | First draft |
 | 1.1.0 | 2026-11-25 | Changed after the first independent review.<br>• Interaction states get their own tokens and documented pairs, and tricks that dodge the contrast proof (`opacity`, `filter`, `color-mix()`) are banned.<br>• The action area is in the page flow and sticks to the bottom; the header scrolls away. Focus rule is WCAG 2.4.11 ("not entirely hidden") with one scroll-padding token.<br>• The gap rule is scoped to separate controls. Power colors appear on the style guide only inside badges, and a single badge helper is the one way to render one.<br>• Every AC now has a verification row. Checks that need a phone are marked as owed to the maintainer, not claimed.<br>• The style guide shows static variants only, with no measured ratios, so no parser ships in production code.<br>• Reflow is checked at 320 pixels, and the layout is designed for 360 and up.<br>• Hue is measured in HSL on the final hex values, as a circular distance. The color-detection rules are made complete and the root view's own `main` is removed |
 | 1.2.0 | 2026-11-25 | Changed after the second independent review.<br>• Power pairs are shown on the style guide through the badges only.<br>• The "tokens only" rule gets a narrow, stated exemption, and the focus ring gets tokens.<br>• The forbidden-words check scans a fixed set of paths and file names, and exempts `docs/specs/`.<br>• `opacity`, `filter`, `mix-blend-mode` and `color-mix()` are banned outright.<br>• Pressed states change shape as well as fill, and every state has a stated treatment.<br>• The keyboard-open claim is removed from AC-3.9. The helper accepts a symbol or a string.<br>• Markup conventions are shown on the style guide only, with no form builder.<br>• The phone pass gets a tracking Issue. Smaller fixes to limits, wording and Verification |
+| 1.2.1 | 2026-11-25 | Approved at Gate A. While planning: AC-2.8 allows the single declaration `opacity: 1`, since Firefox dims placeholder text by default and no other way cancels it. The phone-pass Issue is #71 |
 
 ## Problem Statement
 
@@ -79,7 +80,7 @@ The playtest has to beat paper, and a cramped or fiddly phone screen won't. Play
 - [ ] **AC-2.5** Given a custom property in the stylesheets whose value is a color, and that is not named `--color-*` or is not in the token file When the contrast spec runs Then it fails and names it
 - [ ] **AC-2.6** Given a documented pair whose colors are changed so the ratio falls below its threshold When the contrast spec runs Then it fails and prints the pair, the ratio and the threshold
 - [ ] **AC-2.7** Given an error message, a required marker or a disabled control When it is shown Then its state is carried by words or shape as well as color (for example the words "Error:" or "Required"), so a person who cannot tell the colors apart still gets it
-- [ ] **AC-2.8** Given the stylesheets When they are scanned Then `opacity`, `filter`, `mix-blend-mode` and `color-mix()` appear nowhere, since they would make a computed ratio untrue and nothing in this work needs them
+- [ ] **AC-2.8** Given the stylesheets When they are scanned Then `opacity`, `filter`, `mix-blend-mode` and `color-mix()` appear nowhere, since they would make a computed ratio untrue and nothing in this work needs them. The one allowed form is `opacity: 1`, which only cancels a browser's own dimming (Firefox dims placeholder text)
 
 ### Story 3: A layout that fits a phone
 
@@ -238,7 +239,7 @@ A secondary button's label in its pressed state is `text` on `page`, which the f
 
 **Must not:**
 - Treat a pair as passing because it was passing once. Each run recomputes.
-- Use `opacity`, `filter`, `mix-blend-mode` or `color-mix()` anywhere (AC-2.8). Disabled and pressed states change the token, never the opacity.
+- Use `opacity` (other than `opacity: 1`), `filter`, `mix-blend-mode` or `color-mix()` anywhere (AC-2.8). Disabled and pressed states change the token, never the opacity.
 
 ### FR-4: Power colors
 
@@ -386,7 +387,7 @@ Each acceptance criterion has at least one row.
 | 2.7, 4.6, 5.5, 6.1 | Review of the markup, the plan and the style guide copy against the criterion | Review |
 | 1.1, 1.2, 1.3, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8, 3.9, 3.10, 6.3 | A repeatable measurement in real Chrome at 320, 360, 390, 768 and 1024 pixels wide (and one short viewport), plus a keyboard pass and the network panel, with screenshots at 360 and 768 pixels. The measurement is a written procedure and a console snippet kept in the spec folder (not app JavaScript), and its results are recorded in the pull request | Before the pull request is ready |
 | Pressed, hover, focus ring, forced colors, reduced motion | The same Chrome session, using its state and media emulation | Before the pull request is ready |
-| 1.4 (zoom), 1.6 (touch), 3.5 (real insets), 3.2 (dynamic toolbar) | One pass on a real iPhone in Mobile Safari. No phone is available to the agent, so this is **owed to the maintainer** and is named as such in the pull request. A `web` Issue tracks it, is linked from the pull request, and lists AC-1.4, 1.6, 3.2 and 3.5. Those four boxes stay unticked until it closes | Before the playtest |
+| 1.4 (zoom), 1.6 (touch), 3.5 (real insets), 3.2 (dynamic toolbar) | One pass on a real iPhone in Mobile Safari. No phone is available to the agent, so this is **owed to the maintainer** and is named as such in the pull request. Issue #71 tracks it and lists AC-1.4, 1.6, 3.2 and 3.5, and the pull request names it. Those four boxes stay unticked until #71 closes | Before the playtest |
 
 The repository's Gemfile has no browser-driving gem, so the geometry checks cannot run in the normal spec run without a new test dependency (such as Capybara with a Selenium driver). The plan does not add one. Whether to add one is raised with the maintainer as a separate choice, and this spec is written so that doing so later turns the Chrome row into automated specs without changing any requirement.
 
