@@ -1,0 +1,9 @@
+<% name = power_name(@seat.power) %>
+<% content_for :title, "Step into #{name}" %>
+
+<%= render layout: "shared/confirm", locals: { title: "Step into #{name}'s seat", confirm_label: "Step into #{name}", danger: true,
+      confirm_path: game_step_in_path(@game.public_id, @seat.power, @phase.number), cancel_path: game_host_path(@game.public_id) } do %>
+  <p>You will be able to see and change <%= name %>'s orders for <%= @phase.title %>.</p>
+  <p>This is recorded in the game. <%= name %> will see that the host entered their orders, and the time you confirmed.</p>
+  <p>It ends when you tap Leave, when you reveal the phase, or after 30 minutes. Your own seat stays your main screen.</p>
+<% end %>

@@ -216,7 +216,7 @@ RSpec.describe "The host page and host links", type: :request do
       id = created.game.public_id
       created.session.get "/games/#{id}/host"
 
-      rows = Nokogiri::HTML5(created.session.response.body).css(".host-section ul.list > li")
+      rows = Nokogiri::HTML5(created.session.response.body).css(".host-section ul.list:not([data-step-in-entry]) > li")
       expect(rows.size).to eq(7)
       expect(rows.css("a").map { |link| link["href"] }).to eq([ "/games/#{id}/host/seats/england/reissue" ])
       expect(rows.map { |row| row.text.squish }.count { |text| text.include?("Open") }).to eq(6)

@@ -45,6 +45,13 @@ class Game < ApplicationRecord
   # The phases already revealed, oldest first.
   def history = phases.where.not(revealed_at: nil)
 
+  # The host's own seat: the lowest id. Game.start! makes it in the game's own transaction and no path deletes a seat (spec 026 D5).
+  def host_seat = seats.min_by(&:id)
+
+  # Every step-in of this game, oldest first, for the host page (spec 026 D6). Read through the phases, never through an
+  # association that reaches saved orders.
+  def step_in_history = StepIn.joins(:phase).where(phases: { game_id: id }).includes(:phase, :seat).order(:id)
+
   def close_joining!
     update!(joining_closed_at: Time.current) if open?
   end

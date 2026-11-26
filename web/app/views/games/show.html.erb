@@ -5,6 +5,7 @@
   <%= render "phases/header", phase: @phase, power: @seat.power %>
   <p><%= @seat.submitted?(@phase) ? "Submitted" : "Not submitted" %></p>
   <p><%= @ordered %> of <%= @units %> units ordered.</p>
+  <%= render "step_ins/notices", seat: @seat, phase: @phase %>
   <%= link_to "Enter orders", game_seat_orders_path(@game.public_id, @phase.number), class: "button" %>
   <p>Keep this page. The host reveals each phase when the table is ready.</p>
   <% if @host %>

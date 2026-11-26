@@ -23,6 +23,9 @@ class GamesController < ApplicationController
     @seat = @game && seat_of(@game)
     return stranger!(@game) unless @seat
 
+    return if send_to_step_in(@game, @seat)
+
+    load_step_in(@game)
     @host = host?(@game)
     @phase = @game.current_phase
     @units = @phase.position.units.count { |unit| unit.power.to_s == @seat.power }

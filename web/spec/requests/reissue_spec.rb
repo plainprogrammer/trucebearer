@@ -30,7 +30,7 @@ RSpec.describe "Reissuing a seat", type: :request do
       game.take_seat!("france")
       host.get "/games/#{id}/host"
 
-      rows = Nokogiri::HTML5(host.response.body).css(".host-section ul.list > li")
+      rows = Nokogiri::HTML5(host.response.body).css(".host-section ul.list:not([data-step-in-entry]) > li")
       expect(rows.size).to eq(7)
       expect(rows.css("a").map { |link| link["href"] }).to eq(
         [ "/games/#{id}/host/seats/england/reissue", "/games/#{id}/host/seats/france/reissue" ]

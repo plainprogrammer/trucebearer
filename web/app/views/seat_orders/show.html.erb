@@ -1,9 +1,11 @@
-<% content_for :title, "Your orders" %>
+<% heading = @stepped_in_page ? "#{power_name(@seat.power)}'s orders" : "Your orders" %>
+<% content_for :title, heading %>
 <% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
 
 <div class="stack">
-  <h1>Your orders</h1>
+  <h1><%= heading %></h1>
   <%= render "phases/header", phase: @phase, power: @seat.power %>
+  <%= render "step_ins/notices", seat: @seat, phase: @phase unless @stepped_in_page %>
   <% if @refusal %><%= render "shared/banner", kind: "danger", text: @refusal %><% end %>
   <p>Tap a unit to give it an order. A unit with no order holds.</p>
   <ul class="list">

@@ -17,7 +17,7 @@ RSpec.describe "Forgery protection", type: :request do
 
   def state
     [ Game.count, Seat.count, game.reload.joining_closed_at, Seat.order(:id).pluck(:token_digest),
-      Phase.count, game.current_phase.revealed_at, SavedOrder.count, Submission.count ]
+      Phase.count, game.current_phase.revealed_at, SavedOrder.count, Submission.count, StepIn.count ]
   end
 
   # Posts without a token on a phone that holds every cookie the host has, and says what became of it.
@@ -72,5 +72,36 @@ RSpec.describe "Forgery protection", type: :request do
   it "refuses a reveal without a token, and the phase stays open (spec 022 NFR security)" do
     post_without_token "/games/#{id}/host/phases/1/reveal"
     expect(game.current_phase.number).to eq(1)
+  end
+
+  describe "stepping into a seat (spec 026 AC-8.7)" do
+    before { game.take_seat!("france") }
+
+    it "refuses the confirmation without a token, and records nothing" do
+      post_without_token "/games/#{id}/host/seats/france/phases/1/step-in"
+      expect(StepIn.count).to eq(0)
+    end
+
+    it "refuses Leave without a token, and the step-in stays in force" do
+      created.session.post "/games/#{id}/host/seats/france/phases/1/step-in" # forgery protection is still off here
+      post_without_token "/games/#{id}/host/seats/france/step-in", verb: :delete
+      expect(created.session.cookies["step_in_#{id}"]).to be_present
+      created.session.get "/games/#{id}/host/seats/france/phases/1/orders"
+      expect(created.session.response).to have_http_status(:ok)
+    end
+
+    it "does record the confirmation with a token, so the refusal is not just a missing route" do
+      ActionController::Base.allow_forgery_protection = true
+      created.session.get "/games/#{id}/host/seats/france/phases/1/step-in"
+      token = Nokogiri::HTML5(created.session.response.body).at_css(".confirm input[name=authenticity_token]")["value"]
+      expect { created.session.post "/games/#{id}/host/seats/france/phases/1/step-in", params: { authenticity_token: token } }
+        .to change(StepIn, :count).by(1)
+    end
+
+    it "refuses saving orders through a stepped-in URL without a token" do
+      created.session.post "/games/#{id}/host/seats/france/phases/1/step-in" # forgery protection is still off here
+      hold = JSON.generate({ "format" => 1, "type" => "hold", "power" => "france", "at" => "par" })
+      post_without_token "/games/#{id}/host/seats/france/phases/1/orders", verb: :put, orders: { par: hold }
+    end
   end
 end
