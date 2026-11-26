@@ -140,4 +140,47 @@ RSpec.describe "Resuming a game", type: :request do
       expect(hrefs["/games/#{other.game.public_id}"]).not_to include("You host this game")
     end
   end
+
+  describe "the lost-seat line (D6)" do
+    let(:line) { "Lost your seat? Ask the host for a new QR code." }
+
+    def occurrences(phone) = phone.response.body.scan(line).size
+
+    it "is on the home page once, below the buttons, for everyone (AC-4.1, AC-4.4)" do
+      [ open_session, england_phone ].each do |phone|
+        phone.get "/"
+        main = Nokogiri::HTML5(phone.response.body).at_css("main")
+        expect(occurrences(phone)).to eq(1)
+        expect(main.css("a.button, p").map(&:text).last).to eq(line)
+        expect(main.css("p").find { |p| p.text == line }.css("a")).to be_empty
+      end
+    end
+
+    it "is on the stranger page once, and the stranger responses stay identical (AC-4.2)" do
+      phone = open_session
+      phone.get "/games/#{id}"
+      expect(phone.response).to have_http_status(:not_found)
+      expect(occurrences(phone)).to eq(1)
+
+      existing, missing = [ id, GameFlow::MISSING_ID ].map do |game_id|
+        open_session.tap { |s| s.get "/games/#{game_id}" }.then { |s| comparable(s.response, game_id) }
+      end
+      expect(existing).to eq(missing)
+    end
+
+    it "gives a reissued seat back to its replacement phone and not to the old one (AC-4.3)" do
+      old_phone = england_phone
+      token = game.reissue_seat!(game.seat_for(started.seat_token))
+      new_phone = open_session
+      new_phone.get "/games/#{id}/seat-link", params: { token: token }
+
+      expect(new_phone.response.location).to eq("http://www.example.com/games/#{id}")
+      new_phone.get "/"
+      expect(cards(new_phone).map { |card| card["href"] }).to eq([ "/games/#{id}" ])
+      old_phone.get "/"
+      expect(cards(old_phone)).to be_empty # before the game page, whose stranger response would delete the stale cookie
+      old_phone.get "/games/#{id}"
+      expect(old_phone.response).to have_http_status(:not_found)
+    end
+  end
 end
