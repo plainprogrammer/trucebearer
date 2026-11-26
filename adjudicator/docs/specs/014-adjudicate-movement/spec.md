@@ -1,7 +1,7 @@
 # Feature 014: Adjudicate movement phases without convoys
 
 **Status:** Approved
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #14
@@ -16,6 +16,7 @@
 | 1.0.0 | 2026-11-26 | Initial draft |
 | 1.1.0 | 2026-11-26 | Folded in the Gate A review (round 1, changes required, five blocking):<br>• Attack strength drops the owner's supports only when the unit in the province stays or is the head-to-head opponent (6.D.35, 6.E.9).<br>• A unit is dislodged when it stays (it follows no move, or its move fails); "loses a head-to-head battle" is defined once as "the opposing move succeeds".<br>• AC-7.3, AC-5.2, AC-6.1, AC-8.2, AC-8.7, AC-9.3, AC-9.6 and AC-10.1 are made consistent and testable.<br>• 6.D.8 is encoded (no convoy is ordered, so its result is the same before and after #15).<br>• The convoy section says openly where it departs from the contract; AC-5.3 is flagged; the random specs seed the hard shapes and carry a minimum count of each; the paradox check needs no counter |
 | 1.2.0 | 2026-11-26 | Gate A approved by the coordinator under the maintainer's delegation. Rulings: convoys never work yet (option 1), pinned in its own spec file, and the spec and the CHANGELOG entry say convoy routing arrives with #15 before 0.2.0 ships; the Outcome and Adjudication impossible objects are added to `docs/interface.md` (one Ruby example each, only rules that follow from the contract, and the duplicate-province rule agrees with the duplicate-order raise), after `origin/main` is merged in; 6.F.1 is encoded; one pull request for now (Gate B decides); wrong-class arguments raise `TA::InvalidInput`; the implementation review confirms the defensive branch is unreachable. Status is now Approved |
+| 1.2.1 | 2026-11-26 | Folded in the plan review (round 1): the loader's refusals are listed in full under "Fixture format" (a `result:` with no `after:`, an `after:` in a case with an order that has no `check:`, an unknown key or no `units` in `after:`), and AC-11.4 says what the loader spec shows. `origin/main` (0.1.0) is merged in: `docs/interface.md` now marks `## Value objects` as "0.1.0, except `TA::Outcome` and `TA::Adjudication`", so the impossible-object examples of AC-3.5 go under `### Impossible objects`, labelled "From 0.2.0" |
 
 ## Problem Statement
 
@@ -162,7 +163,7 @@ after:                       # the position after the moves
   standoffs: [boh]           # optional, default none
 ```
 
-A fixture lists the submitted orders only. The runner works out the implied holds from the fixture itself: a unit with no order from its owner that has `check: {legal: true}` gets an implied hold, which must come back `:held`, with `dislodged` true exactly when the unit is in `after.dislodged`. The implied holds come last, sorted by province, as the contract says. `dislodged:` on an order is a new key (#11 reserved only `result:` and `after:`). The loader refuses an unknown key, an unknown result symbol, a `dislodged:` that isn't true or false, an `after:` in a file that has an order with no `result:`, an `after:` unit that is not a valid unit, and a `from:` that is not a province.
+A fixture lists the submitted orders only. The runner works out the implied holds from the fixture itself: a unit with no order from its owner that has `check: {legal: true}` gets an implied hold, which must come back `:held`, with `dislodged` true exactly when the unit is in `after.dislodged`. The implied holds come last, sorted by province, as the contract says. `dislodged:` on an order is a new key (#11 reserved only `result:` and `after:`). The loader refuses: an unknown key (at any level, `after:` included); an unknown result symbol; a `dislodged:` that isn't true or false; a `result:` in a case with no `after:`; an `after:` in a case with an order that has no `result:` or no `check:`; an `after:` with no `units`; an `after:` unit that is not a valid unit; a dislodged unit with no `from:` or with a `from:` that is not a province; and a standoff that is not a province.
 
 ## Definitions
 
@@ -324,7 +325,7 @@ Every acceptance criterion is verified by a passing spec in this pull request, e
 - [ ] **AC-11.1** Given a file `spec/datc/<section>.yml` with `after:` When the runner adjudicates it Then each submitted order's result and `dislodged` equal the fixture's, the implied holds are as in "Fixture format", `paradox` is `false`, and the position's units, dislodged units (with `attacker_from` and `by_convoy`) and standoffs equal `after:`; each is its own example, named by case and order
 - [ ] **AC-11.2** Given the directory `spec/datc/` Then the files with an `after:` are exactly the list of "Encoded" in the adjudication runner, none missing and none extra, the files without one are exactly 6.B.18, 6.B.19 and 6.G.19, none of the cases of "Left out" has a file with an `after:`, and each file's `case:` equals its name
 - [ ] **AC-11.3** Given the checking runner of #11 Then it still passes: the list of files it expects is extended with the new files (each with a `check:` for every order), its `size == 30` check and its `left_out` list change (6.A.11 and 6.A.12 are encoded now), and `6.B.2` and `6.B.12` are still the only departures; the rest of spec 011's expectations stand
-- [ ] **AC-11.4** Given the loader Then a spec shows each refusal of "Fixture format", and the example of spec 011's AC-8.5 (a fixture with reserved keys) still loads
+- [ ] **AC-11.4** Given the loader Then a spec shows each refusal of "Fixture format"; a fixture with `result:`, `dislodged:` and `after:` loads, with the position after the moves built and the implied holds worked out from the checks; and, as spec 011's AC-8.5 requires, an order with no `check:` still loads in a case with no `after:`
 - [ ] **AC-11.5** Given every encoded fixture Then the units and orders are those of the DATC case, and nothing more: no extra order and no extra unit (the adjudication would change). The two adapted checking fixtures, 6.A.5 and 6.D.31, keep the adaptations #11 made, since they give the DATC's results (review)
 
 ### Story 12: Correctness beyond the DATC
