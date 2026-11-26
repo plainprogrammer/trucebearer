@@ -1,0 +1,35 @@
+case: "6.D.17"
+summary: A support attacked from the province it aims at is cut only if the supporter is dislodged
+position:
+  units:
+    - {power: russia, type: fleet, at: con}
+    - {power: russia, type: fleet, at: bla}
+    - {power: turkey, type: fleet, at: ank}
+    - {power: turkey, type: army, at: smy}
+    - {power: turkey, type: army, at: arm}
+orders:
+  - order: {type: support_move, power: russia, at: con, from: bla, to: ank}
+    check: {legal: true}
+    result: cut
+    dislodged: true
+  - order: {type: move, power: russia, at: bla, destination: ank}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: turkey, at: smy, from: ank, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: arm, destination: ank}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: russia, type: fleet, at: bla}
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: smy}
+    - {power: turkey, type: army, at: arm}
+  dislodged:
+    - {power: russia, type: fleet, at: con, from: ank}
+  standoffs: [ank]

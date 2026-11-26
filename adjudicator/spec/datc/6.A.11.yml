@@ -1,0 +1,18 @@
+case: "6.A.11"
+summary: Two armies that move into the same empty province bounce, and the province is a standoff
+position:
+  units:
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+orders:
+  - order: {type: move, power: austria, at: vie, destination: tyr}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: italy, at: ven, destination: tyr}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+  standoffs: [tyr]

@@ -1,0 +1,34 @@
+case: "6.D.24"
+summary: An army's move into the sea is void and can't be supported, while the fleet in that sea is dislodged by others
+position:
+  units:
+    - {power: france, type: army, at: mar}
+    - {power: france, type: fleet, at: "spa/sc"}
+    - {power: italy, type: fleet, at: gol}
+    - {power: turkey, type: fleet, at: tys}
+    - {power: turkey, type: fleet, at: wes}
+orders:
+  - order: {type: move, power: france, at: mar, destination: gol}
+    check: {legal: false, reason: not_reachable}
+    result: void
+  - order: {type: support_move, power: france, at: spa, from: mar, to: gol}
+    check: {legal: false, reason: move_impossible}
+    result: void
+  - order: {type: hold, power: italy, at: gol}
+    check: {legal: true}
+    result: held
+    dislodged: true
+  - order: {type: support_move, power: turkey, at: tys, from: wes, to: gol}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: wes, destination: gol}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: france, type: army, at: mar}
+    - {power: france, type: fleet, at: "spa/sc"}
+    - {power: turkey, type: fleet, at: tys}
+    - {power: turkey, type: fleet, at: gol}
+  dislodged:
+    - {power: italy, type: fleet, at: gol, from: wes}

@@ -1,0 +1,34 @@
+case: "6.D.14"
+summary: A foreign attack with enough support of its own still dislodges, despite a support from the attacked unit's power
+position:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+    - {power: italy, type: fleet, at: adr}
+orders:
+  - order: {type: hold, power: austria, at: tri}
+    check: {legal: true}
+    result: held
+    dislodged: true
+  - order: {type: support_move, power: austria, at: vie, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: ven, destination: tri}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: italy, at: tyr, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: italy, at: adr, from: ven, to: tri}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: austria, type: army, at: vie}
+    - {power: italy, type: army, at: tri}
+    - {power: italy, type: army, at: tyr}
+    - {power: italy, type: fleet, at: adr}
+  dislodged:
+    - {power: austria, type: fleet, at: tri, from: ven}

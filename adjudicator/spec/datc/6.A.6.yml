@@ -6,3 +6,7 @@ position:
 orders:
   - order: {type: move, power: germany, at: lon, destination: nth}
     check: {legal: false, reason: foreign_unit}
+    result: void
+after:
+  units:
+    - {power: england, type: fleet, at: lon}

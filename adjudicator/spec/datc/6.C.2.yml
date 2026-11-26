@@ -1,0 +1,27 @@
+case: "6.C.2"
+summary: A circle of three moves when one of its moves is supported
+position:
+  units:
+    - {power: turkey, type: fleet, at: ank}
+    - {power: turkey, type: army, at: smy}
+    - {power: turkey, type: army, at: bul}
+    - {power: italy, type: army, at: con}
+orders:
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: smy, destination: ank}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: turkey, at: bul, from: ank, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: italy, at: con, destination: smy}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: ank}
+    - {power: turkey, type: army, at: bul}
+    - {power: italy, type: army, at: smy}

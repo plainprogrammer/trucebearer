@@ -1,0 +1,39 @@
+case: "6.D.21"
+summary: A unit dislodged in the same turn still cuts the support it attacked
+position:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+    - {power: germany, type: army, at: mun}
+    - {power: russia, type: army, at: sil}
+    - {power: russia, type: army, at: ber}
+orders:
+  - order: {type: hold, power: austria, at: tri}
+    check: {legal: true}
+    result: held
+  - order: {type: move, power: italy, at: ven, destination: tri}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: italy, at: tyr, from: ven, to: tri}
+    check: {legal: true}
+    result: cut
+  - order: {type: move, power: germany, at: mun, destination: tyr}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+  - order: {type: move, power: russia, at: sil, destination: mun}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: ber, from: sil, to: mun}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: austria, type: fleet, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+    - {power: russia, type: army, at: mun}
+    - {power: russia, type: army, at: ber}
+  dislodged:
+    - {power: germany, type: army, at: mun, from: sil}

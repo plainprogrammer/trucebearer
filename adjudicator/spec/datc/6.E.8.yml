@@ -1,0 +1,37 @@
+case: "6.E.8"
+summary: The same, when the attacked fleet is also in a head-to-head battle
+position:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: fleet, at: yor}
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: nwy}
+orders:
+  - order: {type: move, power: england, at: nth, destination: nwy}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: england, at: yor, from: nwy, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: support_move, power: germany, at: hol, from: hel, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: germany, at: hel, destination: nth}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: ska, from: nwy, to: nth}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: nwy, destination: nth}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: fleet, at: yor}
+    - {power: germany, type: fleet, at: hol}
+    - {power: germany, type: fleet, at: hel}
+    - {power: russia, type: fleet, at: ska}
+    - {power: russia, type: fleet, at: nwy}

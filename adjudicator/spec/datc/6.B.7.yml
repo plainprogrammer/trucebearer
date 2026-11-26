@@ -9,9 +9,20 @@ position:
 orders:
   - order: {type: support_move, power: france, at: por, from: mao, to: spa}
     check: {legal: true}
+    result: given
   - order: {type: move, power: france, at: mao, destination: "spa/nc"}
     check: {legal: true}
+    result: bounced
   - order: {type: support_move, power: italy, at: gol, from: wes, to: spa}
     check: {legal: true}
+    result: given
   - order: {type: move, power: italy, at: wes, destination: "spa/sc"}
     check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: france, type: fleet, at: por}
+    - {power: france, type: fleet, at: mao}
+    - {power: italy, type: fleet, at: gol}
+    - {power: italy, type: fleet, at: wes}
+  standoffs: [spa]

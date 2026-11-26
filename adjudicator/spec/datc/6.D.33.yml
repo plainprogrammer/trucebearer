@@ -1,0 +1,27 @@
+case: "6.D.33"
+summary: A support from another power can break a standoff between two units of one power
+position:
+  units:
+    - {power: austria, type: army, at: ser}
+    - {power: austria, type: army, at: vie}
+    - {power: russia, type: army, at: gal}
+    - {power: turkey, type: army, at: bul}
+orders:
+  - order: {type: move, power: austria, at: ser, destination: bud}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: austria, at: vie, destination: bud}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: russia, at: gal, from: ser, to: bud}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: bul, destination: ser}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: austria, type: army, at: bud}
+    - {power: austria, type: army, at: vie}
+    - {power: russia, type: army, at: gal}
+    - {power: turkey, type: army, at: ser}

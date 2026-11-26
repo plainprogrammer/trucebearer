@@ -1,0 +1,22 @@
+case: "6.E.3"
+summary: A power can't help dislodge its own unit in a head-to-head battle
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: army, at: mun}
+    - {power: england, type: fleet, at: kie}
+orders:
+  - order: {type: move, power: germany, at: ber, destination: kie}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: mun, from: kie, to: ber}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: kie, destination: ber}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: army, at: mun}
+    - {power: england, type: fleet, at: kie}

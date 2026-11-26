@@ -1,0 +1,32 @@
+case: "6.D.27"
+summary: A convoy order for an army that doesn't move is unmatched, yet its fleet may be supported
+position:
+  units:
+    - {power: england, type: fleet, at: swe}
+    - {power: england, type: fleet, at: den}
+    - {power: germany, type: army, at: ber}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: fleet, at: pru}
+orders:
+  - order: {type: move, power: england, at: swe, destination: bal}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: england, at: den, from: swe, to: bal}
+    check: {legal: true}
+    result: given
+  - order: {type: hold, power: germany, at: ber}
+    check: {legal: true}
+    result: held
+  - order: {type: convoy, power: russia, at: bal, from: ber, to: lvn}
+    check: {legal: true}
+    result: unmatched
+  - order: {type: support_hold, power: russia, at: pru, target: bal}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: england, type: fleet, at: swe}
+    - {power: england, type: fleet, at: den}
+    - {power: germany, type: army, at: ber}
+    - {power: russia, type: fleet, at: bal}
+    - {power: russia, type: fleet, at: pru}

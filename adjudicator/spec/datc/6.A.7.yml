@@ -7,5 +7,11 @@ position:
 orders:
   - order: {type: move, power: england, at: lon, destination: bel}
     check: {legal: false, reason: not_reachable}
+    result: void
   - order: {type: convoy, power: england, at: nth, from: lon, to: bel}
     check: {legal: false, reason: no_unit}
+    result: void
+after:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: nth}

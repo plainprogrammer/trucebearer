@@ -1,0 +1,29 @@
+case: "6.D.20"
+summary: A unit can't cut the support of its own power
+position:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: nth}
+    - {power: england, type: army, at: yor}
+    - {power: france, type: fleet, at: eng}
+orders:
+  - order: {type: support_move, power: england, at: lon, from: nth, to: eng}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: england, at: nth, destination: eng}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: england, at: yor, destination: lon}
+    check: {legal: true}
+    result: bounced
+  - order: {type: hold, power: france, at: eng}
+    check: {legal: true}
+    result: held
+    dislodged: true
+after:
+  units:
+    - {power: england, type: fleet, at: lon}
+    - {power: england, type: fleet, at: eng}
+    - {power: england, type: army, at: yor}
+  dislodged:
+    - {power: france, type: fleet, at: eng, from: nth}

@@ -1,0 +1,29 @@
+case: "6.D.19"
+summary: A support from the attacked unit's own power doesn't count toward dislodging it
+position:
+  units:
+    - {power: russia, type: fleet, at: con}
+    - {power: russia, type: fleet, at: bla}
+    - {power: russia, type: army, at: smy}
+    - {power: turkey, type: fleet, at: ank}
+orders:
+  - order: {type: support_move, power: russia, at: con, from: bla, to: ank}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: bla, destination: ank}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: support_move, power: russia, at: smy, from: ank, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: bounced
+    dislodged: true
+after:
+  units:
+    - {power: russia, type: fleet, at: con}
+    - {power: russia, type: fleet, at: ank}
+    - {power: russia, type: army, at: smy}
+  dislodged:
+    - {power: turkey, type: fleet, at: ank, from: bla}

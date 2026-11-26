@@ -10,6 +10,24 @@ require_relative "../support/datc"
 RSpec.describe "DATC fixtures: adjudication" do
   cases = Datc.load_all.select(&:after)
 
+  it "has an after: in exactly the encoded files, and in none of the cases left out (AC-11.2)" do
+    expect(Datc::ADJUDICATED.size).to eq(80)
+    expect(cases.map(&:id).sort).to eq(Datc::ADJUDICATED)
+    without = Datc.load_all.reject(&:after).map(&:id)
+    expect(without).to eq(Datc::CHECKING_ONLY)
+    left_out = %w[6.B.9 6.B.14 6.C.4 6.C.5 6.C.6 6.C.7 6.D.6 6.D.16 6.E.11 6.F.12 6.G.7]
+    expect(cases.map(&:id) & left_out).to eq([])
+  end
+
+  it "marks only 6.B.2 and 6.B.12 as departures, and their results are the strict ones (AC-8.4)" do
+    expect(cases.select(&:departure).map(&:id).sort).to eq(%w[6.B.12 6.B.2])
+    %w[6.B.2 6.B.12].each do |id|
+      kase = cases.find { _1.id == id }
+      expect(kase.entries.map(&:result)).to eq([:void])
+      expect(kase.after.units).to eq(kase.position.units)
+    end
+  end
+
   # Every order of every case, adjudicated in any order. A case of up to five orders is tried
   # in every order; the others in a few shuffles (AC-9.1).
   def outcomes_by_order(adjudication)

@@ -8,7 +8,17 @@ position:
 orders:
   - order: {type: hold, power: england, at: mao}
     check: {legal: true}
+    result: held
+    dislodged: true
   - order: {type: move, power: france, at: spa, destination: mao}
     check: {legal: true}
+    result: succeeded
   - order: {type: support_move, power: italy, at: wes, from: spa, to: mao}
     check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: france, type: fleet, at: mao}
+    - {power: italy, type: fleet, at: wes}
+  dislodged:
+    - {power: england, type: fleet, at: mao, from: spa}

@@ -1,0 +1,27 @@
+case: "6.D.1"
+summary: A supported hold stands against an attack of equal strength
+position:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}
+orders:
+  - order: {type: support_move, power: austria, at: adr, from: tri, to: ven}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: austria, at: tri, destination: ven}
+    check: {legal: true}
+    result: bounced
+  - order: {type: hold, power: italy, at: ven}
+    check: {legal: true}
+    result: held
+  - order: {type: support_hold, power: italy, at: tyr, target: ven}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: austria, type: fleet, at: adr}
+    - {power: austria, type: army, at: tri}
+    - {power: italy, type: army, at: ven}
+    - {power: italy, type: army, at: tyr}

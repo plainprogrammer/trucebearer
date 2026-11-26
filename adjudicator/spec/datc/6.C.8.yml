@@ -1,0 +1,32 @@
+case: "6.C.8"
+summary: A circle blocked from outside stays put, because an army may not push out a unit of its own power
+position:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: bul}
+    - {power: turkey, type: army, at: smy}
+    - {power: russia, type: fleet, at: bla}
+    - {power: austria, type: army, at: ser}
+orders:
+  - order: {type: move, power: turkey, at: con, destination: bla}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: turkey, at: bul, destination: con}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: turkey, at: smy, from: bul, to: con}
+    check: {legal: true}
+    result: given
+  - order: {type: move, power: russia, at: bla, destination: "bul/ec"}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: austria, at: ser, destination: bul}
+    check: {legal: true}
+    result: bounced
+after:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: bul}
+    - {power: turkey, type: army, at: smy}
+    - {power: russia, type: fleet, at: bla}
+    - {power: austria, type: army, at: ser}

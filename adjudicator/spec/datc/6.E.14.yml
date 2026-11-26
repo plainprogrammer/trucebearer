@@ -1,0 +1,17 @@
+case: "6.E.14"
+summary: An illegal move is void, but the unit still holds against an attack of strength one
+position:
+  units:
+    - {power: england, type: army, at: lvp}
+    - {power: russia, type: fleet, at: edi}
+orders:
+  - order: {type: move, power: england, at: lvp, destination: edi}
+    check: {legal: true}
+    result: bounced
+  - order: {type: move, power: russia, at: edi, destination: lvp}
+    check: {legal: false, reason: not_reachable}
+    result: void
+after:
+  units:
+    - {power: england, type: army, at: lvp}
+    - {power: russia, type: fleet, at: edi}

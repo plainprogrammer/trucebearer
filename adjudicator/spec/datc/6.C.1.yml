@@ -1,0 +1,22 @@
+case: "6.C.1"
+summary: Three units moving in a circle all move
+position:
+  units:
+    - {power: turkey, type: fleet, at: ank}
+    - {power: turkey, type: army, at: con}
+    - {power: turkey, type: army, at: smy}
+orders:
+  - order: {type: move, power: turkey, at: ank, destination: con}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: con, destination: smy}
+    check: {legal: true}
+    result: succeeded
+  - order: {type: move, power: turkey, at: smy, destination: ank}
+    check: {legal: true}
+    result: succeeded
+after:
+  units:
+    - {power: turkey, type: fleet, at: con}
+    - {power: turkey, type: army, at: smy}
+    - {power: turkey, type: army, at: ank}

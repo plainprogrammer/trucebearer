@@ -1,0 +1,22 @@
+case: "6.D.10"
+summary: A unit can't dislodge a unit of its own power
+position:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
+orders:
+  - order: {type: hold, power: germany, at: ber}
+    check: {legal: true}
+    result: held
+  - order: {type: move, power: germany, at: kie, destination: ber}
+    check: {legal: true}
+    result: bounced
+  - order: {type: support_move, power: germany, at: mun, from: kie, to: ber}
+    check: {legal: true}
+    result: given
+after:
+  units:
+    - {power: germany, type: army, at: ber}
+    - {power: germany, type: fleet, at: kie}
+    - {power: germany, type: army, at: mun}
