@@ -1,7 +1,7 @@
 # Feature 025: Reveal results to every phone at once
 
 **Status:** Approved
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #25
@@ -13,6 +13,7 @@
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1.0 | 2026-11-26 | Amended by spec 029 (gem 0.2.0, #29).<br>• D6's stand-in note, Story 7's AC-7.1 and AC-7.3's wording about the note, AC-8.1's and AC-8.4's note, `RulesEngine.stand_in?` and the partial `results/_practice_note` are retired: no results view carries a practice note.<br>• The Goal and Non-Goal lines, AC-7.2's "stand-in's loader" wording and the Known limits entries that call the results fake are read as the real engine. Every other mention of the stand-in (the partial contract's "practice note when due", AC-4.1's stand-in made to raise) is read as the real engine. The paradox warning, the dislodged banners and every other behavior stand. |
 | 1.0.0 | 2026-11-26 | Approved at Gate A by the coordinator under the maintainer's delegation, with D5 (the 303) and its amendments to specs 022, 023 and 024. The follow-up that folds "Earlier results" into #104's history list is opened by the coordinator after both merge, not by this pull request |
 | 0.3.0 | 2026-11-26 | Changed after the second Fable review (2 blocking, 11 non-blocking, all taken; not re-reviewed, round 2 being the last): AC-1.4 is a per-row mapping with the pairs stated; AC-5.3 names the two allowed differences, keeps the swept pickers occupied and sweeps the stepped-in screens for both numbers; `PhaseResults` also returns the dislodged units' banner data from the hash form; a dislodged implied hold's note drops "so it held"; the paradox and dislodged banners are told apart by a data attribute; AC-3.1 waits for the right number of sources; D1 states that production delivery is batched and the test adapter is not Solid Cable; D9 and AC-9.2 list the specs that the always-`no-store` and the 303 break |
 | 0.2.0 | 2026-11-26 | Changed after the first Fable review (5 blocking, 12 non-blocking, all taken): the sweep's second world requests the open phase's own pages, with phase numbers in its context (AC-5.2 to AC-5.5); void orders, foreign units and units off the board have stated rows, and an implied hold's note is true when a void order exists (D8, FR-1, AC-1.3, AC-1.6, AC-1.9); a convoy paradox gets one warning line (D6, AC-7.4); the banner source is the stored position, only for the latest phase (D8, AC-2.2, AC-2.6); the amendments to spec 024's AC-4.1 and AC-4.5 are named (AC-9.1, AC-9.2); the refresh is sent with no request id, so it is exactly one attribute, and the host's banner is protected by timing, not by request-id suppression (D1, AC-3.3, AC-4.2); the host with France's seat cookie, header order, the stepped-in revealed GET, a refresh dropped mid-navigation, a skip link, the follow-up to fold the two host lists, the wording of `void` and `disrupted`, fixture rules, word lists |

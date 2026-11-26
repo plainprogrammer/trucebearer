@@ -25,4 +25,20 @@ module ResultsFixtures
     game.phases.create!(number: phase.number + 1, position: phase.position)
     phase.reload
   end
+
+  # Reveals a phase from a position and orders, the way the host would (spec 029 D4): the open phase's position is set from
+  # units ([[power, type, province], ...]), each power's orders are saved through its seat (the seat is taken when the game has
+  # none), and Phase#reveal! adjudicates them. orders: [[type, power, at, {extra fields}], ...]. Returns the revealed phase.
+  def reveal_position!(game, units:, orders:)
+    phase = game.current_phase
+    phase.update_columns(position: rules_position(units: units))
+    phase.reload
+    orders.map { |type, power, at, rest| rules_order(type, power, at, **(rest || {})) }
+          .group_by { |order| order.to_h["power"] }.each do |power, list|
+      seat = game.seats.find_by(power: power) || game.take_seat!(power).first
+      seat.save_orders!(phase, list.to_h { |order| [ order.to_h["at"], json_of(order) ] }, submit: true)
+    end
+    phase.reveal!
+    phase.reload
+  end
 end
