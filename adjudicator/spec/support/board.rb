@@ -35,4 +35,25 @@ module Board
   def army = TA::Unit.new(power: :austria, type: :army, location: L.new(province: :bud))
   def fleet = TA::Unit.new(power: :russia, type: :fleet, location: L.new(province: :stp, coast: :sc))
   def spring = { map: "classic", season: :spring, year: 1901, phase: :movement, dislodged_units: [], standoffs: [] }
+
+  # "spa/nc" or "par" as a TA::Location.
+  def loc(text)
+    province, coast = text.split("/")
+    L.new(province: province.to_sym, coast: coast&.to_sym)
+  end
+
+  # A unit from short pieces: unit(:france, :fleet, "spa/nc").
+  def unit(power, type, at) = TA::Unit.new(power: power, type: type, location: loc(at))
+
+  # A spring 1901 position holding only these units, no ownership.
+  def position(*units, phase: :movement)
+    TA::Position.new(map: "classic", season: :spring, year: 1901, phase: phase, units: units,
+                     ownership: {}, dislodged_units: [], standoffs: [])
+  end
+
+  # What checking says, as the list of reasons: [] when legal.
+  def verdict(position, order)
+    result = TA.check(position, order)
+    result.legal ? [] : result.reasons
+  end
 end
