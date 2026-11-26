@@ -9,6 +9,7 @@ require_relative "adjudicator/unit"
 require_relative "adjudicator/dislodged_unit"
 require_relative "adjudicator/position"
 require_relative "adjudicator/order"
+require_relative "adjudicator/check_result"
 
 module Trucebearer
   # The rules engine: checks orders and adjudicates each phase of a game turn.
