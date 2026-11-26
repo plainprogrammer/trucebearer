@@ -50,7 +50,7 @@ A mobile-first base stylesheet (tokens, layout, buttons, lists, form controls, p
 
 ### CSS features used (FR-1: each must be Baseline "widely available")
 
-`@layer`; custom properties and `var()`; `calc()`, `max()`; `env()` and `viewport-fit=cover`; `dvh` with a `vh` fallback line; `position: sticky`; flexbox with `gap`; `:focus-visible`; `:not()`; `::placeholder`; `accent-color`; `color-scheme`; `scroll-padding`; `touch-action`; `text-decoration-thickness` and `text-underline-offset`; logical properties (`margin-inline`, `margin-block-start`, `text-align: start`); the media features `hover` and `prefers-reduced-motion`, and the range form `(height < 30rem)`. A reviewer checks the list against MDN's Baseline data. Two declarations that are not Baseline were dropped on review: `text-size-adjust` and `-webkit-tap-highlight-color`.
+`@layer`; custom properties and `var()`; `calc()`, `max()`; `env()` and `viewport-fit=cover`; `dvh` with a `vh` fallback line; `position: sticky`; flexbox with `gap`; `display: contents` (used only on an unnamed form wrapper, which has no role to lose); `:focus-visible`; `:not()`; `::placeholder`; `accent-color`; `color-scheme`; `scroll-padding`; `touch-action`; `text-decoration-thickness` and `text-underline-offset`; logical properties (`margin-inline`, `margin-block-start`, `text-align: start`); the media features `hover` and `prefers-reduced-motion`, and the range form `(height < 30rem)`. A reviewer checks the list against MDN's Baseline data. Two declarations that are not Baseline were dropped on review: `text-size-adjust` and `-webkit-tap-highlight-color`.
 
 ### The palette (derived once, recorded here)
 
@@ -1429,7 +1429,7 @@ RSpec.describe "Style guide", type: :request do
       expect(page.css(".app-actions .button").size).to eq(2)
     end
 
-    it "uses no inline styles (AC-1.1 in FR-1)" do
+    it "uses no inline styles (spec Security requirement, FR-1 must-not list)" do
       expect(page.css("[style]")).to be_empty
       expect(page.css("style")).to be_empty
     end
@@ -1750,7 +1750,7 @@ Pairs with a minimum of 4.5 are text pairs: the sample text and its caption are 
 ```
 
 - [ ] Run: `bundle exec rspec` — expect everything PASS: the contrast spec, the rules spec (all five files present, total under 24 KB, `styleguide.css` under 4 KB), helper, layout, root, style guide, words. If `styleguide.css` is over 4 KB, trim the `sg-bg-*` and `sg-fg-*` lines that no pair uses. If the words spec finds a match, rename it (do not widen the exemption).
-- [ ] Run: `bin/rubocop -A app/controllers app/helpers config spec/requests`, then `bundle exec rspec` again.
+- [ ] Run: `bin/rubocop -A app/controllers app/helpers config/application.rb config/environments/development.rb config/environments/test.rb config/routes.rb spec/requests`, then `bundle exec rspec` again.
 - [ ] Commit: `Add the development-only style guide page`
 
 ---
@@ -1764,9 +1764,9 @@ Pairs with a minimum of 4.5 are text pairs: the sample text and its caption are 
 No new dependency is added. Two ways of using Chrome, because a desktop window cannot be made 320 to 390 pixels wide (its floor is about 500):
 
 - **Measuring:** a scratch page `public/frame.html`, never committed (it is deleted at the end of this phase and listed in `.git/info/exclude` while it exists), holds `<iframe id="f" src="/styleguide" style="width:360px;height:800px;border:0">`. It is served by the same Rails server, so it is same-origin and the snippet can reach into the frame. The frame's width and height are the viewport the page sees, so media queries, `dvh` and `sticky` behave as on a phone of that size. The snippet runs in the parent page through the browser tooling's JavaScript tool, or in DevTools.
-- **Screenshots:** headless Chrome, which can be given any window size: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=360,800 --screenshot=<path> http://localhost:3020/styleguide`. That captures the top of the page at the viewport size. A taller `--window-size` (for example `360,2600`) captures the whole page.
+- **Screenshots:** headless Chrome, which can be given any window size: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=360,800 --screenshot=<path> http://localhost:3020/styleguide`. That captures the top of the page at the viewport size. A taller `--window-size` (for example `360,2600`) captures the whole page. Check each capture with `sips -g pixelWidth <png>`: if Chrome enforced a minimum window width and the PNG is wider than asked, screenshot `frame.html` with the frame set to that width instead.
 
-- [ ] Start the app in the background: `bin/rails server -p 3020` from `web/`. Wait until `curl -s -o /dev/null -w '%{http_code}' http://localhost:3020/styleguide` prints `200`. Add `public/frame.html` to `.git/info/exclude`, then write it (`<!doctype html><title>frame</title><iframe id="f" src="/styleguide" style="width:360px;height:800px;border:0"></iframe>`).
+- [ ] Start the app in the background: `bin/rails server -p 3020` from `web/`. Wait until `curl -s -o /dev/null -w '%{http_code}' http://localhost:3020/styleguide` prints `200`. Add the scratch file to the exclude list with `echo web/public/frame.html >> "$(git rev-parse --git-path info/exclude)"` (this checkout is a git worktree, so `.git` is a file, and the list is shared with the other worktrees), then write `public/frame.html` (`<!doctype html><title>frame</title><iframe id="f" src="/styleguide" style="width:360px;height:800px;border:0"></iframe>`).
 - [ ] Write `docs/specs/020-base-stylesheet/measure.md` with the procedure above and this snippet (documentation, not app JavaScript). It takes the frame's window, so the same code runs at each size:
 
 ```js
@@ -1840,7 +1840,7 @@ function measure(win) {
 
 - [ ] Run the procedure at the five widths and the short viewport. Fix any real problem in the stylesheet, add a text spec if the problem can be caught in text, rerun `bundle exec rspec`, and commit each fix on its own: `Fix <what>`.
 - [ ] Take the screenshots with headless Chrome at `--window-size=360,800` and `768,1024` (viewport at the top), and a tall `360,2600` and `768,2600` for the whole page. Save the 360 and 768 ones as `docs/specs/020-base-stylesheet/screenshots/styleguide-360.png` and `styleguide-768.png` (tall versions) and keep each under about 400 KB.
-- [ ] Record the measured results at the end of `measure.md`: a table with width, `problems`, position, `barBottomGap`, `clearOfBar` and `headerTop` for each run, and the states that could not be checked with the reason. Delete `public/frame.html` and its `.git/info/exclude` line. Stop the server.
+- [ ] Record the measured results at the end of `measure.md`: a table with width, `problems`, position, `barBottomGap`, `clearOfBar` and `headerTop` for each run, and the states that could not be checked with the reason. Delete `public/frame.html` and remove exactly that one line from the exclude list (it is shared with other worktrees). Confirm `git status --porcelain | grep frame.html` prints nothing. Stop the server.
 - [ ] Commit: `Record the browser measurements and screenshots for the base stylesheet`
 
 ---
