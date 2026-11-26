@@ -1,5 +1,5 @@
-# A seat's own orders for one phase: the plain form and the endpoint behind it (spec 022 FR-2, FR-4). The form is the
-# part #23 replaces; the endpoint, its partial-update meaning and its refusals stay.
+# A seat's own orders for one phase: the order screen (spec 023) and the endpoint behind every pick (spec 022 FR-2). The
+# endpoint, its partial-update meaning and its refusals are unchanged; the screen replaced spec 022's plain form.
 class SeatOrdersController < ApplicationController
   include OrderScreen
   before_action :require_seat
@@ -21,7 +21,7 @@ class SeatOrdersController < ApplicationController
     return refuse(Seat::UNREADABLE) unless entries
 
     result = @seat.save_orders!(@phase, entries, submit: params[:submit] == "1")
-    flash[:banner] = { "kind" => "info", "text" => result.submitted ? "Submitted." : "Orders saved." }
+    flash[:banner] = { "kind" => "info", "text" => "Submitted." } if params[:submit] == "1" && result.submitted
     redirect_to game_seat_orders_path(@game.public_id, @phase.number), status: :see_other
   rescue Seat::Refusal => error
     refuse(error.message)
@@ -47,7 +47,7 @@ class SeatOrdersController < ApplicationController
   def load_page
     @units = @phase.position.units.select { |unit| unit.power.to_s == @seat.power }.sort_by { |unit| unit.location.province.to_s }
     @stored = @seat.orders_for(@phase)
-    @choices = @units.to_h { |unit| [ unit.location.province.to_s, RulesEngine.legal_orders(@phase.position, unit) ] }
+    @submitted = @seat.submitted?(@phase)
   end
 
   def refuse(sentence)

@@ -437,6 +437,55 @@
     gap: var(--space-3);
   }
 
+  /* ---- Unit row (#23): extends .list__row. Icon, the unit, its order or "holds", and a chevron drawn here ---- */
+  .unit-row {
+    gap: var(--space-3);
+  }
+
+  .unit-row__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .unit-row__order {
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .unit-row::after {
+    content: "";
+    flex: none;
+    inline-size: 0.6rem;
+    block-size: 0.6rem;
+    border: solid currentcolor;
+    border-width: 2px 2px 0 0;
+    transform: rotate(45deg);
+  }
+
+  /* ---- Submit bar (#23): in .app-actions, with the save status above the state and the button ---- */
+  .submit-bar {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .submit-bar form {
+    display: contents;
+  }
+
+  .submit-bar__state {
+    flex: 1 1 auto;
+    margin: 0;
+  }
+
+  .submit-bar__count {
+    display: block;
+  }
+
   /* ---- Picker step (#23): the order so far above a list of choices; each choice is a .list__row ---- */
   .picker {
     gap: var(--space-4);
