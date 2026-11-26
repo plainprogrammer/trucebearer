@@ -142,3 +142,30 @@ The snippet above was run in headless Chrome from a scratch page, at each width,
 ## Screenshots
 
 `screenshots/styleguide-360.png` (360 x 800, top of the page), `screenshots/styleguide-768.png` (768 x 1024, top of the page), `screenshots/styleguide-360-powers.png` (360 x 800, scrolled to the power badges). They were taken as described under "Method".
+
+## Re-run after the re-theme (2026-11-26, spec 2.0.x, Issue #81)
+
+The palette, the header, the font and the icons changed, so the geometry was checked again. The layout checks of #73 (`spec/system/styleguide_layout_spec.rb`) run on every `bundle exec rspec` and pass unchanged: 44 pixel targets at 360 and 768, no sideways scroll at 360, the sticky action area and focus.
+
+The snippet above was also run in headless Chrome (Capybara, device metrics emulation as in `spec/support/system.rb`, from a throwaway spec that is not committed) against `/styleguide` at each width:
+
+| Width x height | Problems found | `barBottomGap` | Main width |
+|---|---|---|---|
+| 320 x 800 | none | 0 | 305 |
+| 360 x 800 | none | 0 | 345 |
+| 390 x 800 | none | 0 | 375 |
+| 768 x 800 | none | 0 | 640 |
+| 1024 x 800 | none | 0 | 640 |
+
+"None" has the meaning given above (no sideways scroll, targets at least 44 by 44, at least 8 pixels between separate controls, body text 16 pixels, controls 16 pixels, no text under 14 pixels), with one stated exception. The snippet lists the power-initial in each unit's tag as "text under 14px" (the SVG `text` computes to 8 pixels). That is the AC-1.1 exemption, so those lines were filtered out before reading the result. There were exactly 44 of them at every width: 42 in the unit grid and 2 labelled icons.
+
+| Check | Result |
+|---|---|
+| Forced colors (Chrome emulation, `forced-colors: active`) | Buttons keep their real 2 pixel border and the browser recolors it (it computed to `rgb(255, 255, 255)`; the ground behind it was not inspected). The icons are SVG fills and strokes and keep their own colors: the Austria silhouette stayed `rgb(88, 111, 42)`, its tag stroke the same, and the England supply-center disk `rgb(130, 38, 53)` |
+| Reduced motion (Chrome emulation, `prefers-reduced-motion: reduce`) | `.button` transition duration is `0s` |
+| Fonts and requests | `spec/system/font_spec.rb`: the `Plex Mono` face loads (one face), every request goes to the app's own origin, and the one font request is the `.woff2` |
+| Header | `ice` fill with a `steel` rule. Its focus ring is `focus` on `ice` (3.19, documented), and its name link is `text` on `ice` (8.33) |
+
+Screenshots (360 by 800, taken as in the check above, not by the iframe method): `screenshots/styleguide-360-top.png` (the header and the top of the page), `screenshots/styleguide-360-units.png` (the unit section, with the first row on `ice-pale`), `screenshots/styleguide-360-supply-mono.png` (the supply-center and mono sections) and `screenshots/styleguide-360-colors.png` (the swatches, including `ice`, `ice-pale` and `steel`). The three screenshots from #20 above show the old palette and are kept as the record of that version.
+
+Still not checked here: hover, a real `:active`, other browsers, and everything that needs a real iPhone (Issue #71).
