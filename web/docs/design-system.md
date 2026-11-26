@@ -142,7 +142,7 @@ Class names follow the pattern of the base stylesheet: block, `__element`, `--va
 | Seat status | `.seat-status` (helper `seat_status`, partials `shared/_seat_status` for the rows and `phases/_status` for the heading and stream) | #24 (built) | Seven rows: badge plus "Submitted" or "Not submitted"; a polite live list that a stream message morphs, so only a changed row is announced; the same list on the seat page and next to the host's reveal button |
 | Result row | `.result-row`, `.outcome-tag` (partials `results/_row`, `results/_outcome_tag`) | #25 (built) | The unit and its order in words, then a mono tag ("Succeeded", "Bounced", "Support cut", "Dislodged"); dislodged uses `danger`; the one tag partial is the only writer of `.outcome-tag`; an implied hold carries a muted note |
 | Result group | `.result-group` (`--reading`; partials `results/_group`, and `results/_section` for the heading, banners, groups and the list of earlier results) | #25 (built) | Grouped by power; the host's reading variant has larger type, and groups holding a dislodged unit come first |
-| Segmented toggle | `.segmented` | #27 | Army or fleet; a radio group styled as two joined buttons |
+| Segmented toggle | `.segmented` (partial `shared/_segmented`) | #27 (built) | Army or fleet, spring or fall; a radio group drawn as joined buttons, the selected option in `primary` with `on-primary`; the radios stay real, clipped to a pixel, and the label is the 44-pixel target |
 | Game card | `.game-card` | #28 | Game name, phase header, your power |
 
 ### 1.0 screens

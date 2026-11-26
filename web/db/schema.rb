@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_160000) do
   create_table "games", force: :cascade do |t|
     t.string "public_id", null: false
     t.string "host_token_digest", null: false
@@ -34,6 +34,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_150000) do
     t.index ["game_id", "number"], name: "index_phases_on_game_id_and_number", unique: true
     t.index ["game_id"], name: "index_phases_on_game_id_while_open", unique: true, where: "revealed_at IS NULL"
     t.check_constraint "(revealed_at IS NULL) = (adjudication IS NULL)", name: "phases_reveal_is_all_or_nothing"
+  end
+
+  create_table "position_edits", force: :cascade do |t|
+    t.integer "phase_id", null: false
+    t.json "detail", null: false
+    t.datetime "created_at", null: false
+    t.index ["phase_id"], name: "index_position_edits_on_phase_id"
   end
 
   create_table "reissues", force: :cascade do |t|
@@ -82,6 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_150000) do
   end
 
   add_foreign_key "phases", "games"
+  add_foreign_key "position_edits", "phases"
   add_foreign_key "reissues", "phases"
   add_foreign_key "reissues", "seats"
   add_foreign_key "saved_orders", "phases"

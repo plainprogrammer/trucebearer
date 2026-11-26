@@ -1,0 +1,13 @@
+<%# The segmented toggle (spec 027 D9, the design system's .segmented): a radio group drawn as joined buttons. The radios stay real.
+    locals: legend, name, options ([[value, label], ...]), selected %>
+<fieldset class="segmented">
+  <legend class="field__label"><%= legend %></legend>
+  <div class="segmented__options">
+    <% options.each do |value, label| %>
+      <label class="segmented__option">
+        <%= radio_button_tag name, value, value.to_s == selected.to_s, class: "segmented__input" %>
+        <span class="segmented__label"><%= label %></span>
+      </label>
+    <% end %>
+  </div>
+</fieldset>

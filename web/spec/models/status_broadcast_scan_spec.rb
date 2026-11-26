@@ -30,9 +30,10 @@ RSpec.describe "Who writes and broadcasts the status" do
     expect(text.call(Rails.root.join("app/models/seat.rb").to_s)[/def save_orders!.*?\n  end\n/m]).to include("broadcast_seat_status")
     expect(text.call(Rails.root.join("app/models/phase.rb").to_s)[/def reveal!.*?\n  end\n/m]).to include("broadcast_seat_status")
     expect(text.call(Rails.root.join("app/models/game.rb").to_s)[/def reissue_seat!.*?\n  end\n/m]).to include("broadcast_seat_status")
-    # And nowhere else: one call in Seat, one in Phase, the definition and one call in Game.
+    expect(text.call(Rails.root.join("app/models/game.rb").to_s)[/def edit_position!.*?\n  end\n/m]).to include("broadcast_seat_status") # spec 027 AC-7.9
+    # And nowhere else: one call in Seat, one in Phase, the definition and two calls in Game (the reissue and spec 027's edit).
     calls = %w[app/models/seat.rb app/models/phase.rb app/models/game.rb].to_h { |path| [ path, code.call(Rails.root.join(path).to_s).scan("broadcast_seat_status").size ] }
-    expect(calls).to eq("app/models/seat.rb" => 1, "app/models/phase.rb" => 1, "app/models/game.rb" => 2)
+    expect(calls).to eq("app/models/seat.rb" => 1, "app/models/phase.rb" => 1, "app/models/game.rb" => 3)
   end
 
   it "calls broadcast_results_refresh only from Phase#reveal!, once (spec 025 AC-4.6)" do

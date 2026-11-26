@@ -7,6 +7,10 @@ class Phase < ApplicationRecord
   attribute :position, RulesObjectType.position
   attribute :adjudication, RulesObjectType.adjudication
 
+  # A revealed phase's position is what it was adjudicated from, so it can be replayed and never changes (spec 027 D7). reveal! writes
+  # with update_all, which skips this.
+  validate { errors.add(:position, "can't change after the reveal") if revealed_at_in_database && position_changed? }
+
   Pending = Data.define(:power, :seated)
   Status = Data.define(:power, :submitted) # one power's row in the status list (spec 024 FR-1)
 

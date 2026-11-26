@@ -69,4 +69,11 @@ RSpec.describe "The design-system document (AC-9.1, 9.2)" do
     end
     expect(doc).to include("results/_outcome_tag").and include("results/_row").and include("results/_group").and include("results/_section")
   end
+
+  it "lists the segmented toggle of Issue 27 as built, with its class and partial (spec 027 AC-10.6)" do
+    line = doc.lines.find { |l| l.include?("`.segmented`") && l.include?("#27") && l.match?(/built/i) }
+
+    expect(line).not_to be_nil, "no catalog line names .segmented with #27 and built"
+    expect(line).to include("shared/_segmented")
+  end
 end

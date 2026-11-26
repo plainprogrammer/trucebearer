@@ -1,0 +1,50 @@
+<% content_for :title, "Edit the board" %>
+<% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
+
+<div class="stack">
+  <h1>Edit the board</h1>
+  <%= render "phases/header", phase: @phase %>
+  <p>Retreats, builds and fixes by hand. Changing where units stand clears every seat's saved orders for this phase; changing a supply center's owner, or the season and year, keeps them. Fix the board before the players order.</p>
+
+  <section class="stack" aria-labelledby="units-heading">
+    <h2 id="units-heading">Units</h2>
+    <% RulesEngine.powers.each do |power| %>
+      <% id = power.id.to_s %>
+      <% units = units_of(@position, id) %>
+      <% next if units.empty? %>
+      <h3><%= power_badge(id) %></h3>
+      <ul class="list">
+        <% units.each do |unit| %>
+          <% province = unit.location.province.to_s %>
+          <li>
+            <%= link_to game_position_unit_path(@game.public_id, @phase.number, province), class: "list__row" do %>
+              <%= unit_icon(id, unit.type, size: 32, decorative: true) %>
+              <span><%= unit.type.to_s.capitalize %> in <%= province_label(province) %><%= ", #{OrderLabelHelper::COASTS.fetch(unit.location.coast.to_s)}" if unit.location.coast %></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section class="stack" aria-labelledby="centers-heading">
+    <h2 id="centers-heading">Supply centers</h2>
+    <ul class="list">
+      <% RulesEngine.powers.each do |power| %>
+        <% id = power.id.to_s %>
+        <% centers = centers_of(@position, id) %>
+        <% next if centers.empty? %>
+        <li><div class="list__row"><%= supply_center_icon(id, size: 32, decorative: true) %> <span><%= power.name %>:</span> <span class="mono"><%= centers.map(&:upcase).join(" ") %></span></div></li>
+      <% end %>
+      <li><div class="list__row"><%= supply_center_icon(nil, size: 32, decorative: true) %> <span>Unowned:</span> <span class="mono"><%= unowned_centers(@position).map(&:upcase).join(" ") %></span></div></li>
+    </ul>
+  </section>
+
+  <%= link_to "Add a unit", new_game_position_unit_path(@game.public_id, @phase.number), class: "button" %>
+  <%= link_to "Set a supply center's owner", game_position_owners_path(@game.public_id, @phase.number), class: "button button--secondary" %>
+  <%= link_to "Season and year", game_position_date_path(@game.public_id, @phase.number), class: "button button--secondary" %>
+</div>
+
+<% content_for :actions do %>
+  <%= link_to "Back to the host page", game_host_path(@game.public_id), class: "button button--secondary" %>
+<% end %>
