@@ -32,15 +32,15 @@ stays under the license note inside the document itself. In short, that
 note says anyone may copy and use the document, and anyone who changes it
 must keep the note and maintain its change log.
 
-Two kinds of file inside web/ are not under that folder's license:
-web/app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2, IBM Plex Mono Medium
-(Latin subset), (C) 2017 IBM Corp. with Reserved Font Name "Plex", under the
-SIL Open Font License 1.1, with its license text beside it in
-web/app/assets/fonts/OFL.txt; and the five unit and supply-center SVGs in
-web/app/assets/images/icons/ (army.svg, army-small.svg, fleet.svg,
-fleet-small.svg, supply-center.svg), unchanged copies of the masters in
-assets/icons/, which stay under CC BY-SA 4.0 (see assets/LICENSE). See
-web/NOTICE for the details.
+Two kinds of file inside web/ are not under that folder's license. The
+first is web/app/assets/fonts/IBMPlexMono-Medium-Latin1.woff2, IBM Plex Mono
+Medium (Latin subset), (C) 2017 IBM Corp. with Reserved Font Name "Plex",
+under the SIL Open Font License 1.1. Its license text is beside it in
+web/app/assets/fonts/OFL.txt. The second is the five unit and supply-center
+SVGs in web/app/assets/images/icons/ (army.svg, army-small.svg, fleet.svg,
+fleet-small.svg, supply-center.svg). They are unchanged copies of the
+masters in assets/icons/ and stay under CC BY-SA 4.0 (see assets/LICENSE).
+See web/NOTICE for the details.
 
 Trademarks
 ----------
