@@ -22,6 +22,9 @@ module RulesEngine
 
     def check(position, order) = TA.check(position, order)
 
+    # Whether an identifier names a province of the map. The one place a province list is read for the app (spec 022 AC-2.5).
+    def province?(id) = TA::Map.classic.provinces.any? { |province| province.id.to_s == id.to_s }
+
     def adjudicate(position, orders) = StandIn.adjudicate(position, orders)
 
     def legal_orders(position, unit) = TA.legal_orders(position, unit)

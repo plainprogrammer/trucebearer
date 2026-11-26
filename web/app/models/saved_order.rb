@@ -7,4 +7,9 @@ class SavedOrder < ApplicationRecord
   belongs_to :seat
 
   attribute :content, RulesObjectType.order
+
+  # An order can't be written or removed once its phase is revealed (spec 022 AC-6.5). The check reads the database, so
+  # a phase object loaded before the reveal doesn't fool it.
+  validate { errors.add(:phase, "is no longer open") unless Phase.open?(phase_id) }
+  before_destroy { throw :abort unless Phase.open?(phase_id) }
 end

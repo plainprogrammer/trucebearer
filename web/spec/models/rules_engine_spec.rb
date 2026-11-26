@@ -103,4 +103,10 @@ RSpec.describe RulesEngine do
       end
     end
   end
+
+  it "says whether an identifier is a province of the map (spec 022 AC-2.5)" do
+    expect(RulesEngine.province?("lon")).to be(true)
+    expect(RulesEngine.province?(:lon)).to be(true)
+    expect([ "xyz", "", nil, "LON", "lon " ].map { |id| RulesEngine.province?(id) }).to all(be(false))
+  end
 end

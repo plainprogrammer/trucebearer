@@ -9,6 +9,12 @@ class Phase < ApplicationRecord
 
   Pending = Data.define(:power, :seated)
 
+  class Revealed < StandardError; end # the phase is no longer open
+  class Conflict < StandardError; end # the reveal's conditional write changed no row (spec 022 D8, a backstop)
+
+  # True while no reveal has been committed, read from the database and not from this object (spec 022 AC-6.5).
+  def self.open?(id) = where(id: id, revealed_at: nil).exists?
+
   def open? = revealed_at.nil?
 
   # "Spring 1901 · Movement". Capitals are drawn by the stylesheet.

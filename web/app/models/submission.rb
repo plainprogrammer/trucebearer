@@ -2,4 +2,6 @@
 class Submission < ApplicationRecord
   belongs_to :phase
   belongs_to :seat
+
+  validate { errors.add(:phase, "is no longer open") unless Phase.open?(phase_id) }
 end
