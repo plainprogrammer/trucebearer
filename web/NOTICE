@@ -43,8 +43,20 @@ The Trucebearer logo, wordmark and icons are licensed under the Creative
 Commons Attribution-ShareAlike 4.0 International License
 (https://creativecommons.org/licenses/by-sa/4.0/), (C) 2026 James
 Thompson, wherever they are copied in this repository, including into
-this folder. The wordmark is set in Fraunces, an SIL Open Font License
-1.1 typeface by The Fraunces Project Authors, outlined to vector shapes.
+this folder. The unit and supply-center drawings inlined by the app are
+copies of the master artwork in the repository root, kept byte for byte in
+app/assets/images/icons/, and are CC BY-SA 4.0 (see assets/LICENSE). The
+wordmark is set in Fraunces, an SIL Open Font License 1.1 typeface by The
+Fraunces Project Authors, outlined to vector shapes.
+
+Fonts
+-----
+The app serves one font, IBM Plex Mono Medium (Latin subset), (C) 2017 IBM
+Corp. with Reserved Font Name "Plex", under the SIL Open Font License 1.1.
+The license text is in app/assets/fonts/OFL.txt. The file is the unmodified
+IBMPlexMono-Medium-Latin1.woff2 from the @ibm/plex-mono package, release
+2.5.0, https://registry.npmjs.org/@ibm/plex-mono/-/plex-mono-2.5.0.tgz
+SHA-256: 41201b658a328b9d00368215c2f1102770f80b15952ab82631e4006255e6365d
 
 Trucebearer is an independent, unofficial companion for playing the board
 game Diplomacy. Diplomacy(R) is a registered trademark of Hasbro, Inc.

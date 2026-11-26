@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <path id="silhouette" fill="currentColor" d="M2 5 L4 3 H19 L21 5 V14 Q21 22 11.5 28.5 Q2 22 2 14 Z"/>
+  <g id="marks" fill="#fff">
+    <path class="mark" d="M5 12 L11.5 7 L18 12 V15 L11.5 10 L5 15 Z"/>
+    <path class="mark" d="M6 17.2 L11.5 13 L17 17.2 V20.2 L11.5 16 L6 20.2 Z"/>
+  </g>
+</svg>

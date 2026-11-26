@@ -24,14 +24,27 @@ RSpec.describe "Stylesheet rules" do
     expect(names).to all(start_with("--"))
   end
 
+  it "sets the header on ice with a steel rule, and no component reads steel (FR-2)" do
+    layout = Stylesheets.rules(Stylesheets.read(File.join(Stylesheets::DIR, "layout.css")))
+    header = layout.find { |selector, _| selector == ".app-header" }&.last.to_s
+    expect(header).to include("background: var(--color-ice)")
+    expect(header).to match(/border-bottom:[^;]*var\(--color-steel\)/)
+    steel_readers = Stylesheets.files.flat_map do |f|
+      Stylesheets.rules(Stylesheets.read(f)).select { |_, body| body.include?("var(--color-steel)") }.map(&:first)
+    end
+    # Only the header rule, and the style guide's own swatch class, read it. It is decorative.
+    expect(steel_readers.reject { |selector| selector.start_with?(".sg-") }).to eq([ ".app-header" ])
+  end
+
   it "defines the token groups of FR-2" do
     t = Stylesheets.tokens
-    %w[--font-sans --text-sm --text-base --text-lg --text-xl --text-2xl --leading-tight --leading-normal
+    %w[--font-sans --font-mono --text-sm --text-base --text-lg --text-xl --text-2xl --leading-tight --leading-normal
        --weight-regular --weight-strong --gutter --tap-min --content-max --radius --border-width
        --focus-width --focus-offset --scroll-pad].each { |n| expect(t).to have_key(n) }
     (1..8).each { |i| expect(t).to have_key("--space-#{i}") }
     expect(t["--text-base"]).to eq("1rem")
     expect(t["--font-sans"]).to start_with("system-ui").and end_with("sans-serif")
+    expect(t["--font-mono"]).to eq('"Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace')
     expect(t["--space-1"]).to eq("0.25rem")
     expect(t["--tap-min"]).to eq("max(44px, 2.75rem)")
     expect(t["--content-max"]).to eq("40rem")
@@ -42,7 +55,8 @@ RSpec.describe "Stylesheet rules" do
 
   it "has no stray colors, banned properties, px font sizes, imports, fonts or url( in any file (AC-2.4, 2.5, 2.8, 1.5, 6.2, 4.4)" do
     problems = files.flat_map do |f|
-      Stylesheets.violations(Stylesheets.read(f), File.basename(f), token_file: f == Stylesheets::TOKENS)
+      Stylesheets.violations(Stylesheets.read(f), File.basename(f), token_file: f == Stylesheets::TOKENS,
+                             font_face: File.basename(f) == "base.css")
     end
     expect(problems).to be_empty, problems.join("\n")
   end
@@ -138,10 +152,14 @@ RSpec.describe "Stylesheet rules" do
       expect(found("a { font-size: var(--text-base); }")).to be_empty
     end
 
-    it "flags imports, font rules and url( (AC-6.2)" do
+    it "flags imports, a second font face and url( (AC-6.2)" do
       expect(found("@import 'x.css';")).not_to be_empty
       expect(found("@font-face { font-family: X; }")).not_to be_empty
       expect(found("a { background: url(x.png); }")).not_to be_empty
+      one = '@font-face { font-family: "Plex Mono"; src: url("a.woff2"); }'
+      expect(Stylesheets.violations(one, "x.css", font_face: true)).to be_empty
+      expect(Stylesheets.violations("#{one} #{one}", "x.css", font_face: true)).not_to be_empty
+      expect(Stylesheets.violations("#{one} a { background: url(x.png); }", "x.css", font_face: true)).not_to be_empty
     end
 
     it "lets the token file hold hex only in --color-* tokens (AC-2.5)" do
@@ -151,9 +169,14 @@ RSpec.describe "Stylesheet rules" do
       expect(Stylesheets.violations(":root { --bg: url(a.png); }", "t.css", token_file: true)).not_to be_empty
     end
 
-    it "allows a power token only inside a power badge rule (AC-4.4)" do
+    it "allows a power token only inside a badge, unit icon or supply-center icon variant rule (AC-4.4)" do
       expect(found(".power-badge--austria { --_fill: var(--color-power-austria); }")).to be_empty
+      expect(found(".unit-icon--austria { --_power: var(--color-power-austria); }")).to be_empty
+      expect(found(".supply-center-icon--austria { --_owner: var(--color-power-austria); }")).to be_empty
       expect(found(".button { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".unit-icon { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".button .unit-icon--austria { color: var(--color-power-austria); }")).not_to be_empty
+      expect(found(".app-main .power-badge--austria { --_fill: var(--color-power-austria); }")).not_to be_empty
       expect(found(".power-badge--austria, .button { color: var(--color-power-austria); }")).not_to be_empty
     end
   end
