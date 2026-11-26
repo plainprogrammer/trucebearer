@@ -1,7 +1,7 @@
 # Feature 015: Adjudicate convoys
 
 **Status:** Approved
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Created:** 2026-11-26
 **Last Updated:** 2026-11-26
 **Issue:** #15
@@ -14,6 +14,7 @@
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0.0 | 2026-11-26 | Initial draft |
+| 1.2.2 | 2026-11-26 | Record for AC-5.4 (wording only): the wide sweep compared the resolver with the independent reference on 10 500 seeded random convoy boards (the 500 of the spec and 10 000 on five other seeds, 1 157 of the sweep's boards being paradoxes). No board was found whose flag was set while the reference found exactly one consistent result, and none whose results differed, so the counting step of "Detecting a paradox" was not written |
 | 1.2.1 | 2026-11-26 | Wording only, from the plan review: AC-8.2 names `spec/support/reference.rb`, not `conditions.rb`, as the place the convoy conditions are restated (the reason is in the AC). No behavior changes; brought to the coordinator at Gate B |
 | 1.2.0 | 2026-11-26 | Gate A approved by the coordinator under the maintainer's delegation, as proposed. Two conditions: if the independent reference ever disagrees with the resolver on a board, or any pending case has exactly one consistent result, stop and ask (do not widen the rule inside the plan); and `ruleset.md` names which 4.A option 6.F.19, 6.F.20, 6.F.21, 6.F.25 and 6.F.29 rest on, so #39 can find them. Status is now Approved |
 | 1.1.1 | 2026-11-26 | Gate A review round 2 (approve, seven non-blocking): the reasoning paragraph and AC-5.4 no longer overclaim, AC-3.4 and the size bound of the reference (moves, not units) are fixed, and `CHECKING_ONLY` is said to be removed everywhere |
