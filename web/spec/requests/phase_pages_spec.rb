@@ -23,6 +23,21 @@ RSpec.describe "The phase on the seat page and the host page", type: :request do
       expect(page.text).not_to include("France")
     end
 
+    it "links to the orders page of the current phase and shows the seat's own count, never an order (AC-1.5)" do
+      created.session.get "/games/#{id}"
+      page = Nokogiri::HTML5(created.session.response.body)
+      expect(page.at_css("a.button[href='/games/#{id}/phases/1/orders']").text).to eq("Enter orders")
+      expect(page.text).to include("0 of 3 units ordered")
+
+      england = game.seats.find_by(power: "england")
+      england.save_orders!(game.current_phase, { "lon" => JSON.generate({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" }) })
+      created.session.get "/games/#{id}"
+      page = Nokogiri::HTML5(created.session.response.body)
+      expect(page.text).to include("1 of 3 units ordered")
+      expect(page.text).not_to include("Hold")
+      expect(page.at_css("select")).to be_nil
+    end
+
     it "says Submitted once the seat has submitted" do
       Submission.create!(phase: game.current_phase, seat: game.seats.find_by(power: "england"))
       created.session.get "/games/#{id}"

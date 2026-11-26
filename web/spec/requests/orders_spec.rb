@@ -1,0 +1,227 @@
+require "rails_helper"
+require_relative "../support/rules_helpers"
+
+# Spec 022 Story 2 and 3 over HTTP: the plain orders page and the endpoint behind it. England starts with a fleet in LON,
+# a fleet in EDI and an army in LVP.
+RSpec.describe "Saving orders", type: :request do
+  include RulesHelpers
+
+  around { |example| with_passphrase { example.run } }
+
+  let(:created) { create_game(power: "england") }
+  let(:game) { created.game }
+  let(:id) { game.public_id }
+  let(:path) { "/games/#{id}/phases/1/orders" }
+  let(:england) { game.seats.find_by(power: "england") }
+  let(:phase) { game.current_phase }
+  let(:phone) { created.session }
+
+  def page = Nokogiri::HTML5(phone.response.body)
+
+  def reveal_directly
+    phase.update_columns(adjudication: RulesEngine.adjudicate(RulesEngine.starting_position, []), revealed_at: Time.current)
+    game.phases.create!(number: 2, position: RulesEngine.starting_position)
+  end
+
+  describe "the page (AC-2.11)" do
+    it "has a select for each of the seat's units, with no order first and then the legal orders" do
+      phone.get path
+
+      expect(phone.response).to have_http_status(:ok)
+      selects = page.css("select")
+      expect(selects.map { |s| s["name"] }).to eq(%w[orders[edi] orders[lon] orders[lvp]])
+      selects.each do |select|
+        province = select["name"][/\[(\w+)\]/, 1]
+        unit = phase.position.units.find { |u| u.location.province.to_s == province }
+        options = select.css("option")
+        expect(options.first.text).to eq("No order (holds)")
+        expect(options.first["value"]).to eq("")
+        expect(options.size).to eq(1 + RulesEngine.legal_orders(phase.position, unit).size)
+        expect(options.drop(1).map { |o| JSON.parse(o["value"])["at"] }.uniq).to eq([ province ])
+      end
+      labels = page.css("label.field__label").map { |l| l.dup.tap { |copy| copy.css("svg").remove }.text.squish }
+      expect(labels).to eq([ "Fleet in EDI", "Fleet in LON", "Army in LVP" ])
+    end
+
+    it "shows the stored order as selected, and no order for a unit that has none" do
+      england.save_orders!(phase, { "lon" => json_of(move(:england, :lon, :nth)) })
+
+      phone.get path
+
+      selected = page.css("option[selected]")
+      expect(selected.size).to eq(1)
+      expect(selected.first.text).to eq("Move to NTH")
+      expect(page.at_css("#order-lon option[selected]")).to be_present
+    end
+
+    it "shows the seat's own state and count, and the phase header with its badge" do
+      england.save_orders!(phase, { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: true)
+
+      phone.get path
+
+      expect(page.at_css(".phase-header__title").text).to eq("Spring 1901 · Movement")
+      expect(page.at_css(".phase-header .power-badge--england")).to be_present
+      expect(page.text).to include("Submitted")
+      expect(page.text).to include("1 of 3 units ordered")
+    end
+
+    it "has the two buttons in the action area, tied to the form (D5)" do
+      phone.get path
+
+      expect(page.at_css("form#orders-form")["method"]).to eq("post")
+      expect(page.at_css("form#orders-form input[name=_method]")["value"]).to eq("put")
+      save = page.at_css(".app-actions button[form=orders-form]:not([name])")
+      submit = page.at_css(".app-actions button[form=orders-form][name=submit][value='1']")
+      expect([ save.text, submit.text ]).to eq([ "Save orders", "Save and submit" ])
+    end
+  end
+
+  describe "saving (AC-2.1, AC-3.1)" do
+    it "stores an order for each unit and goes back to the page with a banner" do
+      orders = { "lon" => json_of(move(:england, :lon, :nth)), "edi" => json_of(rules_order(:hold, :england, :edi)),
+                 "lvp" => json_of(move(:england, :lvp, :yor)) }
+
+      phone.put path, params: { orders: orders }
+
+      expect(phone.response).to have_http_status(:see_other)
+      expect(phone.response.location).to eq("http://www.example.com#{path}")
+      expect(SavedOrder.where(seat_id: england.id, phase_id: phase.id).count).to eq(3)
+      phone.follow_redirect!
+      expect(page.css(".banner--info").map(&:text)).to eq([ "Orders saved." ])
+      expect(page.text).to include("3 of 3 units ordered")
+    end
+
+    it "submits when asked, and the banner says so (AC-3.1)" do
+      phone.put path, params: { orders: { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: "1" }
+      phone.follow_redirect!
+
+      expect(england.submitted?(phase)).to be(true)
+      expect(page.css(".banner--info").map(&:text)).to eq([ "Submitted." ])
+      expect(page.text).to match(/\bSubmitted\b/)
+    end
+
+    it "submits alone, with no orders at all" do
+      phone.put path, params: { submit: "1" }
+
+      expect(phone.response).to have_http_status(:see_other)
+      expect(england.submitted?(phase)).to be(true)
+      expect(SavedOrder.count).to eq(0)
+    end
+
+    it "does not lock after a submit: the next edit is accepted and puts the seat back to not submitted (AC-3.6, AC-3.2)" do
+      phone.put path, params: { submit: "1" }
+      phone.put path, params: { orders: { "lon" => json_of(rules_order(:hold, :england, :lon)) } }
+
+      expect(phone.response).to have_http_status(:see_other)
+      expect(england.submitted?(phase)).to be(false)
+    end
+
+    it "keeps only the banner's kind and text in the flash (AC-7.7)" do
+      order = json_of(move(:england, :lon, :nth))
+      phone.put path, params: { orders: { "lon" => order } }
+
+      expect(phone.flash.to_h).to eq({ "banner" => { "kind" => "info", "text" => "Orders saved." } })
+    end
+  end
+
+  describe "what is refused (AC-2.2 to AC-2.6)" do
+    it "gives 422 and the sentence in an error banner, storing nothing, for an illegal order" do
+      phone.put path, params: { orders: { "lon" => json_of(move(:england, :lon, :bel)), "lvp" => json_of(move(:england, :lvp, :yor)) } }
+
+      expect(phone.response).to have_http_status(:unprocessable_content)
+      expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: The fleet in LON can't reach there." ])
+      expect(SavedOrder.count).to eq(0)
+      expect(page.css("select").size).to eq(3)
+    end
+
+    it "gives 422 for another power's unit and for another power's name" do
+      phone.put path, params: { orders: { "par" => json_of(rules_order(:hold, :france, :par)) } }
+      expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: You have no unit in PAR." ])
+
+      phone.put path, params: { orders: { "lon" => json_of(rules_order(:hold, :france, :lon)) } }
+      expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: That order isn't for your power." ])
+      expect(SavedOrder.count).to eq(0)
+    end
+
+    it "gives 422 when orders is not a hash of text, or a value is not text" do
+      [ { orders: "lon" }, { orders: [ "a" ] }, { orders: { "lon" => { "at" => "lon" } } } ].each do |params|
+        phone.put path, params: params
+        expect(phone.response).to have_http_status(:unprocessable_content), params.inspect
+        expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: That order couldn't be read." ])
+      end
+      expect(SavedOrder.count).to eq(0)
+    end
+
+    it "keeps what was stored when a later save is refused" do
+      england.save_orders!(phase, { "lon" => json_of(move(:england, :lon, :nth)) })
+
+      phone.put path, params: { orders: { "lon" => json_of(move(:england, :lon, :bel)) } }
+
+      expect(england.orders_for(phase)["lon"]).to eq(move(:england, :lon, :nth))
+    end
+  end
+
+  describe "who may use it (AC-2.12)" do
+    let(:order) { json_of(rules_order(:hold, :england, :lon)) }
+
+    def stranger_page?(response) = response.status == 404 && response.body.include?("We can't find that page.")
+
+    it "gives the stranger response, and stores nothing, with no cookie, with the host cookie only, and with another game's seat" do
+      host_only = open_session
+      host_only.get "/games/#{id}/host-link", params: { token: created.host_token }
+      other = create_game(power: "france")
+
+      [ open_session, host_only, other.session ].each do |session|
+        session.get path
+        expect(stranger_page?(session.response)).to be(true)
+        session.put path, params: { orders: { "lon" => order }, submit: "1" }
+        expect(stranger_page?(session.response)).to be(true)
+      end
+      expect(SavedOrder.count).to eq(0)
+      expect(Submission.count).to eq(0)
+    end
+
+    it "gives the stranger response for a number that is not one of the game's phases" do
+      %w[2 01 0 1abc 1.5 -1].each do |number|
+        phone.get "/games/#{id}/phases/#{number}/orders"
+        expect(stranger_page?(phone.response)).to be(true), number
+        phone.put "/games/#{id}/phases/#{number}/orders", params: { orders: { "lon" => order } }
+        expect(stranger_page?(phone.response)).to be(true), number
+      end
+      expect(SavedOrder.count).to eq(0)
+    end
+  end
+
+  describe "caching (AC-7.6)" do
+    it "tells the browser not to keep the page or the redirect, and Turbo not to snapshot the page" do
+      phone.get path
+      expect(phone.response.headers["Cache-Control"]).to include("no-store")
+      expect(page.at_css("meta[name=turbo-cache-control][content=no-cache]")).to be_present
+
+      phone.put path, params: { submit: "1" }
+      expect(phone.response.headers["Cache-Control"]).to include("no-store")
+    end
+  end
+
+  describe "after the host has revealed the phase (AC-6.1 to AC-6.3, the page and the refusal)" do
+    before { reveal_directly }
+
+    it "refuses a save with 409 and a sentence, and links to the current phase" do
+      phone.put path, params: { orders: { "lon" => json_of(rules_order(:hold, :england, :lon)) }, submit: "1" }
+
+      expect(phone.response).to have_http_status(:conflict)
+      expect(page.css(".banner--danger").map(&:text)).to eq([ "Error: The host has already revealed this phase. Your orders were not saved." ])
+      expect(page.at_css("a.button[href='/games/#{id}/phases/2/orders']")).to be_present
+      expect(SavedOrder.count).to eq(0)
+      expect(Submission.count).to eq(0)
+    end
+
+    it "gives the same page for a read, not the form" do
+      phone.get path
+
+      expect(phone.response).to have_http_status(:conflict)
+      expect(page.at_css("form")).to be_nil
+      expect(page.text).to include("The host has already revealed this phase.")
+    end
+  end
+end
