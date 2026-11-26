@@ -71,7 +71,7 @@ Agent instructions live in `AGENTS.md` files so that tools other than Claude Cod
 1. **The app needs something from the gem.** An Issue is opened with the "Adjudicator request" template and labeled `adjudicator`. It describes the need with example input and expected output as plain data.
 2. **A gem agent picks it up.** The example becomes the first failing spec. Additions go under "Added" in the gem's `CHANGELOG.md`.
 3. **The gem changes its interface.** The pull request updates `adjudicator/docs/interface.md`, adds an entry under "Changed", and opens an "Interface change" Issue labeled `web`.
-4. **A release.** Run `bin/release major|minor|patch|X.Y.Z` in `adjudicator/`. It bumps the version, moves the "Unreleased" entries under it, regenerates `Gemfile.lock`, commits, and tags `adjudicator-vX.Y.Z`. It never pushes; it prints the push command for you to run. Use `bin/release --dry-run` first to see the plan. Before 1.0, a minor version may break the interface and a patch version never does.
+4. **A release.** Run `bin/release major|minor|patch|X.Y.Z` in `adjudicator/`. It bumps the version, moves the "Unreleased" entries under it, regenerates `Gemfile.lock`, commits, and tags `adjudicator-vX.Y.Z`. It never pushes; it prints the push command for you to run. Run it first with `--dry-run` (for example `bin/release --dry-run minor`) to see the plan. Before 1.0, a minor version may break the interface and a patch version never does.
 5. **The app upgrades.** A pull request of its own moves the pin to the new tag, after reading the CHANGELOG and any open "Interface change" Issues.
 
 Each pull request touches one side only. Root files change in pull requests of their own.
