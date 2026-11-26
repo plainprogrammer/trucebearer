@@ -69,10 +69,17 @@ class Game < ApplicationRecord
     raise SeatTaken
   end
 
-  # Replaces the seat's digest. The old token stops working with this write. Returns the new token.
+  # Replaces the seat's digest. The old token stops working with this write. The seat's saved orders and its submission for
+  # the open phase go with it, so the host can't read them by opening the new seat link (spec 022 D9). The phase lock comes
+  # first, as in a save, so a save from the old phone can't slip in between. Returns the new token.
   def reissue_seat!(seat)
     token = Token.generate
-    seat.update!(token_digest: Token.digest(token))
+    transaction do
+      phase = current_phase
+      phase.lock!
+      seat.update!(token_digest: Token.digest(token))
+      seat.clear_orders!(phase)
+    end
     token
   end
 end
