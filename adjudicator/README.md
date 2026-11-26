@@ -4,4 +4,4 @@ A rules engine, written in plain Ruby, for adjudicating orders in the board game
 
 The gem is the engine behind [Trucebearer](../README.md). You may depend on it from your own projects under the terms of the AGPL-3.0-or-later (`LICENSE`); see `../TRADEMARKS.md` for how the name may be used.
 
-Status: skeleton only, with no engine yet. The public interface is described in `docs/interface.md`.
+Status: 0.1.0 holds the classic map, the value objects, order checking and legal orders. Adjudication comes in 0.2.0. The public interface is described in `docs/interface.md`.
