@@ -1,0 +1,15 @@
+<% content_for :title, "Join a game" %>
+
+<div class="stack">
+  <h1>Join a game</h1>
+  <% if @error %>
+    <p role="alert"><%= @error %></p>
+  <% end %>
+  <%= form_with url: join_path, class: "stack" do %>
+    <div class="field">
+      <label class="field__label" for="code">Game code</label>
+      <input class="control mono" id="code" type="text" name="code" autocomplete="off" autocapitalize="characters" inputmode="text">
+    </div>
+    <button class="button" type="submit">Join</button>
+  <% end %>
+</div>

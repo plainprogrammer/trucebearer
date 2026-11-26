@@ -1,0 +1,8 @@
+<% content_for :title, "Reissue a seat" %>
+
+<div class="stack">
+  <h1>Reissue <%= power_name(@seat.power) %></h1>
+  <p>The phone that holds this seat loses it at once. Show the new QR code to the player who takes it over.</p>
+  <%= button_to "Reissue seat", game_reissue_path(@game.public_id, @seat.power), class: "button button--danger" %>
+  <%= link_to "Back", game_host_path(@game.public_id), class: "button button--secondary" %>
+</div>

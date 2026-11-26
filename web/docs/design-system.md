@@ -20,7 +20,7 @@ Colors are CSS custom properties named `--color-...`. Rules read tokens only; no
 | `--color-page` | `#eef3f6` | Page background |
 | `--color-surface` | `#ffffff` | Action area, list rows, fields, the secondary button fill, the power-initial tag's tile |
 | `--color-ice` | `#a7c4d4` | The header's fill. A background only: never text, never a control's edge, never a line |
-| `--color-ice-pale` | `#dde8ee` | Selected rows, the host section, the "acting as" banner (later screens) |
+| `--color-ice-pale` | `#dde8ee` | Selected rows, the host section (built by #21), the "acting as" banner (later screens) |
 | `--color-steel` | `#4f7a93` | Decorative only: the rule under the header. It carries no meaning and no control uses it |
 | `--color-text` | `#22262b` | Body text, headings ("Iron"); the unowned supply center's edge and center |
 | `--color-text-muted` | `#4a5560` | Hints, placeholders, secondary text |
@@ -50,14 +50,14 @@ Every pair below is computed from the tokens on each spec run, and none may fall
 |---|---|
 | `text` on `page`, `surface`, `ice`, `ice-pale` | 4.5 |
 | `text-muted` on `page`, `surface`, `ice-pale` | 4.5 |
-| `link` and `link-visited` on `page`, `surface` | 4.5 |
+| `link` and `link-visited` on `page`, `surface`, `ice-pale` | 4.5 |
 | `on-primary` on `primary`, `primary-pressed` | 4.5 |
 | `danger` on `page`, `surface` | 4.5 |
 | `on-danger` on `danger`, `danger-pressed` | 4.5 |
 | `on-power` on each power color | 4.5 |
 | each power color as text on `surface` (the initial tag) | 4.5 |
-| `primary`, `primary-pressed`, `border`, `danger`, `danger-pressed` against `page`, `surface` | 3 |
-| `focus` against `page`, `surface`, `ice` | 3 |
+| `primary`, `primary-pressed`, `border`, `danger`, `danger-pressed` against `page`, `surface`, `ice-pale` | 3 |
+| `focus` against `page`, `surface`, `ice`, `ice-pale` | 3 |
 | `steel` against `page`, `surface` | 3 |
 | `disabled-text` on `disabled-fill` | 3 |
 | each power color against `page`, `surface`, `ice-pale` | 3 |
@@ -115,6 +115,8 @@ supply_center_icon(owner, size: 32, decorative: false)
 - The power and the type each accept a symbol or a string. An unknown power or type, or a size that is not an Integer above zero, raises `ArgumentError`. A `nil` owner is the unowned look.
 - Parts of a drawing are classes (`unit-icon__silhouette`, `supply-center-icon__disk`, and so on). A page with many icons never repeats an id.
 
+Issue #21 adds three more helpers: `join_code_text(code)` (the code as mono text in two groups), `qr_card(url, label:, caption: nil)` (an inline SVG code on white, the caption, the link as text) and `power_tiles(taken: [])` (seven tiles, each with its badge). Draw these parts only through them.
+
 ## Component catalog
 
 Class names follow the pattern of the base stylesheet: block, `__element`, `--variant`. Each screen Issue builds its components to this catalog and adds them to `/styleguide`.
@@ -130,10 +132,10 @@ Class names follow the pattern of the base stylesheet: block, `__element`, `--va
 | Phase header | `.phase-header` | #22 | Season, year, phase type in mono capitals; the viewer's power badge on the right |
 | Banner | `.banner` (`--info`, `--warning`, `--danger`) | #22 | One sentence ("Orders are locked", "Acting as Italy", "The host entered your orders at 8:42"); rendered through one partial so #82 can add a glyph in one place |
 | Confirmation page | `.confirm` | #22 | A full page, not a modal: heading, consequences in plain words, confirm button, cancel link. #26 reuses it |
-| Join code | `.join-code` | #21 | Six mono characters, large, in two groups of three |
-| QR card | `.qr-card` | #21 | QR code on white with the join code under it |
-| Power tile | `.power-tile` (`--taken`) | #21 | Seven tiles in a grid; taken tiles say "Taken" and are not links |
-| Host section | `.host-section` | #21 | `ice-pale` ground with a "Host" heading, apart from the player's own screen |
+| Join code | `.join-code` (`join_code_text`) | #21 (built) | Six mono characters, large, in two groups of three, as one selectable line of text |
+| QR card | `.qr-card` (`__code`, `__caption`, `__link`; `qr_card`) | #21 (built) | QR code on white with a caption under it (the join code, or a power's badge for a seat) and the link as text |
+| Power tile | `.power-tile` (`--taken`; `.power-tiles`, `power_tiles`) | #21 (built) | Seven tiles in a grid; an open tile is a button, a taken tile says "Taken" and is not a control |
+| Host section | `.host-section` | #21 (built) | `ice-pale` ground with a "Host" heading, apart from the player's own screen |
 | Unit row | `.unit-row` (extends `.list__row`) | #23 | Unit icon, province name, mono abbreviation, current order or "holds", chevron |
 | Picker step | `.picker`, `.picker__draft` | #23 | Each step is a page; the draft order so far at the top; choices are a `.list` |
 | Submit bar | `.submit-bar`, `.save-status` | #23 | In `.app-actions`; the button carries the count ("2 of 3 ordered"); "Saved" or "Saving…" |

@@ -1,0 +1,14 @@
+<% content_for :title, "Pick a power" %>
+
+<div class="stack">
+  <h1>Pick a power</h1>
+  <% if @error %>
+    <p role="alert"><%= @error %></p>
+  <% end %>
+  <% if @taken.size == RulesEngine.powers.size %>
+    <p>Every seat is taken.</p>
+  <% end %>
+  <%= form_with url: join_seat_path(@game.join_code), class: "stack" do %>
+    <%= power_tiles(taken: @taken) %>
+  <% end %>
+</div>

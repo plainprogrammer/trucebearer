@@ -5,7 +5,7 @@ require "rails_helper"
 # docs/specs/020-base-stylesheet/measure.md, which holds the hand-run version.
 RSpec.describe "Style guide layout", type: :system do
   # Elements that must be at least 44 by 44 CSS pixels (links in running text are exempt).
-  tappable = [ ".button", ".app-header__name", ".list__row", ".control", ".choice" ]
+  tappable = [ ".button", ".app-header__name", ".list__row", ".control", ".choice", ".power-tile:not(.power-tile--taken)" ]
   # Things in the main column that a person can focus.
   focusable = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
   # Chrome reports sub-pixel sizes; measure.md allows half a pixel.
@@ -40,6 +40,102 @@ RSpec.describe "Style guide layout", type: :system do
 
       widths = evaluate_script("({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth })")
       expect(widths["scroll"]).to be <= widths["client"]
+    end
+  end
+
+  describe "the join code, power tiles and QR card (spec 021)" do
+    it "sets the join code in mono at least as large as the 2xl step, on one line that fits (AC-9.7)" do
+      with_viewport(360) do
+        visit "/styleguide"
+        expect(page).to have_css(".join-code")
+
+        codes = evaluate_script(<<~JS)
+          (() => {
+            const probe = document.createElement("span");
+            probe.className = "sg-type-step--2xl";
+            document.body.appendChild(probe);
+            const step = parseFloat(getComputedStyle(probe).fontSize);
+            probe.remove();
+            return Array.from(document.querySelectorAll(".join-code")).map((el) => {
+              const style = getComputedStyle(el);
+              return {
+                mono: el.classList.contains("mono"),
+                size: parseFloat(style.fontSize),
+                step: step,
+                fits: el.scrollWidth <= el.clientWidth,
+                height: el.getBoundingClientRect().height,
+                lineHeight: parseFloat(style.lineHeight)
+              };
+            });
+          })()
+        JS
+
+        expect(codes).not_to be_empty
+        codes.each do |code|
+          expect(code["mono"]).to be(true)
+          expect(code["size"]).to be >= code["step"]
+          expect(code["fits"]).to be(true)
+          expect(code["height"]).to be < 1.5 * code["lineHeight"]
+        end
+      end
+    end
+
+    it "draws a taken tile dashed, white and muted, and an open tile solid (AC-9.3)" do
+      with_viewport(360) do
+        visit "/styleguide"
+        expect(page).to have_css(".power-tile--taken")
+        expect(page).to have_css("button.power-tile")
+
+        read = evaluate_script(<<~JS)
+          (() => {
+            const taken = getComputedStyle(document.querySelector(".power-tile--taken"));
+            const open = getComputedStyle(document.querySelector("button.power-tile"));
+            return {
+              takenBorder: taken.borderTopStyle,
+              takenBackground: taken.backgroundColor,
+              takenColor: taken.color,
+              mutedColor: getComputedStyle(document.querySelector(".text-muted")).color,
+              openBorder: open.borderTopStyle
+            };
+          })()
+        JS
+
+        expect(read["takenBorder"]).to eq("dashed")
+        expect(read["takenBackground"]).to eq("rgb(255, 255, 255)")
+        expect(read["takenColor"]).to eq(read["mutedColor"])
+        expect(read["openBorder"]).to eq("solid")
+      end
+    end
+
+    it "puts each QR code on white, at least 200 pixels wide, with a four-module quiet zone (AC-9.8)" do
+      with_viewport(360) do
+        visit "/styleguide"
+        expect(page).to have_css(".qr-card .qr-card__code path")
+
+        cards = evaluate_script(<<~JS)
+          Array.from(document.querySelectorAll(".qr-card")).map((card) => {
+            const svg = card.querySelector(".qr-card__code");
+            const path = svg.querySelector("path").getBoundingClientRect();
+            const box = svg.getBoundingClientRect();
+            const scale = box.width / svg.viewBox.baseVal.width;
+            return {
+              background: getComputedStyle(card).backgroundColor,
+              width: box.width,
+              left: (path.left - box.left) / scale,
+              top: (path.top - box.top) / scale,
+              right: (box.right - path.right) / scale,
+              bottom: (box.bottom - path.bottom) / scale
+            };
+          })
+        JS
+
+        expect(cards).not_to be_empty
+        cards.each do |card|
+          expect(card["background"]).to eq("rgb(255, 255, 255)")
+          expect(card["width"]).to be >= 200
+          %w[left top right bottom].each { |side| expect(card[side]).to be >= 4 - 0.05, "quiet zone on the #{side}: #{card[side]}" }
+        end
+      end
     end
   end
 

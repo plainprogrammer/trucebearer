@@ -30,6 +30,17 @@ RSpec.describe RulesEngine do
     expect(orders.map { |o| RulesEngine.check(start, o).legal }).to all(be(true))
   end
 
+  describe ".powers" do
+    it "lists the seven powers of the classic map, each with an id and a name (spec 021 FR-12)" do
+      expect(RulesEngine.powers.map(&:id)).to eq(%i[austria england france germany italy russia turkey])
+      expect(RulesEngine.powers.map(&:name)).to eq(RulesEngine.powers.map { |power| power.id.to_s.capitalize })
+    end
+
+    it "agrees with the names the power badge draws, so the two lists cannot drift" do
+      expect(PowerBadgeHelper::POWER_NAMES).to eq(RulesEngine.powers.to_h { |power| [ power.id.to_s, power.name ] })
+    end
+  end
+
   describe "loaders" do
     let(:order_hashes) do
       [ { "type" => "hold", "power" => "england", "at" => "lon" },

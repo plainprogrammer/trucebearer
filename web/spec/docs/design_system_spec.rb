@@ -28,4 +28,12 @@ RSpec.describe "The design-system document (AC-9.1, 9.2)" do
     expect(doc).to include("sampled, traced or looked up")
     expect(doc).to match(/no edition was consulted/i)
   end
+
+  it "lists the four components of Issue 21 as built, with their classes and helpers (AC-9.6)" do
+    %w[.join-code .qr-card .power-tile .host-section].each do |klass|
+      line = doc.lines.find { |l| l.include?("`#{klass}`") && l.include?("#21") && l.match?(/built/i) }
+      expect(line).not_to be_nil, "no catalog line names #{klass} with #21 and built"
+    end
+    %w[join_code_text qr_card power_tiles].each { |helper| expect(doc).to include(helper) }
+  end
 end

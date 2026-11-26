@@ -1,0 +1,9 @@
+<% content_for :title, "New seat code" %>
+<% content_for :head, tag.meta(name: "turbo-cache-control", content: "no-cache") %>
+
+<div class="stack">
+  <h1>New seat code</h1>
+  <%= qr_card(game_seat_link_url(@game.public_id, token: @token), label: "QR code for this seat", caption: power_badge(@seat.power)) %>
+  <p>Scan this once. It cannot be shown again.</p>
+  <%= link_to "Back to the host page", game_host_path(@game.public_id), class: "button button--secondary" %>
+</div>

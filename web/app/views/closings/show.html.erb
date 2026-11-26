@@ -1,0 +1,8 @@
+<% content_for :title, "Close joining" %>
+
+<div class="stack">
+  <h1>Close joining</h1>
+  <p>Closing cannot be undone. The players who joined keep their seats. Nobody new can join with the code.</p>
+  <%= button_to "Close joining", game_close_path(@game.public_id), class: "button button--danger" %>
+  <%= link_to "Back", game_host_path(@game.public_id), class: "button button--secondary" %>
+</div>
