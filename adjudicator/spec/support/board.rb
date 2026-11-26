@@ -4,6 +4,7 @@ require "trucebearer/adjudicator"
 
 TA = Trucebearer::Adjudicator unless defined?(TA)
 L = TA::Location unless defined?(L)
+O = TA::Order unless defined?(O)
 
 # What the classic map allows, for the specs that try every case, and the example
 # objects that docs/interface.md reuses (army, fleet, spring).

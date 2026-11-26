@@ -81,4 +81,35 @@ RSpec.describe "docs/interface.md examples" do
       end.to raise_error(TA::InvalidInput)
     end
   end
+
+  describe "TA::Order and its six classes, and the format examples" do
+    it "gives the examples of the Value objects introduction and the Errors section" do
+      expect { O.from_h({ "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput, /"format"/)
+      expect { O.from_h({ "format" => 2, "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput, /2/)
+      expect { O.from_h({ "format" => 1, "type" => "hold", "power" => "england" }) }.to raise_error(TA::InvalidInput, /"at"/)
+      expect { O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "xyz" }) }.to raise_error(TA::InvalidInput, /"xyz"/)
+      expect do
+        O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => { "province" => "spa", "coast" => "nc" } })
+      end.to raise_error(TA::InvalidInput, /#{Regexp.escape({ "province" => "spa", "coast" => "nc" }.inspect)}/)
+    end
+
+    it "gives the TA::Order examples" do
+      expect(O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" }))
+        .to eq(O::Hold.new(power: :england, at: :lon))
+      expect(O.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" }).inspect)
+        .to eq("#<data Trucebearer::Adjudicator::Order::Hold power=:england, at=:lon>")
+      expect { O::Move.from_h({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" }) }.to raise_error(TA::InvalidInput)
+      expect(O::Hold.new(power: :england, at: :lon).to_h).to eq({ "format" => 1, "type" => "hold", "power" => "england", "at" => "lon" })
+      expect(O::Move.new(power: :france, at: :mao, destination: L.new(province: :spa, coast: :nc)).to_h)
+        .to eq({ "format" => 1, "type" => "move", "power" => "france", "at" => "mao", "destination" => { "province" => "spa", "coast" => "nc" } })
+      expect(O::MoveViaConvoy.new(power: :england, at: :lon, to: :wal).to_h)
+        .to eq({ "format" => 1, "type" => "move_via_convoy", "power" => "england", "at" => "lon", "to" => "wal" })
+      expect(O::SupportHold.new(power: :germany, at: :mun, target: :ber).to_h)
+        .to eq({ "format" => 1, "type" => "support_hold", "power" => "germany", "at" => "mun", "target" => "ber" })
+      expect(O::SupportMove.new(power: :france, at: :por, from: :mao, to: :spa).to_h)
+        .to eq({ "format" => 1, "type" => "support_move", "power" => "france", "at" => "por", "from" => "mao", "to" => "spa" })
+      expect(O::Convoy.new(power: :england, at: :nth, from: :lon, to: :nwy).to_h)
+        .to eq({ "format" => 1, "type" => "convoy", "power" => "england", "at" => "nth", "from" => "lon", "to" => "nwy" })
+    end
+  end
 end
