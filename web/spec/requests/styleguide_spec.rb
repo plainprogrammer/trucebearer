@@ -102,7 +102,7 @@ RSpec.describe "Style guide", type: :request do
       expect(host.first.css(".button, a").size).to be >= 4
     end
 
-    it "shows results: a player group, a reading group with a dislodged row, every tag, and the practice note (spec 025 AC-8.1)" do
+    it "shows results: a player group, a reading group with a dislodged row, and every tag, and no practice note (spec 025 AC-8.1, spec 029 AC-3.4)" do
       section = page.at_css("section[data-component=results]")
 
       expect(section.css(".result-group").size).to eq(2)
@@ -110,7 +110,7 @@ RSpec.describe "Style guide", type: :request do
       expect(section.css(".result-group--reading .result-row--dislodged")).not_to be_empty
       expect(section.css(".outcome-tag").map(&:text).uniq).to include("Succeeded", "Bounced", "Support cut", "Dislodged", "Not a legal order")
       expect(section.css(".outcome-tag").map(&:text).uniq).to match_array(OutcomeHelper::OUTCOME_WORDS.values)
-      expect(section.at_css(".practice-note")).to be_present
+      expect(section.at_css(".practice-note")).to be_nil
     end
 
     it "shows the seat status with all submitted, none submitted and a mix, each list with an id of its own (spec 024 AC-8.1)" do

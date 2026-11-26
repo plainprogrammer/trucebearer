@@ -199,30 +199,29 @@ RSpec.describe "Revealing a phase", type: :request do
   end
 
   describe "dislodged units (AC-5.4)" do
-    def stub_result_with_dislodged_unit
-      result = RulesEngine.adjudicate(RulesEngine.starting_position, []).to_h
-      # The position and the outcome's flag agree (spec 025 D8): the army in VIE was dislodged, so its implied hold says so too.
-      result["position"]["dislodged_units"] = [ { "unit" => unit_hash(:austria, :army, :vie), "attacker_from" => "gal", "by_convoy" => false } ]
-      result["outcomes"].find { |outcome| outcome["order"]["at"] == "vie" }["dislodged"] = true
-      allow(RulesEngine).to receive(:adjudicate).and_return(RulesEngine.load_adjudication(result))
+    # A real dislodgement: Germany's supported attack on France's holding army in Burgundy (spec 029 AC-2.1).
+    def save_dislodging_orders(phase = game.current_phase)
+      phase.update_columns(position: rules_position(units: [ %i[germany army mun], %i[germany army ruh], %i[france army bur] ]))
+      germany = game.seats.find_by(power: "germany") || game.take_seat!("germany").first
+      germany.save_orders!(phase.reload, { "mun" => json_of(move(:germany, :mun, :bur)),
+                                           "ruh" => json_of(rules_order(:support_move, :germany, :ruh, from: "mun", to: "bur")) }, submit: true)
     end
 
     it "names each on the host page in a warning banner, and keeps them off the board of the next phase" do
-      stub_result_with_dislodged_unit
+      save_dislodging_orders
 
       host.post reveal_path
       host.get "/games/#{id}/host"
 
-      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: Austria's army in VIE was dislodged. Settle it by hand." ])
+      expect(page.css(".banner--warning").map(&:text)).to eq([ "Warning: France's army in BUR was dislodged. Settle it by hand." ])
       expect(page.css("[data-dislodged]").size).to eq(page.css(".outcome-tag--dislodged").size) # one banner for each Dislodged tag (spec 025 AC-2.2)
       expect(game.current_phase.position.dislodged_units).to be_empty
       expect(game.history.first.adjudication.position.dislodged_units.size).to eq(1)
     end
 
     it "shows only the latest revealed phase's dislodged units" do
-      stub_result_with_dislodged_unit
+      save_dislodging_orders
       host.post reveal_path
-      allow(RulesEngine).to receive(:adjudicate).and_call_original
       host.post "/games/#{id}/host/phases/2/reveal"
       host.get "/games/#{id}/host"
 

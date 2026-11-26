@@ -397,7 +397,7 @@ RSpec.describe "Order secrecy", type: :request do
           expect(page.css(".result-row").any?).to eq(entitled.fetch(key, []).include?(viewer)), "#{viewer} on #{key}"
         end
       end
-      # The positive control: an entitled viewer reads England's order, with the stand-in's outcome for it.
+      # The positive control: an entitled viewer reads England's order, with its outcome.
       row = Nokogiri::HTML5(shot.fetch("another seat").fetch("GET /games/:public_id")[1]).css(".result-group[data-power=england] .result-row")
              .find { |r| r.text.include?("Move to North Sea (NTH)") }
       expect(row.at_css(".outcome-tag").text).to eq("Succeeded")
@@ -406,7 +406,7 @@ RSpec.describe "Order secrecy", type: :request do
     # Spec 025 Story 5: the same viewers after one reveal. Phase 1 is revealed, phase 2 is open, and the open phase's orders are as secret as ever.
     describe "after one reveal (spec 025)" do
       let(:open_number) { 2 }
-      # Phase 1: England lvp -> yor and France mar -> pie (both uncontested under the stand-in), then the host reveals. The swept picker
+      # Phase 1: England lvp -> yor and France mar -> pie (both uncontested), then the host reveals. The swept picker
       # provinces lon and par stay occupied (England keeps fleets in lon and edi and an army in yor; Paris stays French), so no swept page
       # silently becomes a stranger page. `phase` is not touched here: it is memoised later, after the reveal, as phase 2.
       let!(:revealed_phase) do

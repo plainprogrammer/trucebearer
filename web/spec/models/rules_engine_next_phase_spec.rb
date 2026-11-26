@@ -1,7 +1,7 @@
 require "rails_helper"
 require_relative "../support/rules_helpers"
 
-# Spec 022 D3, FR-8: the app's own rule for the phase that follows a reveal. It is not part of the stand-in.
+# Spec 022 D3, FR-8: the app's own rule for the phase that follows a reveal. It is the playtest's own rule, not the gem's.
 RSpec.describe RulesEngine, ".next_movement_position" do
   include RulesHelpers
 
@@ -47,7 +47,7 @@ RSpec.describe RulesEngine, ".next_movement_position" do
     expect(RulesEngine.load_position(after.to_h)).to eq(after)
   end
 
-  it "follows the stand-in's result for a real spring phase (AC-5.2)" do
+  it "follows the engine's result for a real spring phase (AC-5.2)" do
     start = RulesEngine.starting_position
     result = RulesEngine.adjudicate(start, [ move(:england, :lon, :nth) ])
 
