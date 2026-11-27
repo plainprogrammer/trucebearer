@@ -36,13 +36,13 @@ When it is unset or blank, Rails' own default applies: only a socket opened from
 
 ## Self-hosting on a home lab
 
-This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare tunnel. The tunnel ends TLS and sends plain http to the VM, so Rails assumes SSL (`config.assume_ssl` and `config.force_ssl` in `config/environments/production.rb`) and kamal-proxy runs with `ssl: false`. All configuration is in `config/deploy.yml`, which Kamal reads through ERB with the environment of the machine that runs `bin/kamal`. Kamal does not load a `.env` file, so export the variables below in your shell (or with a tool such as direnv) first.
+This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare tunnel whose client, cloudflared, runs on the same VM as a Kamal accessory. The tunnel ends TLS and sends plain http to the VM, so Rails assumes SSL (`config.assume_ssl` and `config.force_ssl` in `config/environments/production.rb`) and kamal-proxy runs with `ssl: false`. All configuration is in `config/deploy.yml`, which Kamal reads through ERB with the environment of the machine that runs `bin/kamal`. Kamal does not load a `.env` file, so export the variables below in your shell (or with a tool such as direnv) first.
 
 **What you need**
 
 - A VM that you can reach over SSH, as root unless you add `ssh: user:` to `config/deploy.yml`, with a CPU that matches `builder.arch` there (`amd64`). If Docker is missing, `bin/kamal setup` installs it, which needs root or passwordless sudo, and either `curl` or `wget`.
 - A deploy machine (your own computer) with this repository, its gems (`bundle install`), Docker, and `config/master.key` in place (`.kamal/secrets` reads it from there). Never commit that file.
-- A Cloudflare tunnel you control, with a public host name.
+- A Cloudflare account with your domain on it, where you create the tunnel (see "The tunnel" below).
 - No registry account. `config/deploy.yml` uses `localhost:5555`: Kamal runs a small registry container on the deploy machine and forwards its port to the VM over SSH, so the image never leaves your two machines.
 
 **Variables and secrets**
@@ -52,14 +52,20 @@ This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare 
 | `TRUCEBEARER_HOST` | Deploy machine's shell, required | No | The public host name the tunnel serves, with no scheme, such as `play.example.org`. It becomes kamal-proxy's `host` and is passed to the container, where `production.rb` allows only that host (and `/up`). Unset or blank, `bin/kamal` stops with a `KeyError`; stray spaces are trimmed. In the app alone, unset or blank means any host is allowed. |
 | `TRUCEBEARER_PASSPHRASE` | Deploy machine's shell, required to create games | Yes | The passphrase that lets a host create a game. See "Playtest access". |
 | `RAILS_MASTER_KEY` | Read from `config/master.key` by `.kamal/secrets` | Yes | Decrypts `config/credentials.yml.enc`. |
+| `TUNNEL_TOKEN` | Deploy machine's shell, required | Yes | The token of your Cloudflare tunnel. Only the cloudflared accessory gets it, not the app. |
 | `TRUCEBEARER_CABLE_ORIGINS` | Deploy machine's shell, optional | No | Extra origins that may open the live-update socket. In `deploy.yml` it defaults to `https://` plus `TRUCEBEARER_HOST`. See "Live updates". |
 | `TRUCEBEARER_TIME_ZONE` | `env.clear` in `config/deploy.yml` | No | The table's time zone, `UTC` unless you change it there. See "Playtest access". |
 
-Secrets are listed by name under `env.secret` in `config/deploy.yml` and their values come from `.kamal/secrets`, which holds no raw values and is safe to commit. Clear settings are in `env.clear`.
+Secrets are listed by name under `env.secret` in `config/deploy.yml` (the tunnel token under `accessories.cloudflared.env.secret`) and their values come from `.kamal/secrets`, which holds no raw values and is safe to commit. Clear settings are in `env.clear`.
 
 **Point `deploy.yml` at your VM.** Change the address under `servers.web` (the file ships with the placeholder `192.168.0.1`). Kamal reads the file from your working copy, so this edit can stay uncommitted.
 
-**The tunnel target.** In the tunnel's public host name settings, set the service to `http://<VM address>:80`, with the public host name equal to `TRUCEBEARER_HOST`. Port 80 is kamal-proxy, which answers only requests whose `Host` header matches `TRUCEBEARER_HOST`, so the tunnel must pass the public name on as the `Host` header (cloudflared does, unless you set an HTTP Host Header override).
+**The tunnel.** cloudflared runs on the VM as the Kamal accessory `cloudflared`, with the image `cloudflare/cloudflared:2026.11.2`. Kamal starts it on its own Docker network, beside kamal-proxy, so the tunnel reaches the app by container name and the VM needs no port open to the LAN for it.
+
+1. In the Cloudflare dashboard (Zero Trust, then Networks, then Tunnels), create a tunnel of the cloudflared type and copy its token. Export it as `TUNNEL_TOKEN` on the deploy machine.
+2. Add a public host name to the tunnel equal to `TRUCEBEARER_HOST`, with the service `http://kamal-proxy:80`. Leave the HTTP Host Header override empty: kamal-proxy answers only requests whose `Host` header matches `TRUCEBEARER_HOST`, and cloudflared passes the public name on unchanged.
+
+`bin/kamal setup` boots the accessory with the app. Afterwards, `bin/kamal accessory logs cloudflared` shows whether the tunnel connected, and `bin/kamal accessory reboot cloudflared` restarts it, for example after you change its image tag or token. To use a proxy or tunnel of your own instead, delete the `cloudflared` accessory and `TUNNEL_TOKEN` in `.kamal/secrets`, and point your proxy at `http://<VM address>:80`.
 
 **The volume.** The databases (the app's own, the cache, the job queue and the live-update queue) are SQLite files in `/rails/storage`, which `deploy.yml` mounts from the Docker volume `web_storage` on the VM. `config/database.yml` points all four there. The volume outlives the container, so deploys and restarts keep your games.
 
@@ -68,8 +74,9 @@ Secrets are listed by name under `env.secret` in `config/deploy.yml` and their v
 ```sh
 export TRUCEBEARER_HOST=play.example.org
 export TRUCEBEARER_PASSPHRASE='choose-a-passphrase'
+export TUNNEL_TOKEN='the token from the Cloudflare dashboard'
 bin/kamal config   # checks the files render; it contacts nothing and fails if TRUCEBEARER_HOST is unset
-bin/kamal setup    # installs Docker if needed, starts kamal-proxy, builds, pushes and boots the app
+bin/kamal setup    # installs Docker if needed, boots cloudflared, starts kamal-proxy, builds, pushes and boots the app
 ```
 
 Later deploys: `bin/kamal deploy`, with the same variables exported. Handy aliases from `deploy.yml`: `bin/kamal logs`, `bin/kamal console`, `bin/kamal shell`.
