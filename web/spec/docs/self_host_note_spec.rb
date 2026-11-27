@@ -22,12 +22,21 @@ RSpec.describe "The self-hosting note in the README" do
   it "says which variables are secret and which are not" do
     secret_rows = section.lines.grep(/\A\| `/).select { |row| row.split("|")[3].to_s.strip == "Yes" }.map { |row| row[/`(\w+)`/, 1] }
 
-    expect(secret_rows).to match_array(deploy.dig("env", "secret"))
+    accessory_secrets = deploy["accessories"].values.flat_map { |accessory| Array(accessory.dig("env", "secret")) }
+
+    expect(secret_rows).to match_array(deploy.dig("env", "secret") + accessory_secrets)
   end
 
-  it "gives the tunnel target as plain http on port 80" do
+  it "gives the tunnel target as plain http to kamal-proxy on port 80, which the tunnel client reaches by name" do
     expect(deploy.dig("proxy", "ssl")).to be(false)
-    expect(section).to include("http://<VM address>:80")
+    expect(deploy["accessories"]).to have_key("cloudflared")
+    expect(section).to include("http://kamal-proxy:80")
+  end
+
+  it "names the tunnel client's image as the deploy file pins it, and the commands that manage it" do
+    expect(section).to include("`#{deploy.dig('accessories', 'cloudflared', 'image')}`")
+    expect(section).to include("bin/kamal accessory logs cloudflared")
+    expect(section).to include("bin/kamal accessory reboot cloudflared")
   end
 
   it "names the volume and the directory it holds, as the deploy file mounts them" do

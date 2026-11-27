@@ -91,6 +91,37 @@ RSpec.describe "The Kamal deploy configuration" do
     end
   end
 
+  # The tunnel's client runs on the VM as a Kamal accessory, on the same Docker network as kamal-proxy, so the tunnel's service
+  # is http://kamal-proxy:80 and nothing has to reach the VM from the LAN. Its only setting is the tunnel token, a secret.
+  describe "the Cloudflare tunnel client" do
+    let(:tunnel) { deploy.dig("accessories", "cloudflared") }
+
+    it "runs Cloudflare's own image, pinned to a release rather than latest" do
+      expect(tunnel["image"]).to match(%r{\Acloudflare/cloudflared:\d{4}\.\d+\.\d+\z})
+    end
+
+    it "runs on the app's own server, through the web role, so no address is written in the file" do
+      expect(tunnel["roles"]).to eq([ "web" ])
+      expect(tunnel).not_to include("host", "hosts")
+    end
+
+    it "runs the remotely managed tunnel without updating itself, since Kamal pins the version" do
+      expect(tunnel["cmd"]).to eq("tunnel --no-autoupdate run")
+    end
+
+    it "joins Kamal's default network, where kamal-proxy is, and publishes no port" do
+      expect(tunnel).not_to include("network", "port", "options")
+    end
+
+    it "takes the tunnel token as a secret, from the deploy machine, never from a literal" do
+      expect(tunnel.dig("env", "secret")).to eq([ "TUNNEL_TOKEN" ])
+      expect(tunnel.dig("env")).not_to include("clear")
+
+      lines = File.readlines(Rails.root.join(".kamal/secrets")).reject { |line| line.strip.start_with?("#") }.join
+      expect(lines).to match(/^TUNNEL_TOKEN=\$TUNNEL_TOKEN$/)
+    end
+  end
+
   describe "the registry" do
     it "is the local one Kamal starts itself, so no outside account is needed" do
       expect(deploy.dig("registry", "server")).to eq("localhost:5555")
