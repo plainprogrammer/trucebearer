@@ -36,7 +36,7 @@ When it is unset or blank, Rails' own default applies: only a socket opened from
 
 ## Self-hosting on a home lab
 
-This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare tunnel whose client, cloudflared, runs on the same VM as a Kamal accessory. The tunnel ends TLS and sends plain http to the VM, so Rails assumes SSL (`config.assume_ssl` and `config.force_ssl` in `config/environments/production.rb`) and kamal-proxy runs with `ssl: false`. All configuration is in `config/deploy.yml`, which Kamal reads through ERB with the environment of the machine that runs `bin/kamal`. Kamal does not load a `.env` file, so export the variables below in your shell (or with a tool such as direnv) first.
+This is how the playtest runs: one VM, deployed with Kamal, behind a Cloudflare tunnel whose client, cloudflared, runs on the same VM as a Kamal accessory. The tunnel ends TLS and sends plain http to the VM, so Rails assumes SSL (`config.assume_ssl` and `config.force_ssl` in `config/environments/production.rb`) and kamal-proxy runs with `ssl: false`. All configuration is in `config/deploy.yml`, which Kamal reads through ERB with the environment of the machine that runs `bin/kamal`. Kamal does not load a `.env` file, so export the variables below in your shell (or with a tool such as direnv) first. If you keep them in a `.env` file (it is gitignored), load it with `set -a; source .env; set +a`: a plain `source` sets them in your shell only, and `bin/kamal` then stops with `KeyError: key not found: "TRUCEBEARER_HOST"` even though `echo` shows the value.
 
 **What you need**
 
@@ -64,6 +64,7 @@ Secrets are listed by name under `env.secret` in `config/deploy.yml` (the tunnel
 
 1. In the Cloudflare dashboard (Zero Trust, then Networks, then Tunnels), create a tunnel of the cloudflared type and copy its token. Export it as `TUNNEL_TOKEN` on the deploy machine.
 2. Add a public host name to the tunnel equal to `TRUCEBEARER_HOST`, with the service `http://kamal-proxy:80`. Leave the HTTP Host Header override empty: kamal-proxy answers only requests whose `Host` header matches `TRUCEBEARER_HOST`, and cloudflared passes the public name on unchanged.
+3. Turn on Always Use HTTPS for the domain (SSL/TLS, then Edge Certificates). Rails assumes every request came over https, because the tunnel ends TLS, so it cannot see a plain http request to redirect it. Without Cloudflare's redirect, a phone that types `http://` gets the page, and its browser drops the app's `Secure` cookies, so creating or joining a game fails. Check it with `curl -i http://play.example.org/`, which should answer `301` with a `Location` on `https://`.
 
 `bin/kamal setup` boots the accessory with the app. Afterwards, `bin/kamal accessory logs cloudflared` shows whether the tunnel connected, and `bin/kamal accessory reboot cloudflared` restarts it, for example after you change its image tag or token. To use a proxy or tunnel of your own instead, delete the `cloudflared` accessory and `TUNNEL_TOKEN` in `.kamal/secrets`, and point your proxy at `http://<VM address>:80`.
 
