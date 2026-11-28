@@ -39,6 +39,18 @@ RSpec.describe "The self-hosting note in the README" do
     expect(section).to include("bin/kamal accessory reboot cloudflared")
   end
 
+  # Behind the tunnel Rails assumes SSL, so it cannot see a plain http request to redirect it, and its Secure cookies would be
+  # dropped. Cloudflare's own redirect has to be on.
+  it "tells the host to turn on Cloudflare's Always Use HTTPS, since Rails cannot redirect plain http behind the tunnel" do
+    expect(section).to include("Always Use HTTPS")
+    expect(section).to include("curl -i http://play.example.org/")
+  end
+
+  # Kamal reads only the environment of the shell that runs it, so a sourced .env file must export what it sets.
+  it "says how to load a .env file so bin/kamal sees its variables" do
+    expect(section).to include("set -a; source .env; set +a")
+  end
+
   it "names the volume and the directory it holds, as the deploy file mounts them" do
     volume, directory = deploy["volumes"].grep(/web_storage/).first.split(":")
 
